@@ -175,7 +175,7 @@ Each package releases on its own cadence, so a tag range spans every sibling iss
 
 ```bash
 PLAN=$(git log --format='%H' --grep="docs: \(re-\)\?plan .*(#$1)" -1)
-git log --oneline "$PLAN"^..HEAD
+git log --format='%H %s' "$PLAN"^..HEAD
 ```
 
 The `\(re-\)\?` alternation matters: a reopened issue is re-planned with a `docs: re-plan …` subject, and a bare `docs: plan` pattern silently resolves the **abandoned** original instead, yielding a range hundreds of commits wide (Refs #863).
