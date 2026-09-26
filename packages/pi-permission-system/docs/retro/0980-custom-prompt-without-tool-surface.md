@@ -53,3 +53,17 @@ Executed both planned steps: the `feat(pi-permission-system)!:` cycle (`AgentPre
 - **Doc wording beyond the plan's list:** `docs/configuration.md`'s "moves to the end of the prompt for every session" became "every session on pi's default prompt", because the paragraph's own next sentence now excludes a root under a custom prompt.
 - **Pre-completion reviewer: PASS.**
   It re-derived the four invariants (child states its tools, Pi-default relocation unchanged, filtering still runs, the inherited identity stays byte-identical) against the code rather than the plan, and found no stale statement in `README.md`, `docs/subagent-integration.md`, or the package skill.
+
+## Stage: Sync (worktree) (2026-09-26T20:28:43Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint`, `pnpm fallow dead-code`) passed clean, no fixes needed.
+The plan's `**Release:** ship independently` marker stands — issue #980 is not a roadmap step, so `/ship` releases `pi-permission-system` on its own major bump for the breaking commit (`feat(pi-permission-system)!: stop appending a tool list and rules to an operator's custom system prompt`).
+No deferred work: the Non-Goals' child-override question stays an open question with no issue filed, by operator decision.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-980--/2026-09-26T02-37-18-996Z_01a0db92-ff13-714c-840c-8e819a4a36d0.jsonl` — read with `read_session_file({ path: "..." })` for message-level verification at land/retro time.
+
+### Observations
+
+Nothing beyond the TDD stage's own notes; this sync found the branch already green.
