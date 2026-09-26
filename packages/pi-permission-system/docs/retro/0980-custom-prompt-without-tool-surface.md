@@ -34,3 +34,22 @@ Plan committed at `packages/pi-permission-system/docs/plans/0980-custom-prompt-w
 #### Deferred tidyings
 
 - `src/handlers/before-agent-start.ts` — reshaping `AgentPrepHandler`'s positional constructor into a deps object; declined as inconsistent with its positional siblings.
+
+## Stage: Implementation — TDD (2026-09-26T17:40:26Z)
+
+### Session summary
+
+Executed both planned steps: the `feat(pi-permission-system)!:` cycle (`AgentPrepHandler` gains a `SubagentDetector`, and a root under `customPrompt` skips `renderToolSurface`) and the docs commit (ADR 0014 amendment, architecture entries, `docs/configuration.md`).
+`pi-permission-system` went from 4743 to 4749 tests (+6: four new handler cases, two composition-root cases; two existing handler cases moved into the new `describe` and retargeted to the child role).
+`check`, root `lint`, `test`, and `fallow dead-code` are green.
+
+### Observations
+
+- **All five planned killing mutations killed exactly the predicted tests.**
+  Always-render → three handler root cases plus the composition-root root case; drop the detector → both handler child cases plus the composition-root child case; `customPrompt !== undefined` → only the empty-string case; `{ isSubagent: () => false }` in `index.ts` → only the composition-root child case; early `return {}` → only the skills case.
+  The two tests that stayed green during Red (the child case and the empty-string case) were pins, confirmed by those mutations.
+- **Small deviation: a `hasCustomPrompt(event)` module helper.**
+  Pi's truthiness test is now read in two places (the render decision and `piAuthoredPreamble`), so it moved into one function carrying the "empty string reads as none" comment instead of repeating `!event.systemPromptOptions?.customPrompt`.
+- **Doc wording beyond the plan's list:** `docs/configuration.md`'s "moves to the end of the prompt for every session" became "every session on pi's default prompt", because the paragraph's own next sentence now excludes a root under a custom prompt.
+- **Pre-completion reviewer: PASS.**
+  It re-derived the four invariants (child states its tools, Pi-default relocation unchanged, filtering still runs, the inherited identity stays byte-identical) against the code rather than the plan, and found no stale statement in `README.md`, `docs/subagent-integration.md`, or the package skill.
