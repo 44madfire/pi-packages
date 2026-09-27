@@ -1,63 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { getGrammarParser, type TSNode } from "#src/access-intent/bash/parser";
+import type { TSNode } from "#src/access-intent/bash/parser";
 import { reattachRedirectArguments } from "#src/access-intent/bash/redirect-arguments";
+import {
+  shape,
+  viewContractViolations,
+  withCorrected as withCorrectedBy,
+} from "#test/helpers/bash-parse-tree";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Parse `command` with the grammar's own parser and hand the corrected root,
- * alongside the grammar's, to `read`.
- *
- * The grammar's parser, not `getParser()`: the subject is what the correction
- * does to `tree-sitter-bash`'s real output, so the input must be that output.
- */
-async function withCorrected<T>(
+function withCorrected<T>(
   command: string,
   read: (corrected: TSNode, grammar: TSNode) => T,
 ): Promise<T> {
-  const parser = await getGrammarParser();
-  const tree = parser.parse(command);
-  if (!tree) throw new Error("parser.parse returned null");
-  try {
-    // Read once: web-tree-sitter builds a new wrapper on every access.
-    const root = tree.rootNode;
-    return read(reattachRedirectArguments(root), root);
-  } finally {
-    tree.delete();
-  }
-}
-
-/**
- * A node's named structure as an S-expression: an inner node renders as
- * `(type child…)`, and a node with no named children as its text in quotes.
- */
-function shape(node: TSNode): string {
-  const named: TSNode[] = [];
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (child?.isNamed) named.push(child);
-  }
-  if (named.length === 0) return JSON.stringify(node.text);
-  return `(${node.type} ${named.map(shape).join(" ")})`;
+  return withCorrectedBy(command, reattachRedirectArguments, read);
 }
 
 function correctedShape(command: string): Promise<string> {
   return withCorrected(command, (corrected) => shape(corrected));
-}
-
-/** Every node of a tree, depth-first. */
-function allNodes(node: TSNode, out: TSNode[] = []): TSNode[] {
-  out.push(node);
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (child) allNodes(child, out);
-  }
-  return out;
-}
-
-/** A node's range and type, which identify it across a real node and a view. */
-function spanOf(node: TSNode | null): string | null {
-  return node ? `${node.type}@${node.startIndex}-${node.endIndex}` : null;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -161,54 +121,9 @@ describe("reattachRedirectArguments", () => {
       "echo é 2>/dev/null $(git 2>/dev/null push) | tail",
     ];
 
-    it.each(rewritten)(
-      "keeps every node's text its source slice in %s",
-      async (command) => {
-        await withCorrected(command, (corrected) => {
-          for (const node of allNodes(corrected)) {
-            expect(node.text).toBe(
-              command.slice(node.startIndex, node.endIndex),
-            );
-          }
-        });
-      },
-    );
-
-    it.each(rewritten)(
-      "keeps every node's children in source order in %s",
-      async (command) => {
-        await withCorrected(command, (corrected) => {
-          for (const node of allNodes(corrected)) {
-            for (let i = 1; i < node.childCount; i++) {
-              const before = node.child(i - 1);
-              const after = node.child(i);
-              expect(after?.startIndex).toBeGreaterThanOrEqual(
-                before?.endIndex ?? Number.POSITIVE_INFINITY,
-              );
-            }
-          }
-        });
-      },
-    );
-
-    it.each(rewritten)(
-      "gives every child its corrected previous sibling in %s",
-      async (command) => {
-        await withCorrected(command, (corrected) => {
-          for (const node of allNodes(corrected)) {
-            for (let i = 0; i < node.childCount; i++) {
-              expect(spanOf(node.child(i)?.previousSibling ?? null)).toBe(
-                spanOf(i === 0 ? null : node.child(i - 1)),
-              );
-            }
-          }
-        });
-      },
-    );
-
-    it.each(rewritten)("reports no parse error in %s", async (command) => {
-      await withCorrected(command, (corrected) => {
-        expect(allNodes(corrected).some((node) => node.hasError)).toBe(false);
+    it.each(rewritten)("keeps the view contract in %s", async (command) => {
+      await withCorrected(command, (corrected, grammar) => {
+        expect(viewContractViolations(command, corrected, grammar)).toEqual([]);
       });
     });
   });
