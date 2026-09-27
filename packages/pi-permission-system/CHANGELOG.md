@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [35.0.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v35.0.0...pi-permission-system-v35.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** check the words after a heredoc against the command's own rules ([0a88264](https://github.com/gotgenes/pi-packages/commit/0a882643bb5b1be1f546842e75ca3fac5cff1930)), closes [#979](https://github.com/gotgenes/pi-packages/issues/979)
+* **pi-permission-system:** gate the commands and redirects written after a heredoc ([b7b2709](https://github.com/gotgenes/pi-packages/commit/b7b27095606c07f684eca353c253b59ebdec4cb4)), closes [#979](https://github.com/gotgenes/pi-packages/issues/979)
+
 ## [35.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v34.0.1...pi-permission-system-v35.0.0) (2026-09-26)
 
 
