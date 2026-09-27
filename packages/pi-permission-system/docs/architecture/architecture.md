@@ -1456,6 +1456,7 @@ A command, argument, or redirect written after `<<EOF` therefore reaches no bash
 - **Smell:** Category C (the tail's role, a statement or an argument or a redirect, is lost at parse).
 - **Target:** decided by the plan; the likely seam extends [#977]'s parser-boundary correction to hoist the heredoc tail into the places its heredoc-free spelling reaches.
 - **Constraint:** [#941]'s pinned unit text (`git commit -F - <<'EOF'` enumerates as `git commit -F`) is kept or deliberately revisited, since a project deny rule is spelled against it.
+- **Soft dependency:** [#977], whose parser-boundary correction the likely seam extends.
 - **Outcome:** `cat <<EOF | rm -rf /tmp/x` is denied by `rm *`; `cat <<EOF > /tmp/o` projects `/tmp/o` as a `write`.
 - **Commit type:** `fix:`.
 - **Impact 3 / Risk 2 / Priority 12.**
@@ -1468,6 +1469,7 @@ Release: independent
 
 - **Smell:** Category A (dead code kept alive by its own tests) over Category G (a test file at the wrong layer).
 - **Target:** retire the facade and its test file after moving any case with no equivalent in `program.test.ts` or `token-collection.test.ts`, or keep it as a documented seam and narrow the test to the facade's own mapping; the plan decides.
+- **Soft dependency:** [#979], which lands directly after [#977], the step this one was placed after.
 - **Outcome:** no test file re-tests `BashProgram` through an unused facade; the `bash-path-extractor.ts` module-tree entry matches the decision.
 - **Commit type:** `test:`/`refactor:` (no release).
 
@@ -1503,6 +1505,7 @@ ADR 0013 §11 keys transparency on the *inner command* (a pure-reader-core head 
   `/usr/bin/time`'s `-o`/`--output`/`-a`/`--append` write a file, so their presence refuses the exemption; `nohup` (a tty-conditional `nohup.out`) and `flock` (creates its lock-file operand) stay floored.
   The `writesViaRedirect` refusal exists because §11's exemption *classifies* the unit as read; this clause inherits the inner verdict instead, and the plan verifies that redirect analysis on a wrapper unit is independent of the floor before dropping it for this class.
   The metamorphic pin (`time ${cmd}` never loosens the verdict) keeps holding, since the unit's verdict becomes exactly the unwrapped command's.
+- **Soft dependency:** [#924], which opens the `command-effects.ts` sequence this step sits inside.
 - **Outcome:** `time pnpm run lint >/tmp/lintout.txt 2>&1` resolves as `pnpm run lint` does, redirect gated by the path surfaces as for the unwrapped command; `time sudo rm -rf x` and `timeout 5 bash -c '…'` still floor.
 - **Commit type:** `feat:`.
 - **Impact 3 / Risk 2 / Priority 12.**
@@ -1520,6 +1523,7 @@ The long tail has nowhere to live but the package's own frozen core, which is th
   The pipe-safety argument is the same as the core's: a wrong declaration is the user's own allow, at finer grain than the standing grants the record already accepts.
 - **Design question the plan must settle:** whether subcommand descent is exact-word (§7) or routes through `bash-arity.ts`'s meaningful-prefix machinery so `git -C ~/other log` resolves as `git log`; §7 says exact, §10 says structural, and Phase 17's [#804] will need the same answer.
 - **Acceptance case:** [#797] — `commandEffects: { officecli: { effects: [] } }` withdraws the tool's operands from the path surfaces, so `officecli set data.xlsx /Sheet1/B1` raises no `external_directory` ask while `bash: {"officecli *": …}` still governs the command; `[]` is the enforcement-relevant value §7 names beside `"read"`, and it is the ask-producing-side lever for the shape-indistinguishable class ([#882] is the ask-consuming one).
+- **Soft dependency:** [#963], whose ADR 0013 §11 amendment is the clause this step's "does not lift the floor" constraint cites.
 - **Outcome:** `git: { subcommands: { log: "read" } }` plus `external_directory_read: {"*": "allow"}` silences `git log ~/other`; the [#797] acceptance case passes; `scripts/measure-core-coverage.mjs` accepts a declarations file and reports the relieved share; the review log's `effectSource` can read `declared`.
 - **Commit type:** `feat:`.
 - **Impact 5 / Risk 2 / Priority 20.**
@@ -1536,6 +1540,7 @@ So the blame reaches the review log on every path except the one a human decides
 - **Constraint:** the fact set is the *deciding* path only; the full escaping-path list stays evidence and stays out of the log.
   The teaching sentence names `commandEffects`, so it lands after [#880].
 - **Hard dependency:** [#880], whose `commandEffects` key the blame line names.
+- **Soft dependency:** [#609], whose role-carrying `worstEntry` lets the blame read one shape rather than two.
 - **Outcome:** a bash `external_directory` ask's `waiting` entry names the path and its provenance; the dialog states why the direction was chosen; the package skill's claim about the stamped context becomes true; `effectSource` appears in the payload module.
 - **Commit type:** `fix:`.
 - **Impact 4 / Risk 2 / Priority 16.**
@@ -1564,21 +1569,21 @@ Release: independent
 
 ```mermaid
 flowchart TD
-    S945["✅ #945<br/>Hosted commands keep their operands"] -.-> S863["✅ #863<br/>Inline scripts are scripts"]
-    S863 -.-> S609["✅ #609<br/>Redirect destinations by role"]
-    S859["✅ #859<br/>.. as a whole segment"] -.-> S957["✅ #957<br/>A quoted --flag=value is still a flag"]
-    S957 -.-> S609
-    S924["#924<br/>sed/awk presumed readers"] -.-> S963["#963<br/>Execution-modifier wrappers inherit the verdict"]
-    S963 -.-> S880["#880<br/>commandEffects"]
+    S945["✅ #945<br/>Hosted commands keep their operands"] -.soft.-> S863["✅ #863<br/>Inline scripts are scripts"]
+    S863 -.soft.-> S609["✅ #609<br/>Redirect destinations by role"]
+    S859["✅ #859<br/>.. as a whole segment"] -.soft.-> S957["✅ #957<br/>A quoted --flag=value is still a flag"]
+    S957 -.soft.-> S609
+    S924["#924<br/>sed/awk presumed readers"] -.soft.-> S963["#963<br/>Execution-modifier wrappers inherit the verdict"]
+    S963 -.soft.-> S880["#880<br/>commandEffects"]
     S880 --> S881["#881<br/>Blame reaches the ask"]
-    S609 -.-> S881
-    S609 -.-> S977["✅ #977<br/>Arguments after a redirect"]
-    S977 -.-> S979["#979<br/>A heredoc's tail"]
-    S979 -.-> S978["#978<br/>The facade nobody calls"]
-    S881 -.-> S882["#882<br/>May a link dismiss a nonexistent-path ask?"]
+    S609 -.soft.-> S881
+    S609 -.soft.-> S977["✅ #977<br/>Arguments after a redirect"]
+    S977 -.soft.-> S979["#979<br/>A heredoc's tail"]
+    S979 -.soft.-> S978["#978<br/>The facade nobody calls"]
+    S881 -.soft.-> S882["#882<br/>May a link dismiss a nonexistent-path ask?"]
 ```
 
-The section order under `### Steps` is the order they are meant to land, and the dashed edges here are sequencing preferences, not dependencies.
+The section order under `### Steps` is the order they are meant to land, and the `soft` edges here are sequencing preferences rather than hard dependencies.
 The diagram is laid out by dependency instead, so its shape and the working sequence answer different questions.
 [#945], [#863], [#859], and [#957] are one-file fixes in `token-collection.ts` and `token-classification.ts`; landing them before [#609] keeps the role thread's diff about the role, and [#609]'s `TokenRole` then has a `script` value to absorb [#863]'s table entries into if the plan chooses.
 [#924] and [#880] both edit `command-effects.ts`, so they sequence rather than parallelize — [#924] first, because core relief needs no configuration from the user and narrows the population a declaration has to cover.
