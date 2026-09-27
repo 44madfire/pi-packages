@@ -37,6 +37,7 @@ function makeStep(overrides = {}) {
     scores: { impact: 2, risk: 2, priority: 8 },
     releaseTags: ["independent"],
     hardDependency: null,
+    softDependency: null,
     ...overrides,
   };
 }

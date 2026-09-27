@@ -21,6 +21,7 @@ import { parseStepReferenceRun } from "./step-references.mjs";
  * @property {{ impact: number, risk: number, priority: number }|null} scores
  * @property {string[]} releaseTags every `Release:` line in the block, so "exactly one" is checkable
  * @property {{ present: true, dependsOn: number[] }|null} hardDependency null when the bullet is absent
+ * @property {{ present: true, dependsOn: number[] }|null} softDependency null when the bullet is absent
  */
 
 /**
@@ -51,8 +52,12 @@ const ISSUE_HEADING = /^(?:✅ )?\[#(\d+)\] (.*)$/;
 const SCORES = /\*\*Impact (\d+) \/ Risk (\d+) \/ Priority (\d+)\.\*\*/;
 const RELEASE_LINE = /^Release: (.*)$/gm;
 const HARD_DEPENDENCY = /^- \*\*Hard dependency:\*\* (.*)$/m;
+const SOFT_DEPENDENCY = /^- \*\*Soft dependency:\*\* (.*)$/m;
 /** Every step field holding a dependency claim, each resolved from ordinals alike. */
-const DEPENDENCY_FIELDS = /** @type {const} */ (["hardDependency"]);
+const DEPENDENCY_FIELDS = /** @type {const} */ ([
+  "hardDependency",
+  "softDependency",
+]);
 const MERMAID_FENCE = /```mermaid\n([\s\S]*?)```/;
 const LABELLED_NODE = /\b(S\w+)\["([^"]*)"\]/g;
 const EDGE = /\b(S\w+)(?:\["[^"]*"\])?\s*(-->|-\.[^>]*?->)\s*(S\w+)/g;
@@ -159,7 +164,6 @@ function parseStep(block) {
 
   const body = rest.join("\n");
   const scores = SCORES.exec(body);
-  const dependency = HARD_DEPENDENCY.exec(body);
 
   return {
     ...identity,
@@ -174,11 +178,21 @@ function parseStep(block) {
     releaseTags: [...body.matchAll(RELEASE_LINE)].map((match) =>
       match[1].trim(),
     ),
-    hardDependency:
-      dependency === null
-        ? null
-        : { present: true, dependsOn: parseStepReferenceRun(dependency[1]) },
+    hardDependency: parseDependencyClaim(HARD_DEPENDENCY, body),
+    softDependency: parseDependencyClaim(SOFT_DEPENDENCY, body),
   };
+}
+
+/**
+ * @param {RegExp} bulletPattern
+ * @param {string} body
+ * @returns {{ present: true, dependsOn: import("./step-references.mjs").StepReference[] }|null}
+ */
+function parseDependencyClaim(bulletPattern, body) {
+  const bullet = bulletPattern.exec(body);
+  return bullet === null
+    ? null
+    : { present: true, dependsOn: parseStepReferenceRun(bullet[1]) };
 }
 
 /**
