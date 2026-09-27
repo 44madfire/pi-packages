@@ -51,6 +51,8 @@ const ISSUE_HEADING = /^(?:✅ )?\[#(\d+)\] (.*)$/;
 const SCORES = /\*\*Impact (\d+) \/ Risk (\d+) \/ Priority (\d+)\.\*\*/;
 const RELEASE_LINE = /^Release: (.*)$/gm;
 const HARD_DEPENDENCY = /^- \*\*Hard dependency:\*\* (.*)$/m;
+/** Every step field holding a dependency claim, each resolved from ordinals alike. */
+const DEPENDENCY_FIELDS = /** @type {const} */ (["hardDependency"]);
 const MERMAID_FENCE = /```mermaid\n([\s\S]*?)```/;
 const LABELLED_NODE = /\b(S\w+)\["([^"]*)"\]/g;
 const EDGE = /\b(S\w+)(?:\["[^"]*"\])?\s*(-->|-\.[^>]*?->)\s*(S\w+)/g;
@@ -131,17 +133,19 @@ function parseSteps(stepsBody) {
       ? reference.n
       : (issueByOrdinal.get(reference.n) ?? reference.n);
 
-  return steps.map((step) =>
-    step.hardDependency === null
-      ? step
-      : {
-          ...step,
-          hardDependency: {
-            present: true,
-            dependsOn: step.hardDependency.dependsOn.map(resolve),
-          },
-        },
-  );
+  return steps.map((step) => {
+    const resolved = { ...step };
+    for (const field of DEPENDENCY_FIELDS) {
+      const claim = step[field];
+      if (claim !== null) {
+        resolved[field] = {
+          present: true,
+          dependsOn: claim.dependsOn.map(resolve),
+        };
+      }
+    }
+    return resolved;
+  });
 }
 
 /**
