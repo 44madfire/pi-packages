@@ -79,8 +79,82 @@ function hoistStatement(
     source,
   );
   if (!tail.joined) return redirected;
-  return join(redirected, tail.joined.operator, tail.joined.statement, source);
+  return join(
+    redirected,
+    tail.joined.operator,
+    withTrailingRedirectsOutermost(tail.joined.statement, source),
+    source,
+  );
 }
+
+/**
+ * `statement` with a redirect written at its end hung off all of it, as the
+ * grammar hangs it when the same text is not a heredoc's tail.
+ *
+ * At the top level `a | b | c > o` parses as `(a | b | c) > o`, but in a
+ * heredoc's tail the grammar parses it as `a | ((b | c) > o)`. Left that way,
+ * the joined write would not reach the heredoc's own command, so
+ * `xargs grep foo <<EOF && a | b | c > o` would keep a floor exemption that
+ * `xargs grep foo < in && a | b | c > o` withholds.
+ */
+function withTrailingRedirectsOutermost(
+  statement: TSNode,
+  source: Source,
+): TSNode {
+  if (statement.type === "redirected_statement") return statement;
+  const detached = detachTrailingRedirects(statement, source);
+  if (!detached) return statement;
+  return rewrittenNode(
+    { type: "redirected_statement", isNamed: true },
+    [detached.body, ...detached.redirects],
+    statement.startIndex,
+    statement.endIndex,
+    source,
+  );
+}
+
+/**
+ * `node` without the `redirected_statement` that ends it, plus that
+ * statement's redirects, or `undefined` when `node` does not end in one.
+ *
+ * The walk follows the last element of each `list` and `pipeline`, and a
+ * pipeline left holding a pipeline is flattened into one, as the grammar
+ * parses `a | b | c`.
+ */
+function detachTrailingRedirects(
+  node: TSNode,
+  source: Source,
+): { body: TSNode; redirects: TSNode[] } | undefined {
+  const children = childrenOf(node);
+  if (node.type === "redirected_statement") {
+    const bodyIndex = children.findIndex((child) => child.isNamed);
+    return {
+      body: children[bodyIndex],
+      redirects: children.slice(bodyIndex + 1),
+    };
+  }
+  if (!GROUPING_TYPES.has(node.type)) return undefined;
+  const lastIndex = children.findLastIndex((child) => child.isNamed);
+  const inner = detachTrailingRedirects(children[lastIndex], source);
+  if (!inner) return undefined;
+  const replaced =
+    node.type === "pipeline" && inner.body.type === "pipeline"
+      ? [...children.slice(0, lastIndex), ...childrenOf(inner.body)]
+      : children.with(lastIndex, inner.body);
+  return {
+    body: rewrittenNode(
+      node,
+      replaced,
+      node.startIndex,
+      inner.body.endIndex,
+      source,
+    ),
+    redirects: inner.redirects,
+  };
+}
+
+/** The groupings whose last element a trailing redirect is written after. */
+const GROUPING_TYPES: ReadonlySet<string> = new Set(["list", "pipeline"]);
 
 /** What a heredoc carries after its delimiter, split by where each part goes. */
 interface HeredocTail {
@@ -101,7 +175,9 @@ interface HeredocTail {
  *
  * The grammar spells a `| …` tail as one `pipeline` child holding the operator
  * and the statement, and an `&& …` / `|| …` tail as the operator token and the
- * statement as two children of the heredoc itself.
+ * statement as two children of the heredoc itself. That statement can be a
+ * pipeline too (`cat <<EOF && ls | rm x`), so a `pipeline` child is the `| …`
+ * form only when no operator came before it.
  */
 function tailOf(heredoc: TSNode): HeredocTail | undefined {
   const kept: TSNode[] = [];
@@ -111,7 +187,7 @@ function tailOf(heredoc: TSNode): HeredocTail | undefined {
   for (const child of childrenOf(heredoc)) {
     if (TAIL_REDIRECT_TYPES.has(child.type)) {
       redirects.push(child);
-    } else if (child.type === "pipeline") {
+    } else if (child.type === "pipeline" && !operator) {
       const [pipe] = childrenOf(child);
       operator = pipe;
       statement = childrenOf(child).find((node) => node.isNamed);
@@ -146,10 +222,12 @@ const PIPE_OPERATORS: ReadonlySet<string> = new Set(["|", "|&"]);
  * groups `cat < in <operator> <statement>`.
  *
  * The grammar hangs a redirect off everything before it, so a joined
- * `redirected_statement` keeps its redirects outermost. A `list` is
- * left-associative and binds looser than a pipe, so the join reaches its first
- * element. A pipe tail onto a pipeline extends that pipeline. Anything else
- * becomes the operator's own two-element node.
+ * `redirected_statement` keeps its redirects outermost. That holds inside a
+ * pipeline too: `cat < in && a > o | b` parses as `(cat < in && a > o) | b`,
+ * so a pipeline whose first stage is redirected is joined at that stage. A
+ * `list` is left-associative and binds looser than a pipe, so the join reaches
+ * its first element. A pipe tail onto any other pipeline extends it. Anything
+ * else becomes the operator's own two-element node.
  *
  * Each rebuilt node spans from `redirected`'s start to the furthest end beneath
  * it, which is the heredoc's, since its body is written after the tail.
@@ -166,8 +244,8 @@ function join(
   const rebuild = (type: Pick<TSNode, "type" | "isNamed">, kids: TSNode[]) =>
     rewrittenNode(type, kids, redirected.startIndex, end, source);
 
-  if (statement.type === "redirected_statement" || statement.type === "list") {
-    const first = children.findIndex((child) => child.isNamed);
+  const first = children.findIndex((child) => child.isNamed);
+  if (joinsAtFirstElement(statement, children[first])) {
     return rebuild(
       statement,
       children.with(first, join(redirected, operator, children[first], source)),
@@ -181,4 +259,19 @@ function join(
     operator,
     statement,
   ]);
+}
+
+/**
+ * Whether the grammar joins what precedes `statement` to its first element
+ * rather than to `statement` as a whole.
+ */
+function joinsAtFirstElement(
+  statement: TSNode,
+  first: TSNode | undefined,
+): boolean {
+  if (statement.type === "redirected_statement") return true;
+  if (statement.type === "list") return true;
+  return (
+    statement.type === "pipeline" && first?.type === "redirected_statement"
+  );
 }

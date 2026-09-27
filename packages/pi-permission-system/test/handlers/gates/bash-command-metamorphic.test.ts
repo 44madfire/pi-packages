@@ -213,6 +213,18 @@ describe("bash command gate — a redirect's position does not weaken", () => {
       label: "as a heredoc after the head word of a list's last command",
       place: (h, r) => `cd a && ${h} <<EOF ${r}\nbody\nEOF`,
     },
+    {
+      label: "as a heredoc piped into the command",
+      place: (h, r) => `cat <<EOF | ${h} ${r}\nbody\nEOF`,
+    },
+    {
+      label: "as a heredoc joined to the command by &&",
+      place: (h, r) => `cat <<EOF && ${h} ${r}\nbody\nEOF`,
+    },
+    {
+      label: "as a heredoc writing a file before the command",
+      place: (h, r) => `cat <<EOF > /tmp/o && ${h} ${r}\nbody\nEOF`,
+    },
   ];
 
   const cases: {

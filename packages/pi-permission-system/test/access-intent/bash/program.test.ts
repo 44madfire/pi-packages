@@ -513,6 +513,36 @@ describe("BashProgram", () => {
       ).toContain("/etc/hosts");
     });
 
+    describe("the rest of a heredoc's line", () => {
+      it("projects a tail redirect's target with its operator's effect", async () => {
+        const program = await BashProgram.parse(
+          "cat <<EOF > /tmp/o\nb\nEOF",
+          normalizer,
+        );
+        expect(
+          program
+            .externalAccesses()
+            .map(({ path, effect }) => ({ path: path.value(), effect })),
+        ).toEqual([
+          { path: "/tmp/o", effect: { effect: "write", source: "syntax" } },
+        ]);
+      });
+
+      it("folds a current-shell cd in a list after a piped tail", async () => {
+        // The grammar nests `true && cd /outside && …` inside the pipe; bash
+        // runs the `cd` in the current shell, as the `< in` spelling groups it.
+        const program = await BashProgram.parse(
+          "cat <<EOF | true && cd /outside && cat ../secret\nb\nEOF",
+          normalizer,
+        );
+        // Unfolded, `../secret` would resolve against the cwd instead:
+        // `/projects/secret`.
+        expect(
+          program.externalAccesses().map(({ path }) => path.value()),
+        ).toEqual(["/outside", "/secret"]);
+      });
+    });
+
     describe("the words after a heredoc", () => {
       it("projects a word as the command's own operand", async () => {
         const program = await BashProgram.parse(
@@ -1452,6 +1482,124 @@ describe("BashProgram", () => {
             wrapperKind: "indirection",
             executedUnit: "rm -rf /",
           },
+        ]);
+      });
+    });
+
+    describe("the rest of a heredoc's line", () => {
+      it.each([
+        ["a piped command", "cat <<EOF | rm -rf /tmp/x"],
+        ["an `&&` command", "cat <<EOF && rm -rf /tmp/x"],
+      ])("enumerates %s as its own unit", async (_label, line) => {
+        const program = await BashProgram.parse(`${line}\nb\nEOF`, normalizer);
+        expect(program.commands()).toEqual([
+          { text: "cat" },
+          { text: "rm -rf /tmp/x" },
+        ]);
+      });
+
+      it("enumerates every stage of a pipeline joined by `&&`", async () => {
+        const program = await BashProgram.parse(
+          "cat <<EOF && ls | rm -rf /tmp/x\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          { text: "cat" },
+          { text: "ls" },
+          { text: "rm -rf /tmp/x" },
+        ]);
+      });
+
+      it("keeps the operand a heredoc absorbed while enumerating its tail", async () => {
+        // The first unit is the one this repo's project deny rule is spelled
+        // against (#941); the tail adds a unit without touching it.
+        const program = await BashProgram.parse(
+          "git commit -q -F - <<'EOF' && git log --oneline -1\nfeat: x\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          { text: "git commit -q -F" },
+          { text: "git log --oneline -1" },
+        ]);
+      });
+
+      it("withholds the core-reader exemption when a tail redirect writes a file", async () => {
+        const program = await BashProgram.parse(
+          "xargs grep foo <<EOF > /tmp/o\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          {
+            text: "xargs grep foo",
+            wrapperKind: "indirection",
+            executedUnit: "grep foo",
+          },
+        ]);
+      });
+
+      it("withholds it when a later command's redirect hangs off the heredoc's list", async () => {
+        // The grammar groups `xargs grep foo < in && a > /tmp/o | b` as
+        // `(… && a > /tmp/o) | b`, charging the write to the whole list; the
+        // heredoc spelling is grouped the same way, so it is no looser.
+        const program = await BashProgram.parse(
+          "xargs grep foo <<EOF && a > /tmp/o | b\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          {
+            text: "xargs grep foo",
+            wrapperKind: "indirection",
+            executedUnit: "grep foo",
+          },
+          { text: "a" },
+          { text: "b" },
+        ]);
+      });
+
+      it("withholds it when a redirect ends a pipeline joined after the heredoc", async () => {
+        // The grammar parses the tail `a | b | c > /tmp/o` as
+        // `a | ((b | c) > /tmp/o)`, but the same text at the top level as
+        // `(… | c) > /tmp/o`, which charges the write to `xargs` too.
+        const program = await BashProgram.parse(
+          "xargs grep foo <<EOF && a | b | c > /tmp/o\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          {
+            text: "xargs grep foo",
+            wrapperKind: "indirection",
+            executedUnit: "grep foo",
+          },
+          { text: "a" },
+          { text: "b" },
+          { text: "c" },
+        ]);
+      });
+
+      it("keeps the core-reader exemption when a tail redirect duplicates a descriptor", async () => {
+        const program = await BashProgram.parse(
+          "xargs grep foo <<EOF >&2\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          {
+            text: "xargs grep foo",
+            wrapperKind: "indirection",
+            executedUnit: "grep foo",
+            floorExemption: "core-reader",
+          },
+        ]);
+      });
+
+      it("still enumerates a substitution in the heredoc's body", async () => {
+        const program = await BashProgram.parse(
+          "cat <<EOF | tail\n$(rm e)\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          { text: "cat" },
+          { text: "rm e", context: "command_substitution" },
+          { text: "tail" },
         ]);
       });
     });

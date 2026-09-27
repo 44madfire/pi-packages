@@ -100,12 +100,70 @@ describe("hoistHeredocTails", () => {
       ["a pipe into a pipeline", "cat <<EOF | a | b"],
       ["a pipe into a redirected list", "cat <<EOF | a && b > o"],
       ["an `&&` into a redirected command", "cat <<EOF && a > o"],
+      ["an `&&` into a pipeline", "cat <<EOF && b | c"],
+      ["an `||` into a pipeline", "cat <<EOF || b | c"],
+      [
+        "an `&&` into a pipeline whose first stage redirects",
+        "cat <<EOF && a > o | b",
+      ],
+      [
+        "a pipe into a pipeline whose first stage redirects",
+        "cat <<EOF | a > o | b",
+      ],
+      [
+        "an `&&` into a list whose last element is such a pipeline",
+        "cat <<EOF && x && a > o | b",
+      ],
+      [
+        "an `&&` into a list whose first element is such a pipeline",
+        "cat <<EOF && a > o | b && c",
+      ],
+      [
+        "an `&&` into a pipeline ending in a redirect",
+        "cat <<EOF && a | b | c > o",
+      ],
+      [
+        "a pipe into a pipeline ending in a redirect",
+        "cat <<EOF | a | b | c > o",
+      ],
+      [
+        "an `&&` into a pipeline ending in a subshell's redirect",
+        "cat <<EOF && a | b | (c) > o",
+      ],
+      [
+        "an `&&` into a pipeline ending in a redirect carrying a word",
+        "cat <<EOF && a | b | c 2>/dev/null y",
+      ],
       ["a list body", "x && cat <<EOF | rm y"],
       ["a compound body", "{ cat; } <<EOF | rm x"],
       ["a list body with a redirect", "cd a && cat <<EOF > /tmp/x"],
     ])("is reproduced for %s", async (_label, line) => {
       const { hoisted, oracle } = await shapeAndOracle(line);
       expect(hoisted).toBe(oracle);
+    });
+  });
+
+  describe("where the grammar groups the `< in` spelling unlike bash", () => {
+    // Each of these keeps bash's grouping, or charges a write to more units
+    // than the `< in` spelling does, so none is looser than it.
+    it("keeps a pipe tail's `&&` outside the pipeline", async () => {
+      // The grammar parses `cat < in | a | b && c` as `cat < in | (a | b && c)`.
+      await expect(
+        withHoisted(heredoc("cat <<EOF | a | b && c"), (root) => shape(root)),
+      ).resolves.toBe(
+        '(program (list (pipeline (redirected_statement (command (command_name "cat")) (heredoc_redirect "EOF" "b\\n" "EOF")) (command (command_name "a")) (command (command_name "b"))) (command (command_name "c"))))',
+      );
+    });
+
+    it("charges a mid-pipeline redirect to the heredoc's stage too", async () => {
+      // The grammar charges `> o` to `a | b` alone in `{ cat; } < in | a | b > o | c`.
+      await expect(
+        withHoisted(heredoc("{ cat; } <<EOF | a | b > o | c"), (root) =>
+          shape(root),
+        ),
+      ).resolves.toBe(
+        '(program (pipeline (redirected_statement (pipeline (redirected_statement (compound_statement (command (command_name "cat"))) (heredoc_redirect "EOF" "b\\n" "EOF")) (command (command_name "a")) (command (command_name "b"))) (file_redirect "o")) (command (command_name "c"))))',
+      );
     });
   });
 
@@ -145,6 +203,9 @@ describe("hoistHeredocTails", () => {
       heredoc("cat <<EOF > a && rm x"),
       heredoc("cat <<EOF | rm -rf /tmp/x"),
       heredoc("cat <<EOF | a && b > o"),
+      heredoc("cat <<EOF && b | c"),
+      heredoc("cat <<EOF && a > o | b"),
+      heredoc("cat <<EOF && x && a | b | c > o"),
       heredoc("x && cat <<EOF | rm y"),
       heredoc("cat <<EOF 2>/dev/null arg"),
       "echo é $(cat <<EOF | sh\nb\nEOF\n)",
