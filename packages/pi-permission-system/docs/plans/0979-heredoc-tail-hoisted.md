@@ -36,6 +36,8 @@ This is [#977]'s cause in a second grammar production: the grammar hangs command
   `cat <<EOF ; rm x`, `cat <<EOF & rm x`, `cat <<EOF arg > o`, `cat <<EOF > o | wc`, `0<<EOF`, and the [#875] form `cat <<'MSG' 2>&1 | tail -4` all carry an `ERROR`, so their units are already floored to `ask` (ADR 0013 §10) and the salvage handles what it can.
   The correction leaves an erroring statement exactly as the grammar produced it, as [#977]'s does.
   Upstream tracks the last form as tree-sitter/tree-sitter-bash#350 (open).
+  `bash -n` accepts every one of these forms, and the `;`, `&`, words-plus-redirect, and `0<<` forms still hide a `deny` on the command after the heredoc; that is filed as [#985], the Phase 15 step after this one.
+  Refusing a command bash itself rejects back to the agent, instead of asking the operator, is filed as [#986] (out of scope for the roadmap).
 - **Bash-exact grouping of a rejoined tail.**
   The grammar hangs a redirect on a whole list (`cat < in && a > o` parses as `redirected_statement(list(…), > o)`, tree-sitter/tree-sitter-bash#345), and the corrected heredoc form reproduces that grouping rather than improving on it (operator decision).
   The cost is the existing fail-closed over-attribution ([#803]): the write is also charged to the heredoc's own command.
@@ -423,3 +425,5 @@ The quantitative invariant is measured at step 5: over the review-log corpus, ex
 [#941]: https://github.com/gotgenes/pi-packages/issues/941
 [#977]: https://github.com/gotgenes/pi-packages/issues/977
 [#978]: https://github.com/gotgenes/pi-packages/issues/978
+[#985]: https://github.com/gotgenes/pi-packages/issues/985
+[#986]: https://github.com/gotgenes/pi-packages/issues/986
