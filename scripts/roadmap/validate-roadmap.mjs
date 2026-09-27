@@ -47,6 +47,15 @@ const HARD = {
   claimNoun: "hard dependency",
 };
 
+/** @type {DependencyRelation} */
+const SOFT = {
+  edgeKind: "soft",
+  claimOf: (step) => step.softDependency,
+  edgeNoun: "soft edge",
+  bullet: "**Soft dependency:**",
+  claimNoun: "soft dependency",
+};
+
 /**
  * @param {import("./parse-roadmap.mjs").Roadmap} roadmap
  * @returns {Finding[]}
@@ -59,6 +68,7 @@ export function validateRoadmap(roadmap) {
       ...checkStepBatchResolves(step, roadmap),
       ...checkStepHasNode(step, roadmap),
       ...checkDependencyClaim(step, roadmap, HARD),
+      ...checkDependencyClaim(step, roadmap, SOFT),
       ...checkStepIsNamedInProse(step, roadmap),
     ]),
     ...checkBatchTails(roadmap),
