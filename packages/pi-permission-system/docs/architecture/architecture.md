@@ -1277,6 +1277,11 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
 - [#979] — filed by [#977]'s planning; **becomes a new step in this phase, directly after [#977]** (operator decision, 2026-09-25).
   A `heredoc_redirect` hosts the rest of its command line (a `| …`/`&& …` statement, argument words, further redirects), and the walkers read it only for substitutions, so `cat <<EOF | rm -rf /tmp/x` enumerates as `cat` and `cat <<EOF > /tmp/o` projects no path — measured through the real `resolveBashCommandCheck`.
   It is [#977]'s cause in a second grammar production, and it extends the parser-boundary correction [#977] lands rather than adding a walker branch.
+- [#985] — filed by [#979]'s planning; **becomes a new step in this phase, directly after [#979]** (operator decision, 2026-09-27).
+  A heredoc tail the grammar cannot parse (`cat <<EOF ; rm -rf x`, `&`, words plus a redirect, a descriptor-prefixed `0<<`) is valid bash (`bash -n` exits 0), but the statement errs, so its units floor to `ask` and a `rm *` deny on the command after the heredoc never fires, measured through the real `resolveBashCommandCheck`.
+  It is [#979]'s cause where the grammar gives up instead of mis-hanging, and a recovered tree would pass through [#979]'s correction like any other.
+- [#986] — filed by [#979]'s planning; out of scope for the roadmap.
+  It turns the parse-failure floor into a refusal to the agent when `bash -n` also rejects the command, a UX feature beside [#976].
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1463,13 +1468,28 @@ A command, argument, or redirect written after `<<EOF` therefore reaches no bash
 
 Release: independent
 
+#### [#985] A heredoc tail the grammar cannot parse still reaches the rules
+
+**Cause:** `tree-sitter-bash` 0.25.1's `heredoc_redirect` offers one tail form per heredoc, so valid bash such as `cat <<EOF ; rm -rf x` or `cat <<EOF arg > /tmp/o` yields an `ERROR`, and the [#875] salvage recovers the piped command only when a redirect sits between the heredoc and the pipe.
+Every unit under the statement is floored to `ask`, so an explicit `deny` on the command after the heredoc never fires, and approving the prompt runs it.
+
+- **Smell:** Category C (the tail's role is lost at parse, here because the parse fails rather than mis-hangs).
+- **Target:** decided by the plan; the likely seam is the [#875] salvage re-parsing what follows the heredoc start on its line, keeping the salvage's rule that a re-parse which still errs is dropped.
+- **Soft dependency:** [#979], whose heredoc-tail correction a recovered tree would pass through like any other.
+- **Constraint:** the floor stays for whatever remains unresolved; recovery may only add units.
+- **Outcome:** `cat <<EOF ; rm -rf x` is denied by `rm *`; `cat <<EOF arg > /tmp/o` projects `/tmp/o` as a `write`.
+- **Commit type:** `fix:`.
+- **Impact 2 / Risk 2 / Priority 8.**
+
+Release: independent
+
 #### [#978] The bash-path facade nobody calls
 
 **Cause:** `extractExternalPathsFromBashCommand` (`src/handlers/gates/bash-path-extractor.ts`) has no production caller (both bash path gates read `BashProgram` directly), so its 1300-line test file re-tests `BashProgram` through a seam nothing uses; that file is the concentrated test-design cluster the craftsmanship scout found.
 
 - **Smell:** Category A (dead code kept alive by its own tests) over Category G (a test file at the wrong layer).
 - **Target:** retire the facade and its test file after moving any case with no equivalent in `program.test.ts` or `token-collection.test.ts`, or keep it as a documented seam and narrow the test to the facade's own mapping; the plan decides.
-- **Soft dependency:** [#979], which lands directly after [#977], the step this one was placed after.
+- **Soft dependency:** [#985], which lands directly after [#979], the step this one now follows.
 - **Outcome:** no test file re-tests `BashProgram` through an unused facade; the `bash-path-extractor.ts` module-tree entry matches the decision.
 - **Commit type:** `test:`/`refactor:` (no release).
 
@@ -1579,7 +1599,8 @@ flowchart TD
     S609 -.soft.-> S881
     S609 -.soft.-> S977["✅ #977<br/>Arguments after a redirect"]
     S977 -.soft.-> S979["#979<br/>A heredoc's tail"]
-    S979 -.soft.-> S978["#978<br/>The facade nobody calls"]
+    S979 -.soft.-> S985["#985<br/>A tail the grammar cannot parse"]
+    S985 -.soft.-> S978["#978<br/>The facade nobody calls"]
     S881 -.soft.-> S882["#882<br/>May a link dismiss a nonexistent-path ask?"]
 ```
 
@@ -1594,7 +1615,7 @@ The diagram is laid out by dependency instead, so its shape and the working sequ
 
 ### Parallel tracks
 
-- **Track A — role-carrying projection:** [#945] → [#863] → [#859] → [#957] → [#609] → [#977] → [#979] → [#978].
+- **Track A — role-carrying projection:** [#945] → [#863] → [#859] → [#957] → [#609] → [#977] → [#979] → [#985] → [#978].
   [#977] also re-enters `command-enumeration.ts` and the argument words `command-effects.ts`'s guards read, which Track B's [#924] and [#880] edit — sequence it against whichever of them is in flight rather than concurrently.
   Owns `src/access-intent/bash/token-collection.ts`, `token-classification.ts`, `bash-path-resolver.ts`, and the bash-path tests.
 - **Track B — proven and declared effects, and blame:** [#924] → [#963] → [#880] → [#881].
@@ -1608,7 +1629,7 @@ The sandbox seam that Phase 15 briefly carried as a fourth track is now Phase 16
 
 - **Batch "declared-effects":** [#880], [#881] (ship together; tail = [#881]; release vehicle = [#880]'s `feat:` with [#881]'s `fix:` riding the same release).
   They ship together because [#881]'s blame line names the config key [#880] creates, and a prompt telling the user to declare an effect they cannot declare is worse than the prompt it replaces.
-- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#978] (no release), [#924] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
+- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
 
 ## Refactoring history
 
@@ -1755,5 +1776,7 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#977]: https://github.com/gotgenes/pi-packages/issues/977
 [#978]: https://github.com/gotgenes/pi-packages/issues/978
 [#979]: https://github.com/gotgenes/pi-packages/issues/979
+[#985]: https://github.com/gotgenes/pi-packages/issues/985
+[#986]: https://github.com/gotgenes/pi-packages/issues/986
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
