@@ -11,7 +11,7 @@ issue_title: "pi-permission-system: a heredoc hosts the rest of its command line
 
 Planned #979 as a second parser-boundary pass beside #977's: `hoistHeredocTails` (new `heredoc-tails.ts`) moves a heredoc's redirect tail and `|`/`&&` tail out of the `heredoc_redirect`, and `reattachRedirectArguments` learns that a heredoc can carry words, exactly as a `file_redirect` can.
 The six-step plan (`docs/plans/0979-heredoc-tail-hoisted.md`) leads with extracting the view primitives into `parse-view.ts` and the parse-tree test helpers into `test/helpers/bash-parse-tree.ts`.
-No follow-up issues were filed.
+After the plan, the operator asked what relief an unparseable command could get, which filed #985 (a new Phase 15 step after #979) and #986 (out of scope for the roadmap).
 
 ### Observations
 
@@ -30,3 +30,8 @@ No follow-up issues were filed.
 - **Session friction:** probes run with `bash -c` and a `cd /Users` prefix triggered permission prompts the operator had to approve, which the agent could not see.
   A probe of real bash semantics can run as a script file under the repo instead.
   The disposable spike files (`.spike979*.mjs`, `test/spike/`) were deleted before handoff.
+- **An unparseable heredoc tail is not invalid bash.**
+  `bash -n` (5.3.20) exits 0 on `cat <<EOF ; rm x`, `&`, words plus a redirect, `0<<EOF |`, `2>&1 | tail`, and `> o | wc`, all of which `tree-sitter-bash` errs on.
+  Only the backtick case (``grep -c "`" notes.md``) and `{ …; } <<EOF b` are rejected, and the latter parses cleanly in tree-sitter and is allowed.
+  So the floor is right for the heredoc forms, and it fails open there: under `rm *: deny`, the first four forms ask instead of deny, while the salvage already recovers `rm` in the last two.
+  Filed as #985; the bash-rejects relief is #986, beside #976.
