@@ -193,7 +193,7 @@ The comment should include:
   A SHA quoted from the plan or a stage note was written before a rebase, so `git rev-parse` resolves it while it is unreachable — substitute the landed SHA (Refs #814).
   Write them as plain text — no backticks — so GitHub auto-links them to the commits (Refs #733).
 - A short bullet list of feature/breaking commits.
-- One sentence on user-visible behavior change.
+- One sentence on user-visible behavior change, worded from the feat/fix commit bodies and the TDD stage note — name the entry point as the code spells it (grep it), never from memory (Refs #902).
 - A note flagging any breaking change (matches `feat!:` commits).
 - If the change unblocks or partially addresses other issues, mention them.
 - Credit by `@login` any third party whose comment supplied the shipped design or measured the defect — read `gh issue view $1 --json comments` first; the commits carry a `Co-authored-by:` only if planning recorded one (Refs #962).

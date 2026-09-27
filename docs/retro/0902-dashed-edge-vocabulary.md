@@ -59,3 +59,55 @@ The plan's `**Release:**` marker is `ship independently`, but nothing under `pac
 
 No deferred work beyond what the TDD stage note already lists (chained-link/`&` fan-out parsing, out of scope by design).
 Five warnings on Phase 15's landed steps are expected to persist until that phase archives.
+
+## Stage: Final Retrospective (2026-09-27T16:31:08Z)
+
+### Session summary
+
+The peer session planned and implemented the two-kind edge vocabulary (`-->` hard, `-.soft.->` soft) across `scripts/roadmap/`, the Phase 15 diagram, and the `improvement-discovery` skill in eight commits; the root session fast-forward-merged, passed CI, closed the issue, and tore down the worktree.
+Nothing released: the only `packages/` file in range is an architecture doc outside release scope, which `next-version.sh` confirmed.
+The one defect of the issue is in the published close comment, not the code.
+
+### Observations
+
+#### What went well
+
+- The plan's per-step predicted checker-output table held exactly at every step (3E/2W, 14E/2W, 3E/6W), turning `./scripts/roadmap-check.mjs` into a live acceptance test for each TDD step rather than a final check.
+- Planning ran the candidate `EDGE` regex over every roadmap diagram in the repo (`/tmp/spike902b.mjs`, turns 36–37) and found a fourth spelling the issue never listed: the pipe-labelled edge the old parser silently dropped.
+  Organic corpus data beat the issue's enumeration.
+- Every TDD step ran a killing mutation, and the extra reds were read as discriminating rather than dismissed as noise.
+
+#### What caused friction (agent side)
+
+1. `instruction-violation` (self-identified at retro) — the ship session announced "Loading required skills: `git-workflow`, `releasing`, `github-voice`, `worktrees`" but read only `git-workflow` and `worktrees`.
+   `github-voice` carries "back every claim" and "never present speculation as fact", the two rules the close comment then broke.
+   Impact: enabled friction point 2.
+2. `missing-context` (self-identified at retro) — the close comment on #902 published two false behavior claims.
+   It said "`pnpm fallow` roadmap validation now flags…", but the checker is `./scripts/roadmap-check.mjs`, run by `/plan-improvements` and `/finish-phase` and wired into neither `package.json` nor CI.
+   It said drifted edges were previously "silently parsed as a hard dependency", but a bare `-.->` parsed as soft and a pipe-labelled edge was dropped.
+   The step 9 check re-resolved every SHA and verified nothing else in the draft; the TDD stage note and the feat commit subjects held the correct wording.
+   Impact: a wrong public record on the issue until corrected.
+3. `other` (zsh glob) — the peer planning session hit `no matches found` three times (`docs/*.md` twice, `docs/retro/*902*` once), each time with a `2>/dev/null` that cannot suppress a zsh glob abort.
+   Retro #938 recorded the same form and deliberately left the rule unmechanized.
+   Impact: three retried calls, no rework.
+4. `instruction-violation` (self-identified mid-session) — TDD step 4 committed with `git commit -q -F - <<'MSG'`.
+   The `git commit -F` deny rule did not fire: the matcher is anchored (`^…$`), and the parsed command text for this spelling is `git commit -q -F`, which the exact pattern does not match.
+   No approval prompt fired either, so the harm the rule guards against did not occur.
+   Impact: none.
+5. `other` — the plan draft failed `rumdl` twice (backslash-escaped backticks inside a code span, an unused `[#859]` definition).
+   Impact: two extra calls, no rework.
+
+#### What caused friction (user side)
+
+- None observed; the planning gate's single `ask_user` settled vocabulary, check direction, and bullet scope in one pass because the message ahead of it carried a measured warning-count table per option.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5`; sync and ship on `claude-sonnet-5`; both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) on `claude-sonnet-5` per their transcripts.
+  The one defect landed in the Sonnet ship session, in the only judgment-heavy step it owns (drafting the behavior sentence); the mechanical steps were clean.
+- **Feedback-loop gap analysis** — TDD ran the scoped Vitest suite after every edit and `./scripts/roadmap-check.mjs` after every behavior step; no gap.
+
+### Changes made
+
+1. Corrected the behavior sentence of the #902 close comment (comment `5851613557`) to name `./scripts/roadmap-check.mjs` and the true prior behavior (bare `-.->` parsed as soft, pipe-labelled edges dropped).
+2. `.pi/prompts/ship.md` step 9: the behavior-sentence bullet now requires wording from the feat/fix commit bodies and the TDD stage note, with the entry point named as the code spells it.
