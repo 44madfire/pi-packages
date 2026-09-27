@@ -1,16 +1,28 @@
 ---
 status: accepted
 date: 2026-07-24
-amended: 2026-09-25
+amended: 2026-09-27
 ---
 
 # 0009 — The bash path projection is a completeness contract, not a best-effort heuristic
 
 ## Status
 
-Accepted, as amended 2026-09-25.
+Accepted, as amended 2026-09-27.
 This decision states the contract the bash path projection upholds, and settles how a "the gate missed my path" report is triaged.
 It is the framing for [#645], which closes two gaps the contract names as in-scope; it composes with `docs/decisions/0003-git-bash-posix-path-semantics.md` (win32 token shapes) and `docs/decisions/0007-model-judge-authorizer-chain-adr.md` (the judge that absorbs false positives).
+
+### Amendment, 2026-09-27 — the rest of a heredoc's line is projected where its `< in` spelling is
+
+The 2026-09-25 amendment below left a heredoc's own tail uncovered.
+`tree-sitter-bash` 0.25.1 parses what follows `<<EOF` on the same line (argument words, redirects, a `| …` or `&& …` statement) as children of the heredoc, which every walker read only for its substitutions, so `cat <<EOF > /tmp/o` projected no path and `cat <<EOF ~/x/in` no operand ([#979]).
+The parser now moves the tail before any walker reads the tree: a redirect becomes a sibling after the heredoc, collected with its operator's effect, a word is handed to the command as an operand under the command's own proof, and a statement is joined as the grammar joins it to the same line spelled with `< in`.
+Where that grouping is not bash's, the heredoc form either matches it or keeps bash's grouping, and it never charges a write to fewer units than the `< in` spelling does.
+`/tmp/o` above is a `write (syntax)` target and `~/x/in` is `cat`'s `read (core)`.
+A tail the grammar cannot parse (`cat <<EOF ; rm x`) stays unresolved and floored ([#985]).
+
+This amendment adds candidates and drops none.
+Measured over 8996 distinct commands of a real review log, 2 gain a `write (syntax)` token; three more heredoc writes name a file a later command on the line already projects as `unproven`, so their projection is unchanged.
 
 ### Amendment, 2026-09-25 — the words after a redirect are the command's operands
 
@@ -23,7 +35,7 @@ A statement whose parse failed is left as the grammar produced it, so an unresol
 
 This amendment adds no candidate and drops none; it moves an attribution from the operator's proof to the command's.
 Measured over 8891 distinct commands of a real review log, exactly 4 change, each only by the words it reattaches.
-A heredoc's own tail (`cat <<EOF > /tmp/o`) is a different grammar production and is not covered ([#979]).
+A heredoc's own tail (`cat <<EOF > /tmp/o`) is a different grammar production, covered by the 2026-09-27 amendment above.
 
 ### Amendment, 2026-09-24 — a redirect's target is projected by its role
 
@@ -416,3 +428,4 @@ Cost is ~0.04 ms p95 per command, ~19% of the already-paid tree-sitter parse.
 [#814]: https://github.com/gotgenes/pi-packages/issues/814
 [#977]: https://github.com/gotgenes/pi-packages/issues/977
 [#979]: https://github.com/gotgenes/pi-packages/issues/979
+[#985]: https://github.com/gotgenes/pi-packages/issues/985
