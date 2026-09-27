@@ -27,6 +27,27 @@ const BATCH_BULLET = /\*\*Batch "([^"]+)":?\*\*([^\n]*)/g;
 const BATCH_TAIL = /tail = (?:Step )?\[?#?(\d+)\]?/;
 
 /**
+ * A dependency relation the diagram draws and a step bullet explains: which
+ * edges carry it, which step field claims it, and the words its findings use.
+ *
+ * @typedef {object} DependencyRelation
+ * @property {import("./parse-roadmap.mjs").RoadmapEdge["kind"]} edgeKind
+ * @property {(step: import("./parse-roadmap.mjs").RoadmapStep) => { dependsOn: number[] }|null} claimOf
+ * @property {string} edgeNoun
+ * @property {string} bullet
+ * @property {string} claimNoun
+ */
+
+/** @type {DependencyRelation} */
+const HARD = {
+  edgeKind: "hard",
+  claimOf: (step) => step.hardDependency,
+  edgeNoun: "solid edge",
+  bullet: "**Hard dependency:**",
+  claimNoun: "hard dependency",
+};
+
+/**
  * @param {import("./parse-roadmap.mjs").Roadmap} roadmap
  * @returns {Finding[]}
  */
@@ -37,7 +58,7 @@ export function validateRoadmap(roadmap) {
       ...checkReleaseTag(step),
       ...checkStepBatchResolves(step, roadmap),
       ...checkStepHasNode(step, roadmap),
-      ...checkDependencyClaim(step, roadmap),
+      ...checkDependencyClaim(step, roadmap, HARD),
       ...checkStepIsNamedInProse(step, roadmap),
     ]),
     ...checkBatchTails(roadmap),
@@ -239,32 +260,37 @@ function checkAcyclic(roadmap) {
  *
  * @param {import("./parse-roadmap.mjs").RoadmapStep} step
  * @param {import("./parse-roadmap.mjs").Roadmap} roadmap
+ * @param {DependencyRelation} relation
  * @returns {Finding[]}
  */
-function checkDependencyClaim(step, roadmap) {
+function checkDependencyClaim(step, roadmap, relation) {
+  const { edgeNoun, bullet, claimNoun } = relation;
   const drawn = new Set(
-    hardEdges(roadmap)
-      .filter((edge) => edge.to === step.issue)
+    roadmap.edges
+      .filter(
+        (edge) => edge.kind === relation.edgeKind && edge.to === step.issue,
+      )
       .map((edge) => edge.from),
   );
 
-  if (step.hardDependency === null) {
+  const claim = relation.claimOf(step);
+  if (claim === null) {
     return [...drawn].map((from) =>
       warning(
         step,
-        `has a solid edge from #${from} but declares no **Hard dependency:** bullet`,
+        `has a ${edgeNoun} from #${from} but declares no ${bullet} bullet`,
       ),
     );
   }
 
-  const declared = new Set(step.hardDependency.dependsOn);
+  const declared = new Set(claim.dependsOn);
   return [
     ...[...declared]
       .filter((from) => !drawn.has(from))
       .map((from) =>
         warning(
           step,
-          `declares a hard dependency on #${from} with no solid edge in the diagram`,
+          `declares a ${claimNoun} on #${from} with no ${edgeNoun} in the diagram`,
         ),
       ),
     ...[...drawn]
@@ -272,7 +298,7 @@ function checkDependencyClaim(step, roadmap) {
       .map((from) =>
         warning(
           step,
-          `has a solid edge from #${from} that its **Hard dependency:** bullet omits`,
+          `has a ${edgeNoun} from #${from} that its ${bullet} bullet omits`,
         ),
       ),
   ];
