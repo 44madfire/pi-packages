@@ -69,3 +69,22 @@ The `pi-permission-system` suite went from 4749 to 4832 tests (+83).
   - The metamorphic cases were added as placements in the existing redirect-position describe.
 - **Tooling friction:** a mutation batched in parallel with its restore `cp` never reached the tree; running each mutation in its own call fixed it.
 - Pre-completion reviewer: **PASS** (round 3), after two FAIL rounds, each fixed.
+
+## Stage: Sync (worktree) (2026-09-27T22:53:56Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint`, `pnpm fallow dead-code`) both pass on the branch as landed by the TDD stage; nothing further to fix before rebase.
+The plan's `**Release:** ship independently` marker holds.
+Follow-ups [#985] and [#986] are filed and dispositioned into Phase 15; neither is implemented here.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-979--/2026-09-27T00-27-18-176Z_01a0e042-531f-709b-80c4-174b997becd4.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The TDD stage's own retro entry already records the two pre-completion FAIL rounds and their fixes.
+
+The rebase onto `main` conflicted in `architecture.md`'s Phase 15 dependency diagram: #902 landed first and respelled every dashed edge `-.soft.->`, on the same lines this branch's roadmap disposition and docs commits edited (adding `S985`, then `✅` on `S979`).
+The first attempt was aborted and reported; the operator then approved resolving it by keeping #902's `-.soft.->` spelling with this branch's additions.
+Issue #902's checker also requires a `**Soft dependency:**` bullet for each soft edge, so #985's step gained one naming #979 and #978's bullet moved from #979 to #985, folded into the disposition commit.
+`scripts/roadmap-check.mjs` reports no finding this branch introduced; the #945, #977, and #978 findings predate it.
