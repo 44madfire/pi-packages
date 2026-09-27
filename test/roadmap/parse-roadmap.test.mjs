@@ -235,11 +235,58 @@ describe("parseRoadmap", () => {
       });
     });
 
-    it("classifies every dashed-edge spelling as soft", () => {
+    it("reads only the labelled `-.soft.->` spelling as a soft edge", () => {
       expect(roadmap.edges).toEqual([
         { from: 857, to: 878, kind: "hard" },
-        { from: 857, to: 878, kind: "soft" },
-        { from: 857, to: 878, kind: "soft" },
+        { from: 857, to: 878, kind: "unrecognized", spelling: "-.->" },
+        {
+          from: 857,
+          to: 878,
+          kind: "unrecognized",
+          spelling: "-.informs.->",
+        },
+      ]);
+    });
+  });
+
+  describe("diagram edge spellings", () => {
+    /** @param {string} link */
+    const edgesDrawnWith = (link) =>
+      parseRoadmap(`## Improvement roadmap — Phase 1: Example
+
+### Steps
+
+### Step dependency diagram
+
+\`\`\`mermaid
+flowchart TD
+    S1["#1<br/>One"] ${link} S2["#2<br/>Two"]
+\`\`\`
+`).edges;
+
+    it.each(["-->"])("reads %s as a hard edge", (link) => {
+      expect(edgesDrawnWith(link)).toEqual([{ from: 1, to: 2, kind: "hard" }]);
+    });
+
+    it.each(["-.soft.->", "-. soft .->"])("reads %s as a soft edge", (link) => {
+      expect(edgesDrawnWith(link)).toEqual([{ from: 1, to: 2, kind: "soft" }]);
+    });
+
+    it.each([
+      "-.->",
+      "-..->",
+      "-.informs.->",
+      "-. informs .->",
+      "-.->|soft|",
+      '-.->|"soft ordering — shared input-normalizer.ts churn"|',
+      "-->|blocks|",
+      "--->",
+      "==>",
+      "-- hard -->",
+      "== hard ==>",
+    ])("keeps %s as an unrecognized edge with its spelling", (link) => {
+      expect(edgesDrawnWith(link)).toEqual([
+        { from: 1, to: 2, kind: "unrecognized", spelling: link },
       ]);
     });
   });

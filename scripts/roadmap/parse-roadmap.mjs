@@ -25,10 +25,11 @@ import { parseStepReferenceRun } from "./step-references.mjs";
  */
 
 /**
- * @typedef {object} RoadmapEdge
- * @property {number} from
- * @property {number} to
- * @property {"hard"|"soft"} kind
+ * A diagram edge. The vocabulary has two kinds; any other link is kept, with
+ * its spelling, so the validator can report it rather than lose it.
+ *
+ * @typedef {{ from: number, to: number, kind: "hard"|"soft" }
+ *   | { from: number, to: number, kind: "unrecognized", spelling: string }} RoadmapEdge
  */
 
 /**
@@ -60,7 +61,14 @@ const DEPENDENCY_FIELDS = /** @type {const} */ ([
 ]);
 const MERMAID_FENCE = /```mermaid\n([\s\S]*?)```/;
 const LABELLED_NODE = /\b(S\w+)\["([^"]*)"\]/g;
-const EDGE = /\b(S\w+)(?:\["[^"]*"\])?\s*(-->|-\.[^>]*?->)\s*(S\w+)/g;
+// A Mermaid link: plain or thick arrows of any length (`-->`, `--->`, `==>`),
+// dotted arrows with or without inline text (`-.->`, `-.soft.->`), solid or
+// thick arrows with inline text (`-- x -->`, `== x ==>`), each optionally
+// followed by a `|label|`.
+const EDGE =
+  /\b(S\w+)(?:\["[^"]*"\])?\s*(-{2,}>|={2,}>|-\.+(?:[^>|\n]*?\.)?->|--[^>|\n]*?-->|==[^>|\n]*?==>)(\|[^|\n]*\|)?\s*(S\w+)/g;
+const HARD_LINK = "-->";
+const SOFT_LINK = /^-\.\s*soft\s*\.->$/;
 
 /**
  * Parse the live `## Improvement roadmap` section out of an architecture
@@ -217,7 +225,7 @@ function parseStepHeading(heading) {
 /**
  * The node ID spells the ordinal under one heading shape and the issue under
  * the other, so the issue is read from the label, which carries it either way.
- * A solid arrow is a hard dependency; every dashed spelling is soft.
+ * Only `-->` is hard and only `-.soft.->` is soft; see `classifyLink`.
  *
  * @param {string} section
  * @returns {{ edges: RoadmapEdge[], nodeIssues: number[] }}
@@ -235,10 +243,24 @@ function parseDiagram(section) {
   const edges = [];
   for (const edge of fence[1].matchAll(EDGE)) {
     const from = issueByNode.get(edge[1]);
-    const to = issueByNode.get(edge[3]);
+    const to = issueByNode.get(edge[4]);
     if (from === undefined || to === undefined) continue;
-    edges.push({ from, to, kind: edge[2] === "-->" ? "hard" : "soft" });
+    edges.push({ from, to, ...classifyLink(edge[2], edge[3]) });
   }
 
   return { edges, nodeIssues: [...issueByNode.values()] };
+}
+
+/**
+ * A `|label|` makes any link unrecognized, even on an arrow the vocabulary
+ * uses, so a label can never quietly carry a meaning the checker ignores.
+ *
+ * @param {string} arrow
+ * @param {string|undefined} pipeLabel the `|label|` text including its pipes
+ * @returns {{ kind: "hard"|"soft" } | { kind: "unrecognized", spelling: string }}
+ */
+function classifyLink(arrow, pipeLabel) {
+  if (pipeLabel === undefined && arrow === HARD_LINK) return { kind: "hard" };
+  if (pipeLabel === undefined && SOFT_LINK.test(arrow)) return { kind: "soft" };
+  return { kind: "unrecognized", spelling: arrow + (pipeLabel ?? "") };
 }
