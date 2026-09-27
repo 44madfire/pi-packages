@@ -73,6 +73,7 @@ export function validateRoadmap(roadmap) {
     ]),
     ...checkBatchTails(roadmap),
     ...checkNodesAreSteps(roadmap),
+    ...checkEdgeSpellings(roadmap),
     ...checkAcyclic(roadmap),
   ];
 }
@@ -223,9 +224,28 @@ function checkNodesAreSteps(roadmap) {
 }
 
 /**
+ * The diagram's vocabulary is two edge kinds, so an edge spelled any other way
+ * asserts a relation no bullet can be held to. An error, because the spelling
+ * parses strictly: it is either one of the two or it is not.
+ *
+ * @param {import("./parse-roadmap.mjs").Roadmap} roadmap
+ * @returns {Finding[]}
+ */
+function checkEdgeSpellings(roadmap) {
+  return roadmap.edges
+    .filter((edge) => edge.kind === "unrecognized")
+    .map((edge) =>
+      phaseError(
+        `diagram edge #${edge.from} ${edge.spelling} #${edge.to} is neither hard (\`-->\`) nor soft (\`-.soft.->\`)`,
+      ),
+    );
+}
+
+/**
  * A dependency graph that cannot be ordered has no working sequence, whoever
  * does the ordering. Soft edges are excluded: they state a sequencing
  * preference rather than a constraint, so a soft back-edge is legitimate.
+ * Unrecognized edges are excluded too; `checkEdgeSpellings` reports them.
  *
  * @param {import("./parse-roadmap.mjs").Roadmap} roadmap
  * @returns {Finding[]}

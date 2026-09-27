@@ -460,6 +460,65 @@ describe("validateRoadmap", () => {
     });
   });
 
+  describe("edge spellings", () => {
+    it("reports a bare dashed edge, naming its spelling", () => {
+      const roadmap = makeRoadmap({
+        steps: [makeStep({ issue: 945 }), makeStep({ issue: 863 })],
+        edges: [{ from: 945, to: 863, kind: "unrecognized", spelling: "-.->" }],
+      });
+      expect(messages(roadmap)).toEqual([
+        "error: diagram edge #945 -.-> #863 is neither hard (`-->`) nor soft (`-.soft.->`)",
+      ]);
+    });
+
+    it("reports an unrecognized edge that is not dashed", () => {
+      const roadmap = makeRoadmap({
+        steps: [makeStep({ issue: 1 }), makeStep({ issue: 2 })],
+        edges: [{ from: 1, to: 2, kind: "unrecognized", spelling: "==>" }],
+      });
+      expect(messages(roadmap)).toEqual([
+        "error: diagram edge #1 ==> #2 is neither hard (`-->`) nor soft (`-.soft.->`)",
+      ]);
+    });
+
+    it("accepts the two edge kinds of the vocabulary", () => {
+      const roadmap = makeRoadmap({
+        steps: [
+          makeStep({ issue: 1 }),
+          makeStep({
+            issue: 2,
+            hardDependency: { present: true, dependsOn: [1] },
+            softDependency: { present: true, dependsOn: [1] },
+          }),
+        ],
+        edges: [
+          { from: 1, to: 2, kind: "hard" },
+          { from: 1, to: 2, kind: "soft" },
+        ],
+      });
+      expect(messages(roadmap)).toEqual([]);
+    });
+
+    it("keeps an unrecognized back-edge out of cycle detection", () => {
+      const roadmap = makeRoadmap({
+        steps: [
+          makeStep({ issue: 1 }),
+          makeStep({
+            issue: 2,
+            hardDependency: { present: true, dependsOn: [1] },
+          }),
+        ],
+        edges: [
+          { from: 1, to: 2, kind: "hard" },
+          { from: 2, to: 1, kind: "unrecognized", spelling: "-.informs.->" },
+        ],
+      });
+      expect(messages(roadmap)).toEqual([
+        "error: diagram edge #2 -.informs.-> #1 is neither hard (`-->`) nor soft (`-.soft.->`)",
+      ]);
+    });
+  });
+
   describe("mentions in the prose sections", () => {
     it("accepts a step named in both sections", () => {
       const roadmap = makeRoadmap({
