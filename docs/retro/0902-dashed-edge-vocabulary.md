@@ -45,3 +45,17 @@ Root tests went from 221 to 247; `check`, `lint`, and `fallow dead-code` are cle
 - Pre-completion reviewer: WARN.
   Its two decision-surface findings ask whether `roadmap-check.mjs`, the only outside importer of `parseRoadmap`/`validateRoadmap`, still gets what it expects; it reads only finding fields, its unmodified test passes, and the reviewer's own live run matched the prediction.
   It independently confirmed byte-identical hard messages, a strict-superset edge capture over the whole corpus, and no edit to a landed Phase 15 step block.
+
+## Stage: Sync (worktree) (2026-09-27T01:16:42Z)
+
+### Session summary
+
+Pre-push checks are clean (`pnpm run lint`, `pnpm fallow dead-code`).
+The plan's `**Release:**` marker is `ship independently`, but nothing under `packages/` is release-scoped here (only `pi-permission-system`'s `docs/architecture/architecture.md`, which release tooling excludes), so this land triggers no package release.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-902--/2026-09-27T00-32-07-011Z_01a0e046-bb62-75a5-9cfc-949dd349d490.jsonl` — read with `read_session_file({ path: "..." })` for message-level verification at land/retro time.
+
+### Observations
+
+No deferred work beyond what the TDD stage note already lists (chained-link/`&` fan-out parsing, out of scope by design).
+Five warnings on Phase 15's landed steps are expected to persist until that phase archives.
