@@ -221,6 +221,7 @@ The section should include:
    - **Impact / Risk / Priority** — the per-step scores (`Priority = Impact × (6 − Risk)`), published on the step so the ranking is auditable in the committed roadmap and at `/plan-issue` time, not left in the session transcript.
    - A `Release:` tag on its own line — `Release: independent` or `Release: batch "<batch-name>"` (see the `improvement-discovery` skill's Output format).
 3. Step dependency diagram (Mermaid flowchart), laid out by dependency rather than by sequence, with `S<issue>` node IDs and the bare issue number in the label (`S857["✅ #857<br/>Workspace-backed resume"]`) — that bare number is what `/tdd-plan`'s and `/build-plan`'s `✅`-mark verification counts.
+   Draw a hard dependency as `-->` and a soft one as `-.soft.->`, and no other edge (the `improvement-discovery` skill's Output format defines both).
 4. Named parallel tracks, naming their members as `[#N]`.
 5. A `Release batches` subsection (after the parallel tracks) naming each batch, its member steps as `[#N]` in dependency order (last listed = tail), and the independently releasable steps.
    This is the deterministic source `/plan-issue` reads to recommend a release decision — keep it grep-able, not prose.
@@ -233,8 +234,8 @@ Then check the roadmap you just wrote against its own published inputs:
 ./scripts/roadmap-check.mjs $1
 ```
 
-Resolve every **error** before going further — each one reads a strictly-formatted field, so it is a defect in what you wrote rather than a judgement call: a `Priority` that does not follow from its own `Impact` and `Risk`, a missing or unrecognized `Release:` tag, a batch name with no bullet, a step missing from the diagram, or a dependency cycle.
-Read the **warnings** and fix the ones that are wrong: a step named in no track or no release batch is usually an omission, and a `**Hard dependency:**` bullet disagreeing with the diagram means one of the two is stale.
+Resolve every **error** before going further — each one reads a strictly-formatted field, so it is a defect in what you wrote rather than a judgement call: a `Priority` that does not follow from its own `Impact` and `Risk`, a missing or unrecognized `Release:` tag, a batch name with no bullet, a step missing from the diagram, an edge spelled outside the two kinds, or a dependency cycle.
+Read the **warnings** and fix the ones that are wrong: a step named in no track or no release batch is usually an omission, and a `**Hard dependency:**` or `**Soft dependency:**` bullet disagreeing with the diagram means one of the two is stale.
 
 After writing the plan, present a summary to the user and ask whether to commit.
 If confirmed, commit with:
