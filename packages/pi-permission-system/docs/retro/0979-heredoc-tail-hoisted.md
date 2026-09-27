@@ -35,3 +35,37 @@ After the plan, the operator asked what relief an unparseable command could get,
   Only the backtick case (``grep -c "`" notes.md``) and `{ …; } <<EOF b` are rejected, and the latter parses cleanly in tree-sitter and is allowed.
   So the floor is right for the heredoc forms, and it fails open there: under `rm *: deny`, the first four forms ask instead of deny, while the salvage already recovers `rm` in the last two.
   Filed as #985; the bash-rejects relief is #986, beside #976.
+
+## Stage: Implementation — TDD (2026-09-27T22:50:30Z)
+
+### Session summary
+
+All six planned steps landed as six commits: the `parse-view.ts` extraction, the shared `test/helpers/bash-parse-tree.ts` contract (with the new containment and leaves-preserved checks), heredoc words reattached, the unwired `hoistHeredocTails` pass, the wiring, and the docs.
+The pre-completion reviewer failed the change twice before passing it on the third round; each finding was fixed and folded into the step-5 `fix:` commit, since none had shipped.
+The `pi-permission-system` suite went from 4749 to 4832 tests (+83).
+
+### Observations
+
+- **Reviewer round 1 (FAIL, real).**
+  `tailOf` read any `pipeline` child as the grammar's `| …` form, so `cat <<EOF && ls | rm -rf /tmp/x` enumerated `cat`, `ls`, `ls`.
+  Fix: a `pipeline` is the pipe form only when no `&&`/`||` came before it.
+  The plan's `< in` oracle and leaves check would have caught it; no case fed them an `&&` tail into a pipeline.
+- **Reviewer round 2 (FAIL, real).**
+  `join` built bash's grouping for `<<EOF && a > o | b`, where the grammar groups the `< in` spelling as `(… && a > o) | b`, so `xargs` kept an exemption the `< in` spelling withholds.
+  The operator chose the oracle again (join at a pipeline's redirected first stage).
+- **Self-sweep before round 3.**
+  A disposable oracle sweep (2180 combinations; 1370 comparable) found 62 more divergences in three classes, because the grammar parses a tail differently from the same text at the top level.
+  Operator decision: fix class C (a tail's `a | b | c > o` parses as `a | ((b | c) > o)`, so the write missed the heredoc's command; lifted by `withTrailingRedirectsOutermost`) and document A (bash-correct `cd` grouping) and B (stricter).
+  A mechanical exemption check, confirmed to flag class C with the fix disabled, found 0 looser units among the 22 remaining.
+  Lesson: when a plan names an external oracle, sweep it combinatorially at planning or implementation time rather than sampling rows; each sampled row was green while whole shape classes diverged.
+- **Corpus re-measurement: 3 changed, not the predicted 6.**
+  Three heredoc writes name a file a later command on the line runs (`node /tmp/x.mts`), which that command already projects as `unproven`; the projection merges by path, so the new `write (syntax)` token changes nothing.
+  The rounds 1–3 fixes changed 0 corpus commands.
+- **Plan deviations:**
+  - A heredoc's trailing words are restricted to the grammar's `_literal` types (`LITERAL_NODE_TYPES`) rather than "not `heredoc_body`/`heredoc_end`", so step 3 could not fold a `| …` tail into the command before step 5 wired the hoist.
+  - The `< in` oracle does not hold for a herestring tail (the grammar misparses `cat < in <<< x` itself); that case asserts its shape directly.
+  - Step 2's containment check is killed by a mutation to the command's range growth; the plan's named mutation (the truncated redirect's end) is killed by the overlap check instead.
+  - Step 3 mutation (b) did not redden the leaves check as the plan predicted (a moved body is re-parented, not duplicated); the shape cases carry it.
+  - The metamorphic cases were added as placements in the existing redirect-position describe.
+- **Tooling friction:** a mutation batched in parallel with its restore `cp` never reached the tree; running each mutation in its own call fixed it.
+- Pre-completion reviewer: **PASS** (round 3), after two FAIL rounds, each fixed.
