@@ -205,6 +205,14 @@ describe("bash command gate — a redirect's position does not weaken", () => {
       label: "after the head word of a list's last command",
       place: (h, r) => `cd a && ${h} 2>/dev/null ${r}`,
     },
+    {
+      label: "as a heredoc after the head word",
+      place: (h, r) => `${h} <<EOF ${r}\nbody\nEOF`,
+    },
+    {
+      label: "as a heredoc after the head word of a list's last command",
+      place: (h, r) => `cd a && ${h} <<EOF ${r}\nbody\nEOF`,
+    },
   ];
 
   const cases: {

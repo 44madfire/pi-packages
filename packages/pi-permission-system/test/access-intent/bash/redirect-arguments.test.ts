@@ -75,6 +75,32 @@ describe("reattachRedirectArguments", () => {
     });
   });
 
+  describe("a heredoc the grammar hung the command's words on", () => {
+    it("hands the words back to the command, after the heredoc", async () => {
+      // The body stays in the heredoc: it is written after the words, and its
+      // substitutions still run.
+      await expect(
+        correctedShape("git <<EOF push --force\nb\nEOF"),
+      ).resolves.toBe(
+        '(program (command (command_name "git") (heredoc_redirect "EOF" "b\\n" "EOF") "push" "--force"))',
+      );
+    });
+
+    it("hands the words to the last command of a list the grammar grouped", async () => {
+      await expect(correctedShape("x && git <<EOF push\nb\nEOF")).resolves.toBe(
+        '(program (list (command (command_name "x")) (command (command_name "git") (heredoc_redirect "EOF" "b\\n" "EOF") "push")))',
+      );
+    });
+
+    it("hands back a substitution and a string as words too", async () => {
+      await expect(
+        correctedShape('cat <<EOF $(rm x) "q s"\nb\nEOF'),
+      ).resolves.toBe(
+        '(program (command (command_name "cat") (heredoc_redirect "EOF" "b\\n" "EOF") (command_substitution (command (command_name "rm") "x")) (string "q s")))',
+      );
+    });
+  });
+
   describe("a statement nested in another node", () => {
     it.each([
       [
@@ -104,6 +130,11 @@ describe("reattachRedirectArguments", () => {
       ["a redirect before the command", "2>/dev/null git push --force"],
       ["a statement whose parse failed", "cat <> rw.txt extra"],
       ["a compound body bash rejects", "{ a; } 2>/dev/null b"],
+      ["a heredoc whose line ends at the delimiter", "cat <<EOF\nb\nEOF"],
+      [
+        "a heredoc on a compound body bash rejects",
+        "{ echo a; } <<EOF b\nb\nEOF",
+      ],
     ])("returns the grammar's own root for %s", async (_label, command) => {
       await withCorrected(command, (corrected, grammar) => {
         expect(corrected).toBe(grammar);
@@ -119,6 +150,9 @@ describe("reattachRedirectArguments", () => {
       "cmd >&- arg",
       "cd a && b && git 2>/dev/null push",
       "echo é 2>/dev/null $(git 2>/dev/null push) | tail",
+      "git <<EOF push --force\nb\nEOF",
+      "x && git <<EOF push\nb\nEOF",
+      'cat <<EOF $(rm x) "q s"\nb\nEOF',
     ];
 
     it.each(rewritten)("keeps the view contract in %s", async (command) => {

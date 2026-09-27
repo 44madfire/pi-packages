@@ -513,6 +513,25 @@ describe("BashProgram", () => {
       ).toContain("/etc/hosts");
     });
 
+    describe("the words after a heredoc", () => {
+      it("projects a word as the command's own operand", async () => {
+        const program = await BashProgram.parse(
+          "cat <<EOF ~/x/in\nb\nEOF",
+          normalizer,
+        );
+        expect(
+          program
+            .externalAccesses()
+            .map(({ path, effect }) => ({ path: path.value(), effect })),
+        ).toEqual([
+          {
+            path: join(homedir(), "x/in"),
+            effect: { effect: "read", source: "core" },
+          },
+        ]);
+      });
+    });
+
     describe("a redirect's target is projected by its role (#609)", () => {
       /** Each external access's display path and attributed effect. */
       async function externalsOf(command: string) {
@@ -1401,6 +1420,30 @@ describe("BashProgram", () => {
       it("names what an indirection wrapper runs from the words", async () => {
         const program = await BashProgram.parse(
           "sudo 2>/dev/null rm -rf /",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          {
+            text: "sudo rm -rf /",
+            wrapperKind: "indirection",
+            executedUnit: "rm -rf /",
+          },
+        ]);
+      });
+    });
+
+    describe("a heredoc the grammar hung the command's words on", () => {
+      it("keeps the words in the command's unit", async () => {
+        const program = await BashProgram.parse(
+          "git <<EOF push --force\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([{ text: "git push --force" }]);
+      });
+
+      it("names what an indirection wrapper runs from the words", async () => {
+        const program = await BashProgram.parse(
+          "sudo <<EOF rm -rf /\nb\nEOF",
           normalizer,
         );
         expect(program.commands()).toEqual([

@@ -61,7 +61,9 @@ function spanOf(node: TSNode | null): string | null {
  * grammar had produced it:
  *
  * - Each node's text is its slice of the source.
- * - Each node's children are in source order and do not overlap.
+ * - Each node's children are in source order and do not overlap, except that a
+ *   child holding a heredoc may enclose the siblings after it: the heredoc's
+ *   body is written after the rest of its line.
  * - Each child lies within its parent's range.
  * - Every leaf of the grammar's tree appears exactly once, so nothing is dropped
  *   and nothing is walked twice.
@@ -83,7 +85,7 @@ export function viewContractViolations(
       const child = node.child(i);
       if (!child) continue;
       const before = i === 0 ? null : node.child(i - 1);
-      if (before && child.startIndex < before.endIndex) {
+      if (before && !followsInSource(before, child)) {
         violations.push(`${spanOf(child)}: overlaps ${spanOf(before)}`);
       }
       if (
@@ -107,6 +109,18 @@ export function viewContractViolations(
     );
   }
   return violations;
+}
+
+/**
+ * Whether `after` is where a sibling following `before` belongs: past its end,
+ * or, when `before` holds a heredoc, anywhere past its start.
+ */
+function followsInSource(before: TSNode, after: TSNode): boolean {
+  if (after.startIndex >= before.endIndex) return true;
+  const holdsHeredoc = allNodes(before).some(
+    (node) => node.type === "heredoc_redirect",
+  );
+  return holdsHeredoc && after.startIndex >= before.startIndex;
 }
 
 /** The leaves of a tree, identified by span and sorted, duplicates kept. */
