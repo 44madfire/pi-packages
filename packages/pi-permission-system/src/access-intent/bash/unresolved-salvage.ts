@@ -33,8 +33,11 @@ export function withSalvagedRoots<T>(
 ): T {
   const trees: { rootNode: TSNode; delete(): void }[] = [];
   try {
-    for (const candidate of unresolvedRegionsWithin(primary)) {
-      const tree = reparser.parse(candidate.text);
+    const candidates = unresolvedRegionsWithin(primary).map(
+      (region) => region.text,
+    );
+    for (const text of candidates) {
+      const tree = reparser.parse(text);
       if (!tree) continue;
       // The whole safety argument: tree-sitter's error recovery *invents* the
       // structure inside an unresolved region (#742), and invented structure
