@@ -127,6 +127,24 @@ Every salvageable region of the one grammar gap this package has met is a `file_
 It is rejected anyway, for the reason the 2026-09-04 amendment already gave about the marker: a node-type trigger silently drops the next gap that lands somewhere else.
 A stub-node test pins the distinction the corpus cannot.
 
+### Amendment, 2026-09-28 — a salvage candidate may be a heredoc-free spelling
+
+The amendment above admits a region's own source text.
+That text cannot recover a heredoc tail the grammar has no production for: `cat <<EOF ; rm -rf x`, the `&` form, `cat <<EOF arg > /tmp/o`, and `cat 0<<EOF | rm -rf x` are valid bash (`bash -n` exits 0), yet the innermost unresolved node is the heredoc redirect itself or a top-level `ERROR`, and the redirect's text fails to re-parse the same way.
+Under `bash: {"*": "allow", "rm *": "deny"}` each asked where its heredoc-free spelling is denied, and approving the prompt ran `rm`.
+
+**After the regions, the salvage also offers each unresolved heredoc's line spelled without its heredoc operators, admitted by the same clean re-parse** ([#985]).
+The line runs from the heredoc's host `redirected_statement`, or its line start when an `ERROR` hosts it, to the end of the line.
+The cut removes the `<<`/`<<-` token, a `file_descriptor` before it, the delimiter, and the blanks before them.
+
+This is not the "heredoc pre-pass introducing a second notion of what a bash program is" that the residual paragraph set aside.
+The primary parse is untouched, the floor still clamps every recovered unit, and the trigger is still the parse's health: only a host that failed to parse is spelled.
+The safety argument gains one clause.
+The candidate is derived rather than sliced, but the derivation only removes spans the scanner tokenized as heredoc operators, so it cannot introduce a word the command lacks; the metamorphic anti-invention property now checks exactly that, word by word.
+
+Measured over the local review log against the pre-change code, 9156 distinct intact `bash` commands: 7 change, all the `git commit -F - <<'MSG' 2>&1 | tail -N` shape the region salvage already handled.
+Each gains only duplicated units, and no decision changes; the fail-open forms above occur nowhere in that log, so the change closes a spelling an agent could produce rather than one it has.
+
 ## Context
 
 ### The reported gap
@@ -736,4 +754,5 @@ Issue [#620] carries the judgment slice the chain retains under §7.
 [#814]: https://github.com/gotgenes/pi-packages/issues/814
 [#840]: https://github.com/gotgenes/pi-packages/issues/840
 [#875]: https://github.com/gotgenes/pi-packages/issues/875
+[#985]: https://github.com/gotgenes/pi-packages/issues/985
 [openai/codex#28732]: https://github.com/openai/codex/issues/28732
