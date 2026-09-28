@@ -6,6 +6,7 @@ import { SubagentState, type SubagentStateInit } from "#src/lifecycle/subagent-s
 import type { WorkspacePrepareContext, WorkspaceProvider } from "#src/lifecycle/workspace";
 import type { RunConfig } from "#src/runtime";
 import type { CompactionInfo, SubagentType } from "#src/types";
+import { makeModel } from "#test/helpers/make-model";
 import { createTestSubagent, makeStubExecution } from "#test/helpers/make-subagent";
 import { makeWorkspace, makeWorkspaceProvider } from "#test/helpers/make-workspace";
 import { createMockSession, createSubagentSessionStub, emitResumeUsageAndCompaction, toAgentSession, toSubagentSession } from "#test/helpers/mock-session";
@@ -588,6 +589,67 @@ describe("Subagent — releaseSession", () => {
 		const record = makeSubagent();
 		await expect(record.releaseSession()).resolves.toBeUndefined();
 		expect(record.sessionReleased).toBe(false);
+	});
+});
+
+describe("Subagent — model and thinking level", () => {
+	const sonnet = { provider: "anthropic", id: "claude-sonnet-5" };
+
+	function withLiveSession(execution?: SubagentExecution) {
+		const record = makeSubagent({ execution });
+		const session = createMockSession();
+		session.model = sonnet;
+		session.thinkingLevel = "high";
+		record.subagentSession = toSubagentSession(createSubagentSessionStub(session, "/path/to/session.jsonl"));
+		return { record, session };
+	}
+
+	describe("from the live session", () => {
+		it("reports the model the child is running, over the spawn override", () => {
+			const { record } = withLiveSession(makeStubExecution({ model: makeModel({ provider: "openai", id: "gpt-6" }) }));
+			expect(record.model).toBe(sonnet);
+		});
+
+		it("follows a model the child switches to mid-run", () => {
+			const { record, session } = withLiveSession();
+			const fallback = { provider: "openai", id: "gpt-6" };
+			session.model = fallback;
+			expect(record.model).toBe(fallback);
+		});
+
+		it("reports the child's thinking level, over the spawn override", () => {
+			const { record } = withLiveSession(makeStubExecution({ thinkingLevel: "low" }));
+			expect(record.thinkingLevel).toBe("high");
+		});
+	});
+
+	describe("after the session is released", () => {
+		it("retains the model the child last ran", async () => {
+			const { record } = withLiveSession();
+			await record.releaseSession();
+			expect(record.model).toBe(sonnet);
+		});
+
+		it("retains the child's last thinking level", async () => {
+			const { record } = withLiveSession();
+			await record.releaseSession();
+			expect(record.thinkingLevel).toBe("high");
+		});
+	});
+
+	describe("before a session exists", () => {
+		it("reports the spawn override", () => {
+			const opus = makeModel({ provider: "anthropic", id: "claude-opus-5" });
+			const record = makeSubagent({ execution: makeStubExecution({ model: opus, thinkingLevel: "medium" }) });
+			expect(record.model).toBe(opus);
+			expect(record.thinkingLevel).toBe("medium");
+		});
+
+		it("reports nothing for an inherited model and level", () => {
+			const record = makeSubagent();
+			expect(record.model).toBeUndefined();
+			expect(record.thinkingLevel).toBeUndefined();
+		});
 	});
 });
 

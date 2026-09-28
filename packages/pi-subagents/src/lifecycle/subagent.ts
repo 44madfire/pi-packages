@@ -182,6 +182,8 @@ export class Subagent {
 	// (transcript pointer) survives and the resume path can tell "released" from
 	// "never had a session."
 	private _releasedOutputFile?: string;
+	private _releasedModel?: Model<any>;
+	private _releasedThinkingLevel?: ThinkingLevel;
 	private _sessionReleased = false;
 	/** True once releaseSession() has freed a live session (distinct from never having had one). */
 	get sessionReleased(): boolean { return this._sessionReleased; }
@@ -205,6 +207,20 @@ export class Subagent {
 	 */
 	get outputFile(): string | undefined {
 		return this.subagentSession?.outputFile ?? this._releasedOutputFile;
+	}
+
+	/**
+	 * The model this agent runs: the live session's (so a mid-run switch shows),
+	 * then the one captured at releaseSession(), then the spawn override.
+	 * Undefined for an inherited model until the session exists.
+	 */
+	get model(): Model<any> | undefined {
+		return this.subagentSession?.model ?? this._releasedModel ?? this.execution.model;
+	}
+
+	/** The thinking level this agent runs at, resolved in the same order as `model`. */
+	get thinkingLevel(): ThinkingLevel | undefined {
+		return this.subagentSession?.thinkingLevel ?? this._releasedThinkingLevel ?? this.execution.thinkingLevel;
 	}
 
 	/** The tool call ID that spawned this background agent, if any. */
@@ -697,6 +713,8 @@ export class Subagent {
 		if (!session) return;
 		this.disposeHeldWorkspace();
 		this._releasedOutputFile = session.outputFile;
+		this._releasedModel = session.model;
+		this._releasedThinkingLevel = session.thinkingLevel;
 		this.subagentSession = undefined;
 		this._sessionReleased = true;
 		await disposeQuietly(session, "child session release");
