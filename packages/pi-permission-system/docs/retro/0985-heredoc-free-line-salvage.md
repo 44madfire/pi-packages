@@ -31,3 +31,23 @@ The five-step plan (`docs/plans/0985-heredoc-free-line-salvage.md`) leads with a
 - **Constraint honored.**
   `parse-health.ts` is the only reader of `previousSibling`/`hasError`, so the new walk reaches the `<<` token and `file_descriptor` by sibling index through `childrenOf`.
 - The Tidy-First assessor recommended one preparatory refactor (iterate candidate texts rather than nodes), folded in as step 1; it noted `fallow guard` errored on a pre-existing `pi-subagents` boundary-config error.
+
+## Stage: Implementation — TDD (2026-09-28T15:54:10Z)
+
+### Session summary
+
+All five planned steps landed as five commits: the text-based candidate loop, the word-level anti-invention property, the unwired `heredoc-free-lines.ts`, the wiring `fix:`, and the docs (architecture entries, Phase 15 `✅` marks with a `Landed:` note, and an ADR 0013 amendment).
+The `pi-permission-system` suite went from 4832 to 4879 tests (+47).
+Every planned killing mutation reddened exactly its predicted class: 6 for the new module and 3 for the wiring.
+
+### Observations
+
+- **Step 2 deviation.**
+  A word-subsequence over whitespace-split command words failed 5 existing rows where an operator abuts a word (`rm $f;`, `(cat`, `x=$(cat`); each unit word is instead found as a substring of the command, in order.
+  The `INVENTED` mutation still reddened all 21 rows.
+- **Step 4 deviations.**
+  "keeps a relative operand literal" passed unchanged (the plan predicted a rewrite), because region candidates stay ahead of heredoc-free ones and `.find` meets the region's literal first.
+  The planned "dropped when its re-parse errs" case (`cat <<A <<B ; rm -rf x`) salvages the region text `<B ; rm -rf x`, not the `; rm -rf x` first written; the expectation was corrected to the measured value.
+- **Corpus re-measured** against the pre-wiring salvage: 9156 distinct intact commands, 7 changed (duplicate units only, two with an extra literal-only rule candidate), 0 external-access or verdict changes.
+- Pre-completion reviewer: **PASS**, with one design-note WARN: the word-level anti-invention check is weaker than a substring check by construction (per-word substring matching could draw words from unrelated positions); it found no real construction it misses.
+  The reviewer also probed 12 further inputs (substitutions, arithmetic `<<`, CRLF, abutting operators, multi-line statements) through the real parser; all matched bash or were dropped by the clean-re-parse guard.
