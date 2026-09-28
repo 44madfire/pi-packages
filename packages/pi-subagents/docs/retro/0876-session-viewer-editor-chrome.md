@@ -33,3 +33,28 @@ The plan surfaces the child's model and thinking level through `AgentSession` �
 - `src/lifecycle/subagent.ts`: the long one-line getter block (lines ~150–208) could be grouped; two more getters fit the existing pattern.
 - `src/ui/display.ts`: the shared `Theme` name understates that it is the narrow rendering theme.
 - `test/ui/agent-widget.test.ts`: eight sibling `describe("AgentWidget — …")` blocks could nest under one `describe("AgentWidget")`.
+
+## Stage: Implementation — TDD (2026-09-28T04:51:13Z)
+
+### Session summary
+
+All 8 plan steps landed as 8 commits (1 `test:`, 4 `refactor:`, 2 `feat:`, 1 `docs:`): the session viewer's labeled rules coloured by thinking level (#876), and the widget's `[provider/model]` tag (#954). pi-subagents tests went from 1831 to 1876 (+45); every planned killing mutation turned its predicted tests red.
+
+### Observations
+
+- Deviations: `ModelIdentity` landed in step 5 (`NavigableSubagent` needed it), not step 6.
+  `fileSnapshotSource` treats a model with no `provider`/`modelId` as unknown, because Pi's `getSessionContextSettings` also reads the model off each assistant message, and a file whose messages lack those fields yields `{ provider: undefined, modelId: undefined }`.
+  A test pins the realistic assistant-message path.
+  The #954 commit uses `Refs #954` rather than the plan's `Closes #954` (the `git-workflow` skill forbids closing keywords; `/ship` closes both).
+  The skill's UI row names "labeled rules" in prose, so the plan's step-8 grep for `labeled-rule` hits only `architecture.md`.
+- Step 4's planned mutation (a), swapping the loop nesting, did not discriminate at the planned width 40, because the `"142"` + hints fallback does not fit there either.
+  The test moved to width 50, where only the mutated order picks it.
+- pi-tui's `truncateToWidth` brackets its ellipsis in SGR resets, so the truncation test compares ANSI-stripped text.
+- The plan's real-session check ran as a disposable spike instead: `TranscriptPane` with Pi's real `dark` theme object and the Tidy-First assessor's real child JSONL, through `TuiMainScreen.renderNow()` at 80/50/30 columns.
+  The renderer accepted every frame, and the rules were painted `#81a2be` (`thinkingMedium`, matching the recorded `medium`).
+- Em-dash emission failed three times in edit bodies (a tab plus `er`, a literal `\u2014`, garbage replacement text).
+  Glyph-heavy test and source edits went through node scripts using JS escapes.
+- The full `pnpm run test` failed twice on different pi-permission-system tests (5000 ms timeouts, "Failed to start forks worker") at load average 17 with `corespotlightd` at 120% CPU.
+  This branch touches no pi-permission-system file; the package passed 4832/4832 with `--maxWorkers=4`, and the reviewer's own full run passed.
+- Pre-completion reviewer: PASS.
+  Its decision-surface section noted 4 additive `public-api-contract` signals (`Subagent`, `display.ts`, `SubagentSession`, `mock-session.ts`); no consumer reads the new members.
