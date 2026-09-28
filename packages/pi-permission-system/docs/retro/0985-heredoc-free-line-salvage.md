@@ -65,3 +65,47 @@ No follow-up issues were filed.
 ### Observations
 
 Planning, TDD, and sync all ran in this one peer session; the TDD stage entry above carries the deviations and the reviewer's PASS.
+
+## Stage: Final Retrospective (2026-09-28T18:16:55Z)
+
+### Session summary
+
+The root session shipped #985 in the worktree lane: fast-forward merge of `issue-985-pi-permission-system-a-heredoc-tail-the`, green pre-push gates, green CI, issue closed on the `fix:` commit `8a012390`, and `pi-permission-system-v35.0.2` released and pulled down.
+This retro spans that ship and the peer's planning, TDD, and sync stages, read from the peer transcript.
+No stage needed a follow-up commit, and no follow-up issue was filed.
+
+### Observations
+
+#### What went well
+
+- **Prototype-then-revert as design input.**
+  Planning patched `unresolved-salvage.ts` in place, ran the issue's rows and a 9084-command review-log corpus through the real `BashProgram.parse` and `resolveBashCommandCheck`, then reverted with `git checkout`.
+  The one `ask_user` gate carried a measured before/after table, and the plan's expected salvage texts were re-verified against the prototype before commit, so TDD's only expectation fix (`<B ; rm -rf x`) was a case the plan wrote by hand.
+- **Killing mutations scripted per step.**
+  TDD ran six mutations for the new module and three for the wiring in a loop, each backed up with `cp` and restored with a `cmp` check, following the `git-workflow` skill's back-up-both-sides rule.
+- **Em-dash recovery followed the skill.**
+  The em-dash arrived as `\-` twice (the ADR 0013 amendment heading and the sync note); both were repaired with a scripted placeholder substitution, as `markdown-conventions` prescribes, and neither reached a commit.
+- **The ship ran without a stop.**
+  Every gate the prompt names (ff prediction, `PRE_MERGE`, lint, `fallow`, CI, `next-version.sh`, SHA re-resolve before `issue_close`, release watch) passed first time.
+
+#### What caused friction (agent side)
+
+- `other` — In the ship, the lint gate was written as `cmd >log 2>&1; rc=$?; echo …; [ $rc -ne 0 ] && tail …`; with `rc=0` the trailing `[ … ]` made the call exit 1, reading as a failure.
+  The `git-workflow` skill's documented recipe (`cmd >log 2>&1 || tail -30 log`) has no such trap; I improvised instead of using it.
+  Impact: one extra tool call to read the log; no rework.
+- `instruction-violation` (not caught by agent or user) — The peer repeatedly ran package-scoped commands as `cd packages/pi-permission-system && pnpm exec vitest …`, where `AGENTS.md` asks for `pnpm --filter` or `pnpm -C` from the root.
+  Impact: none observed; each call started at the root, so no command ran in the wrong directory.
+
+#### What caused friction (user side)
+
+- The peer transcript shows a model switch to `claude-sonnet-5` before `/sync-worktree`, whose one turn was rewound and re-run on `claude-opus-5-5`.
+  Impact: one abandoned turn; nothing landed from it.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Planning, TDD, and sync ran on `anthropic/claude-opus-5-5`; the `tidy-first-assessor` and `pre-completion-reviewer` dispatches were judgment work suited to a strong model, and both reports were acted on (step 1 folded in; PASS with one design WARN).
+- **Feedback-loop gap analysis** — Verification was incremental: a baseline `check`/`lint`/test/`fallow` run before step 1, the scoped test files after every Red and Green, `check` after steps 3 and 4, and the full suite plus all gates before the reviewer.
+
+### Changes made
+
+1. `packages/pi-permission-system/docs/retro/0985-heredoc-free-line-salvage.md` gained this Final Retrospective entry; no prompt, skill, or `AGENTS.md` change was made (a `shell-traps` rule for a trailing `[ cond ] && cmd` was considered and declined, because the `git-workflow` recipe already covers the gate).
