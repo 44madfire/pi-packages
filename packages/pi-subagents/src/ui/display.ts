@@ -114,6 +114,11 @@ export function formatMs(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+/** A model as `provider/id`, the syntax the Agent tool's `model` argument accepts. */
+export function formatModel(model: ModelIdentity): string {
+  return `${model.provider}/${model.id}`;
+}
+
 /** Format duration from start/completed timestamps. */
 export function formatDuration(startedAt: number, completedAt?: number): string {
   if (completedAt) return formatMs(completedAt - startedAt);
