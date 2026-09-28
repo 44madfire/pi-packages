@@ -88,3 +88,44 @@ The rebase onto `main` conflicted in `architecture.md`'s Phase 15 dependency dia
 The first attempt was aborted and reported; the operator then approved resolving it by keeping #902's `-.soft.->` spelling with this branch's additions.
 Issue #902's checker also requires a `**Soft dependency:**` bullet for each soft edge, so #985's step gained one naming #979 and #978's bullet moved from #979 to #985, folded into the disposition commit.
 `scripts/roadmap-check.mjs` reports no finding this branch introduced; the #945, #977, and #978 findings predate it.
+
+## Stage: Final Retrospective (2026-09-27T23:10:50Z)
+
+### Session summary
+
+The root ship fast-forward-merged the 13-commit branch, re-ran lint and `fallow dead-code` on the merged tree, pushed, and watched CI and the release run to green: `pi-permission-system-v35.0.1`.
+Issue #979 closed with the landing commit and its two supporting commits cited; the worktree and branch were torn down.
+The ship itself had no friction; the cost of this issue sat in the TDD stage's two pre-completion FAIL rounds.
+
+### Observations
+
+#### What went well
+
+- The `pre-completion-reviewer` earned its keep: both FAIL rounds were real grouping defects (`tailOf` misreading an `&&`-then-pipeline tail, and the `join` grouping for `<<EOF && a > o | b`) that the planned test cases never fed.
+- The self-sweep before round 3 (2180 combinations, 1370 comparable against the `< in` oracle) found 62 divergences the sampled rows missed, and the operator could then pick per class (fix C, document A and B) instead of per row.
+- The peer's first sync attempt aborted the #902 rebase conflict and reported it with the two sides quoted, rather than resolving a shared-diagram collision on its own; the resolution then also satisfied #902's new `**Soft dependency:**` checker.
+- The ship's `PRE_MERGE` anchor test fired as designed: `PRE_MERGE` equalled `"$PLAN"^`, so the plan range was confirmed complete instead of assumed.
+
+#### What caused friction (agent side)
+
+- `missing-context` — the plan named the `< in` spelling as the oracle but sampled it by hand-picked rows; no row fed an `&&` tail into a pipeline or a three-stage pipe with a trailing redirect.
+  Impact: two reviewer FAIL rounds, each folded into the step-5 `fix:` commit, plus a third review round.
+- `other` — planning probes of real bash ran as `bash -c` with a `cd /Users` prefix, which raised permission prompts the agent could not see.
+  Impact: operator approvals only; no rework.
+- `other` — the sync note's line opening `#902's checker` was read as a heading; the peer caught it on `rumdl` output and prefixed `Issue` (self-identified, already a `markdown-conventions` rule).
+  Impact: one amend.
+
+#### What caused friction (user side)
+
+- The #902 edge respelling landed on `main` while this branch had pending edits to the same Phase 15 diagram; landing the branch before the repo-wide diagram change (or vice versa, with the peer rebasing first) would have avoided the two conflict hunks.
+  Added friction but no rework beyond the resolution.
+
+### Diagnostic details
+
+- **Model-performance correlation** — the peer session's main turns ran `anthropic/claude-opus-5-5`, with the first sync attempt on `anthropic/claude-sonnet-5` (it aborted and reported, appropriately); all four subagents (the planning `tidy-first-assessor` and three `pre-completion-reviewer` rounds) ran `claude-sonnet-5`, and the reviewer's two FAILs were both real, so no mismatch.
+  Subagent models were counted from `"model"` fields in each `tasks/*.jsonl` rather than rendered with `read_session_file`.
+- **Feedback-loop gap analysis** — the gaps the reviewer found were oracle coverage, not verification cadence; the combinatorial sweep ran only after round 2, where running it at step 4 (the unwired `hoistHeredocTails`) would have caught all three classes before any review.
+
+### Changes made
+
+1. `.pi/skills/testing/SKILL.md`: added a bullet to sweep a plan-named external oracle combinatorially rather than by hand-picked rows.
