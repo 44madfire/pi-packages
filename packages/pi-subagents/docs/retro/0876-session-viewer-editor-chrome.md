@@ -58,3 +58,17 @@ All 8 plan steps landed as 8 commits (1 `test:`, 4 `refactor:`, 2 `feat:`, 1 `do
   This branch touches no pi-permission-system file; the package passed 4832/4832 with `--maxWorkers=4`, and the reviewer's own full run passed.
 - Pre-completion reviewer: PASS.
   Its decision-surface section noted 4 additive `public-api-contract` signals (`Subagent`, `display.ts`, `SubagentSession`, `mock-session.ts`); no consumer reads the new members.
+
+## Stage: Sync (worktree) (2026-09-28T15:45:38Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` both pass from the worktree root with no changes needed.
+The plan's `**Release:**` marker is `ship independently`, so `/ship 876` releases `pi-subagents` on its own; #954 closes alongside #876 at land time (its `Subagent.model` mechanism and widget tag both shipped on this branch, credited with `Co-authored-by` trailers).
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-876--/2026-09-28T02-49-43-262Z_01a0e5eb-125e-75a6-a3e0-bca8155a2ffb.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+No deferred work beyond the plan's own Open Question (widget tree-connector colouring, left for a future operator request).
+The planning-stage retro already flagged the host-load test flakiness in `pi-permission-system`; unrelated to this branch.
