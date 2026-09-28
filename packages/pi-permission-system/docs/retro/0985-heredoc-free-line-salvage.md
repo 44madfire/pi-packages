@@ -51,3 +51,17 @@ Every planned killing mutation reddened exactly its predicted class: 6 for the n
 - **Corpus re-measured** against the pre-wiring salvage: 9156 distinct intact commands, 7 changed (duplicate units only, two with an extra literal-only rule candidate), 0 external-access or verdict changes.
 - Pre-completion reviewer: **PASS**, with one design-note WARN: the word-level anti-invention check is weaker than a substring check by construction (per-word substring matching could draw words from unrelated positions); it found no real construction it misses.
   The reviewer also probed 12 further inputs (substitutions, arithmetic `<<`, CRLF, abutting operators, multi-line statements) through the real parser; all matched bash or were dropped by the clean-re-parse guard.
+
+## Stage: Sync (worktree) (2026-09-28T16:11:54Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint`, `pnpm fallow dead-code`) pass on the branch as landed by the TDD stage.
+The plan's `**Release:** ship independently` marker holds; the only release-bearing commit is the `fix:` "deny a command written after a heredoc the grammar cannot parse".
+No follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-985--/2026-09-28T02-48-19-074Z_01a0e5e9-c982-7511-bc7f-2ad60a46b80b.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+Planning, TDD, and sync all ran in this one peer session; the TDD stage entry above carries the deviations and the reviewer's PASS.
