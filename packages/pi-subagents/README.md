@@ -68,14 +68,17 @@ The extension renders a persistent widget above the editor showing active backgr
 
 ```text
 ● Agents
-├─ ⠹ Agent  Refactor auth module · ↻5≤30 · 5 tool uses · 33.8k token (62%) · 12.3s
+├─ ⠹ Agent [anthropic/claude-sonnet-5]  Refactor auth module · ↻5≤30 · 5 tool uses · 33.8k token (62%) · 12.3s
 │    ⎿  editing 2 files…
-├─ ⠹ Explore  Find auth files · ↻3 · 3 tool uses · 12.4k token (8%) · 4.1s
+├─ ⠹ Explore [anthropic/claude-haiku-5]  Find auth files · ↻3 · 3 tool uses · 12.4k token (8%) · 4.1s
 │    ⎿  searching…
-├─ ⠹ Agent  Long-running task · ↻42 · 38 tool uses · 91.0k token (84% · ⇊2) · 2m17s
+├─ ⠹ Agent [openai/gpt-6]  Long-running task · ↻42 · 38 tool uses · 91.0k token (84% · ⇊2) · 2m17s
 │    ⎿  reading…
 └─ 2 queued
 ```
+
+Each agent line names the provider and model the agent is running, read from its live session, so a model switched mid-run shows as the one actually in use.
+The tag is omitted until the model is known.
 
 The token field is annotated with two optional signals inside parens:
 
@@ -170,6 +173,17 @@ Changes persist across pi restarts (see [Persistent Settings](./docs/configurati
 
 Pick any subagent — running, or completed with its live session already released — and read its full session transcript in pi's native per-entry viewer.
 Read-only: no steering, no session takeover (steering lives in the `steer_subagent` tool and the background widget).
+
+The viewer is framed by two rules in the style of pi's editor border, coloured for the agent's thinking level:
+
+```text
+── Agent (twin)  Refactor auth module · anthropic/claude-sonnet-5 • high ───────
+… transcript …
+── 142 lines · 87% ──────────────────────── ↑↓ scroll · PgUp/PgDn · Esc close ──
+```
+
+The top rule names the agent, its task, model, and thinking level; the bottom carries the scroll position and key hints.
+On a narrow terminal the footer drops the key hints, and the header drops the task and then the model before it shortens the agent's name.
 
 Creating and editing agent definitions is not a command — write an agent `.md` file in your editor, or ask a pi session to generate one (see [Custom Agents](./docs/configuration.md#custom-agents)).
 

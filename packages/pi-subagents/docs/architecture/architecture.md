@@ -410,6 +410,7 @@ src/
 │   ├── widget-renderer.ts          pure rendering for widget
 │   ├── display.ts                  pure formatters and shared types
 │   ├── bounded-lines.ts            component spending exactly one clipped terminal row per line
+│   ├── labeled-rule.ts             full-width rule with embedded labels, Pi editor-border style
 │   ├── glyphs.ts                   semantic display-glyph vocabulary (monospace-coverage constraint, #669)
 │   ├── subagents-settings.ts       /subagents:settings command handler
 │   ├── session-navigation.ts       pure session-selection and transcript-source logic
