@@ -72,3 +72,49 @@ The plan's `**Release:**` marker is `ship independently`, so `/ship 876` release
 
 No deferred work beyond the plan's own Open Question (widget tree-connector colouring, left for a future operator request).
 The planning-stage retro already flagged the host-load test flakiness in `pi-permission-system`; unrelated to this branch.
+
+## Stage: Final Retrospective (2026-09-28T16:01:22Z)
+
+### Session summary
+
+The root `/ship` fast-forward-merged the worktree branch (pre-merge tip `c090d185`, equal to the plan's parent), passed lint and dead-code, landed CI green, closed #876 and the folded-in #954 (crediting `@the-matt-moo`), released `pi-subagents-v21.8.0`, and tore down the worktree.
+Across all four stages the work went through without rework: 8 planned steps as 8 commits, a PASS review, and no sync rebase needed because `main` had not moved.
+
+### Observations
+
+#### What went well
+
+- The Tidy-First assessor (on `claude-sonnet-5`) caught three things that would have cost rework: widening the shared `Theme` would ripple into six unrelated test stubs (answered by the local `TranscriptTheme`), `renderRunningLines`/`renderFinishedLine` are tested in `test/widget-renderer.test.ts` rather than the planned file, and the SDK's `SessionContext` uses `modelId` and `| null`, not the design's `id` and optional.
+- The TDD session verified the TUI change without an interactive terminal: a throwaway Vitest spike rendered `TranscriptPane` with Pi's real `dark` theme and a real child JSONL through pi-tui's `TuiMainScreen.renderNow()` at 80/50/30 columns, then was deleted.
+  This is a reusable pattern for any pi-subagents UI change whose risk is the renderer rejecting a row.
+- Folding #954 into #876 at planning time, with `Co-authored-by` trailers on its commits, made the ship's two close comments mechanical: the credit and the design deviation (no `subagentSession?.session?.model` reach-through) were already recorded.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (self-identified, in this retro) — `/ship` step 9 says to re-resolve every hex token in the **finished** draft before `issue_close`.
+  I resolved three SHAs before drafting, then the #876 comment added three more (`1a0af78f`, `4db6400e`, `74c74f32`) that no check covered.
+  Impact: none; each was pasted from `git log` output and resolves.
+  The same gap has recurred on #704, #777, #788, #814, #861, #890, and #928; #948 already proposes making `issue_close` refuse an unresolvable SHA.
+- `other` (em-dash emission) — the TDD session lost three edits to U+2014 corruption and moved glyph-heavy edits to node scripts; the Sync session spent 8 tool calls (inspect bytes, a failed tab-pattern replace, a Python byte dump, then a Python replace) on one corrupted em-dash in its own stage note.
+  Impact: added friction, no rework.
+  The `markdown-conventions` skill already prescribes the placeholder-and-substitute route; no new rule.
+- `rabbit-hole` (host load, not the change) — the TDD session's full `pnpm run test` failed twice on different `pi-permission-system` tests (worker-startup timeouts, load average 17, `corespotlightd` at 120% CPU).
+  It took 9 tool calls (one full run of 776 s, a rerun, an isolated file run, `uptime`/`ps` probes, a `--maxWorkers=4` run) to rule out a regression.
+  Impact: roughly 20+ minutes of wall time; the conclusion (unrelated, and green under capped workers and in the reviewer's run) was correct.
+
+#### What caused friction (user side)
+
+- Nothing new.
+  The planning stage's scope widening (from #876 alone to #876 plus #954, and the colour choice after a true-colour preview) came from the operator seeing rendered options, which is the cheapest point to change scope.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Planning and TDD ran on `anthropic/claude-opus-5-5`; Sync ran on `anthropic/claude-sonnet-5` (mechanical, appropriate).
+  Both subagents ran on `anthropic/claude-sonnet-5` per their transcripts: the Tidy-First assessor (judgment-heavy, but output was high quality, so no mismatch) and the pre-completion reviewer (PASS, with a thorough decision-surface section).
+- **Escalation-delay tracking** — the host-load test investigation ran 9 consecutive tool calls; each changed the probe (isolate, check load, cap workers), so it was diagnosis rather than repetition, and asking the operator would not have been faster.
+  The Sync session's 8 calls on one em-dash exceeded the threshold for a single character; the skill's scripted-placeholder route applied from the first failed match.
+- **Feedback-loop gap analysis** — no gap: the TDD session ran the targeted Vitest files after each step and each killing mutation, `pnpm run check` after the widget step, and the full gates once at the end.
+
+### Changes made
+
+1. Commented on #948 (`issue_close` SHA refusal) with this ship's finished-draft re-resolve miss as further evidence; no repository files changed beyond this retro entry.
