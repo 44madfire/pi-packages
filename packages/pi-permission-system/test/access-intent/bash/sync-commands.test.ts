@@ -69,6 +69,19 @@ describe("parseBashCommandsSync", () => {
         { text: "git add -A .", parseUnresolved: true },
         { text: "git commit -F", parseUnresolved: true },
         { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
+        { text: "git add -A .", parseUnresolved: true, salvaged: true },
+        { text: "git commit -F", parseUnresolved: true, salvaged: true },
+        { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
+      ]);
+    });
+
+    it("enumerates a command after a heredoc the grammar cannot parse", () => {
+      expect(
+        parseBashCommandsSync("cat <<EOF ; rm -rf /tmp/x\nb\nEOF"),
+      ).toEqual([
+        { text: "cat", parseUnresolved: true },
+        { text: "cat", parseUnresolved: true, salvaged: true },
+        { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
       ]);
     });
   });

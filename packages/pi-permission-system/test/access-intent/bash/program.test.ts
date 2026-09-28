@@ -1766,11 +1766,13 @@ describe("BashProgram", () => {
           "cat <<'EOF'\nsee `rm -rf x` here",
           "cat",
           "<<'EOF'\nsee `rm -rf x` here",
+          // The heredoc's line, salvaged without its heredoc; not its body.
+          [{ text: "cat", parseUnresolved: true, salvaged: true }],
         ],
-        ["an unbalanced quote", 'echo "$(rm x)', "echo", '"$(rm x)'],
+        ["an unbalanced quote", 'echo "$(rm x)', "echo", '"$(rm x)', []],
       ])(
         "emits %s whole, taking nothing from inside it",
-        async (_label, command, enclosing, blob) => {
+        async (_label, command, enclosing, blob, salvaged) => {
           // Tree-sitter's error recovery *invents* structure, so a node type
           // inside an ERROR subtree is not evidence that a command runs.
           // The blob carries the #840 marker and the clean enclosing command
@@ -1780,6 +1782,7 @@ describe("BashProgram", () => {
           expect(program.commands()).toEqual([
             { text: enclosing },
             { text: blob, parseUnresolved: true },
+            ...salvaged,
           ]);
         },
       );
@@ -2353,6 +2356,9 @@ describe("BashProgram", () => {
           { text: "git add -A .", parseUnresolved: true },
           { text: "git commit -F", parseUnresolved: true },
           { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
+          { text: "git add -A .", parseUnresolved: true, salvaged: true },
+          { text: "git commit -F", parseUnresolved: true, salvaged: true },
+          { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
         ]);
       });
 
@@ -2407,6 +2413,8 @@ describe("BashProgram", () => {
         expect(program.commands()).toEqual([
           { text: "cat", parseUnresolved: true },
           { text: "tail -4", parseUnresolved: true, salvaged: true },
+          { text: "cat", parseUnresolved: true, salvaged: true },
+          { text: "tail -4", parseUnresolved: true, salvaged: true },
         ]);
       });
 
@@ -2417,15 +2425,18 @@ describe("BashProgram", () => {
           "cat <<'MSG' 2>&1 | sudo rm -rf /\nmsg\nMSG",
           normalizer,
         );
+        const salvagedWrapper = {
+          text: "sudo rm -rf /",
+          wrapperKind: "indirection",
+          executedUnit: "rm -rf /",
+          parseUnresolved: true,
+          salvaged: true,
+        };
         expect(program.commands()).toEqual([
           { text: "cat", parseUnresolved: true },
-          {
-            text: "sudo rm -rf /",
-            wrapperKind: "indirection",
-            executedUnit: "rm -rf /",
-            parseUnresolved: true,
-            salvaged: true,
-          },
+          salvagedWrapper,
+          { text: "cat", parseUnresolved: true, salvaged: true },
+          salvagedWrapper,
         ]);
       });
 
@@ -2436,6 +2447,59 @@ describe("BashProgram", () => {
         expect(program.commands()).toEqual([
           { text: "cat", parseUnresolved: true },
         ]);
+      });
+    });
+
+    describe("a heredoc tail the grammar cannot parse", () => {
+      it.each([
+        ["a `;` command", "cat <<EOF ; rm -rf x"],
+        ["an `&` command", "cat <<EOF & rm -rf x"],
+        ["a descriptor-prefixed heredoc", "cat 2<<EOF ; rm -rf x"],
+      ])("enumerates the command after %s", async (_label, line) => {
+        // Before, only `cat` was enumerated, so `bash: {"rm *": "deny"}` was
+        // never consulted for a command `bash -n` accepts and the shell runs.
+        const program = await BashProgram.parse(`${line}\nb\nEOF`, normalizer);
+        expect(program.commands()).toEqual([
+          { text: "cat", parseUnresolved: true },
+          { text: "cat", parseUnresolved: true, salvaged: true },
+          { text: "rm -rf x", parseUnresolved: true, salvaged: true },
+        ]);
+      });
+
+      it("enumerates the command after a descriptor the grammar lexed into the delimiter", async () => {
+        const program = await BashProgram.parse(
+          "cat 0<<EOF | rm -rf x\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          { text: "cat" },
+          { text: "0<<EOF | rm -rf x\nb\nEOF", parseUnresolved: true },
+          { text: "cat", parseUnresolved: true, salvaged: true },
+          { text: "rm -rf x", parseUnresolved: true, salvaged: true },
+        ]);
+      });
+
+      it("gives the words after the heredoc to its command", async () => {
+        const program = await BashProgram.parse(
+          "cat <<EOF arg > /tmp/o\nb\nEOF",
+          normalizer,
+        );
+        expect(program.commands()).toEqual([
+          { text: "cat", parseUnresolved: true },
+          { text: "cat arg", parseUnresolved: true, salvaged: true },
+        ]);
+      });
+
+      it("enumerates the command after a heredoc inside a compound statement", async () => {
+        const program = await BashProgram.parse(
+          "if true; then cat <<EOF ; rm x\nb\nEOF\nfi",
+          normalizer,
+        );
+        expect(program.commands()).toContainEqual({
+          text: "rm x",
+          parseUnresolved: true,
+          salvaged: true,
+        });
       });
     });
   });
@@ -2761,6 +2825,18 @@ describe("BashProgram", () => {
         .pathRuleCandidates()
         .find(({ token }) => token === "../secret");
       expect(candidate?.path.matchValues()).toEqual(["../secret"]);
+    });
+
+    it("projects a redirect written after a heredoc the grammar cannot parse as a write", async () => {
+      const program = await BashProgram.parse(
+        "cat <<EOF arg > /tmp/o\nb\nEOF",
+        normalizer,
+      );
+      expect(
+        program
+          .externalAccesses()
+          .map(({ path, effect }) => [path.value(), effect]),
+      ).toEqual([["/tmp/o", { effect: "write", source: "syntax" }]]);
     });
 
     it("leaves a cleanly-parsed command's slices untouched", async () => {

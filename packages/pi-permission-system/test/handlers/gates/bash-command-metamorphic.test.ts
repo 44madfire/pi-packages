@@ -372,6 +372,29 @@ describe("bash command gate — a parse it could not resolve fails closed", () =
       command:
         "git add -A . && git commit -F - <<'MSG' 2>&1 | rm -rf /tmp/x\nmsg\nMSG",
     },
+    // Valid bash whose heredoc tail the grammar cannot parse at all: the
+    // salvage recovers the command after the heredoc from the line's
+    // heredoc-free spelling.
+    {
+      label: "a heredoc followed by `;`",
+      command: "cat <<EOF ; rm -rf /tmp/x\nb\nEOF",
+    },
+    {
+      label: "a heredoc followed by `&`",
+      command: "cat <<EOF & rm -rf /tmp/x\nb\nEOF",
+    },
+    {
+      label: "a heredoc followed by words and a redirect",
+      command: "cat <<EOF arg > /tmp/o\nb\nEOF",
+    },
+    {
+      label: "a descriptor the grammar lexed into the delimiter",
+      command: "cat 0<<EOF | rm -rf /tmp/x\nb\nEOF",
+    },
+    {
+      label: "a heredoc tail inside a compound statement",
+      command: "if true; then cat <<EOF ; rm -rf /tmp/x\nb\nEOF\nfi",
+    },
     // Malformed input, which the shell itself refuses to run. Covered because
     // the clause is about the parse, not about what bash would accept.
     { label: "an unbalanced quote", command: "echo 'unbalanced" },
