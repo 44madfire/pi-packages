@@ -64,6 +64,23 @@ async function decide(
   ).state;
 }
 
+/**
+ * Whether `unit`'s whitespace-separated words appear in `command`, in order:
+ * the unit is the command with zero or more whole spans left out.
+ *
+ * Each word is found as a substring rather than as one of the command's own
+ * words, because an operator can abut a word (`rm $f;`).
+ */
+function isWordSubsequence(unit: string, command: string): boolean {
+  let next = 0;
+  for (const word of unit.split(/\s+/)) {
+    const found = command.indexOf(word, next);
+    if (found === -1) return false;
+    next = found + word.length;
+  }
+  return true;
+}
+
 describe("bash command gate — metamorphic totality", () => {
   const cases: { bare: string; state: PermissionState }[] = [
     { bare: "git push", state: "ask" },
@@ -459,14 +476,18 @@ describe("bash command gate — a parse it could not resolve fails closed", () =
     );
 
     it.each([...unresolved.map(({ command }) => command), ...resolved])(
-      "emits no unit whose text the command does not contain, for %s",
+      "emits no unit whose words are not the command's words, in order, for %s",
       async (command) => {
-        // Anti-invention: every unit's text is sliced from a parse of the
-        // command's own source, salvaged or not. Recovery's invented structure
-        // is refused a step earlier, when its re-parse fails.
+        // Anti-invention: every unit is built from a parse of the command's own
+        // source, salvaged or not, with at most whole spans left out: a
+        // redirect or heredoc between a command's words is not part of its
+        // unit. So its words are the command's words, in order. Recovery's
+        // invented structure is refused a step earlier, when its re-parse fails.
         const units = (await BashProgram.parse(command, normalizer)).commands();
 
-        expect(units.filter(({ text }) => !command.includes(text))).toEqual([]);
+        expect(
+          units.filter(({ text }) => !isWordSubsequence(text, command)),
+        ).toEqual([]);
       },
     );
 
