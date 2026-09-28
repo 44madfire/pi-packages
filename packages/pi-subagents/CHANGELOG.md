@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.8.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.7.7...pi-subagents-v21.8.0) (2026-09-28)
+
+
+### Features
+
+* **pi-subagents:** show the subagent's name, model, and thinking level in the session viewer's rules ([e2d3a99](https://github.com/gotgenes/pi-packages/commit/e2d3a99bb9df23f97e79e25b034bd32193092dd1)), closes [#876](https://github.com/gotgenes/pi-packages/issues/876)
+* **pi-subagents:** show each background subagent's provider and model in the agents widget ([f1dac93](https://github.com/gotgenes/pi-packages/commit/f1dac932d1f6dc38a9a1da02e908898bc88f606b)), closes [#954](https://github.com/gotgenes/pi-packages/issues/954)
+
+### Documentation
+
+* **pi-subagents:** document the session viewer's rules and the widget's model tag ([289ee43](https://github.com/gotgenes/pi-packages/commit/289ee4393bfd35224873c7800df1826bf7e97ac4)), closes [#876](https://github.com/gotgenes/pi-packages/issues/876)
+
 ## [21.7.7](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.7.6...pi-subagents-v21.7.7) (2026-09-25)
 
 
