@@ -11,6 +11,12 @@ import { GLYPHS } from "#src/ui/glyphs";
 
 // ---- Types ----
 
+/** A model as the UI names it. The SDK's `Model` satisfies it structurally. */
+export interface ModelIdentity {
+  readonly provider: string;
+  readonly id: string;
+}
+
 export type Theme = {
   fg(color: string, text: string): string;
   bold(text: string): string;
