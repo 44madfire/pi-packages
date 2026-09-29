@@ -25,10 +25,8 @@ export function proveCommandEffect(
   argWords: readonly string[],
 ): TokenEffect {
   if (!isBareCoreWord(headWord)) return UNPROVEN_EFFECT;
-  const guard = RETRACTION_GUARDS.get(headWord);
-  if (guard && argWords.some((word) => retractsClaim(word, guard))) {
-    return RETRACTED_EFFECT;
-  }
+  const withdrawsClaim = RETRACTION_GUARDS.get(headWord);
+  if (withdrawsClaim?.(argWords)) return RETRACTED_EFFECT;
   return CORE_READ_EFFECT;
 }
 
@@ -189,6 +187,19 @@ interface RetractionGuard {
 }
 
 /**
+ * Whether a guarded word's arguments withdraw its read claim.
+ *
+ * Each guarded word owns its own predicate, so a word whose proof needs more
+ * than option spellings can supply one without widening the option shape.
+ */
+type ClaimWithdrawal = (argWords: readonly string[]) => boolean;
+
+/** A withdrawal decided by option spellings alone: any argument naming one. */
+function optionGuard(guard: RetractionGuard): ClaimWithdrawal {
+  return (argWords) => argWords.some((word) => retractsClaim(word, guard));
+}
+
+/**
  * The three guarded words and what withdraws each one's claim.
  *
  * All three were chosen because their write options spell identically in GNU
@@ -197,10 +208,10 @@ interface RetractionGuard {
  * they match as exact words; `sort`'s only short option containing `o` is `-o`
  * itself, so the cluster rule cannot over-retract there.
  */
-const RETRACTION_GUARDS: ReadonlyMap<string, RetractionGuard> = new Map([
+const RETRACTION_GUARDS: ReadonlyMap<string, ClaimWithdrawal> = new Map([
   [
     "find",
-    {
+    optionGuard({
       exactWords: new Set([
         "-exec",
         "-execdir",
@@ -212,21 +223,21 @@ const RETRACTION_GUARDS: ReadonlyMap<string, RetractionGuard> = new Map([
         "-fprintf",
         "-fls",
       ]),
-    },
+    }),
   ],
   [
     "fd",
-    {
+    optionGuard({
       longStems: new Set(["--exec", "--exec-batch"]),
       shortLetters: new Set(["x", "X"]),
-    },
+    }),
   ],
   [
     "sort",
-    {
+    optionGuard({
       longStems: new Set(["--output"]),
       shortLetters: new Set(["o"]),
-    },
+    }),
   ],
 ]);
 
