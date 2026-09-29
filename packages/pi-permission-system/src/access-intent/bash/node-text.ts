@@ -106,7 +106,8 @@ const UNSPLIT_TYPES: ReadonlySet<string> = new Set([
  * Unquoted, every expansion splits. Double quotes stop splitting except for
  * `$@` and `${arr[@]}` (and their slices and transforms), which still expand to
  * one word per element; any quoted expansion spelling `@` is read as one of
- * them, which over-counts only an operand such as `${x:-a@b}`.
+ * them, which over-counts only an operand such as `${x:-a@b}`. An indirect
+ * `${!name}` is read as one too, since `name` may hold `arr[@]` or `@`.
  */
 function maySplitIntoWords(node: TSNode, quoted: boolean): boolean {
   if (WORD_SPLITTING_TYPES.has(node.type)) {
@@ -125,7 +126,7 @@ function maySplitIntoWords(node: TSNode, quoted: boolean): boolean {
 function expandsPerElement(node: TSNode): boolean {
   return (
     (node.type === "simple_expansion" || node.type === "expansion") &&
-    node.text.includes("@")
+    (node.text.includes("@") || node.text.includes("${!"))
   );
 }
 

@@ -300,6 +300,10 @@ describe("readArgWord", () => {
         ["quoted positional parameters after a literal", '"x$@"'],
         ["a quoted array expansion after a literal", '"x${arr[@]}"'],
         ["a quoted positional slice after a literal", '"x${@:2}"'],
+        // An indirect expansion names its target at run time, and `a='arr[@]'`
+        // expands per element with no `@` in the source.
+        ["a quoted indirect expansion after a literal", '"x${!a}"'],
+        ["an indirect expansion nested in a default", '"x${y:-${!b}}"'],
         ["a leading glob", "*"],
         ["a dash before a glob", "-*"],
         ["an escaped dash", "\\-delete"],
