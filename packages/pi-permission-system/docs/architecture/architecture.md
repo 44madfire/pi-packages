@@ -1289,6 +1289,9 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
 - [#992] — filed by [#924]'s planning; **becomes a new step in this phase, directly after [#924]** (operator decision).
   A computed argument can spell a `find`/`fd`/`sort` withdrawing option the literal-text guard never sees (`A=-delete; find ~/other $A` resolves on `_read` alone), the same class [#924] closes for `sed` and `awk` by retracting on any computed word.
   It consumes the `ArgWord.computed` fact [#924] threads into `proveCommandEffect`, and it is its own step because it newly prompts on `find . -name "$pat"`, where [#924] regresses nothing.
+- [#995] — filed by [#992]'s planning; **becomes a new step in this phase, directly after [#992]** (operator decision, 2026-09-29).
+  A plain `$HOME`/`$PWD` resolves to its startup value even after the program reassigns it, so `HOME=-delete; find "$HOME"` projects a core read of the home directory, measured through `BashProgram.parse`.
+  It is [#992]'s class (a word only the shell decides, read as known) in the variable vocabulary rather than the guards, and [#992]'s rule inherits the fix through `ArgWord.computed`.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1549,6 +1552,18 @@ Release: independent
 
 Release: independent
 
+#### [#995] A reassigned `$HOME` or `$PWD` is not statically known
+
+**Cause:** `resolvePlainVariableExpansion` resolves a plain `$HOME` to `os.homedir()` and `$PWD` to the base marker whatever the program assigned first, so `HOME=/etc; cat "$HOME/shadow"` projects `~/shadow` and `HOME=-delete; find "$HOME"` proves a core read.
+
+- **Smell:** Category C (the projection reads a fact, the startup value, that is not the value the shell expands).
+- **Target:** `src/access-intent/bash/shell-variable-expansion.ts` and its callers: a reference the program may have reassigned is not resolvable, so it reads as computed; ADR 0009's vocabulary note follows.
+- **Soft dependency:** [#992], whose guard rule reads `ArgWord.computed` and so inherits the fix.
+- **Outcome:** `HOME=/etc; cat "$HOME/shadow"` no longer projects a path under the home directory, and `HOME=-delete; find "$HOME"` withdraws `find`'s read claim.
+- **Commit type:** `fix:`.
+
+Release: independent
+
 #### [#963] An execution-modifier wrapper inherits the inner command's verdict
 
 **Cause:** `INDIRECTION_WRAPPER_NAMES` conflates two classes [#490] floored uniformly — wrappers that change *what* runs, *as whom*, or *with which operands* (`sudo`, `doas`, `env`, `xargs`, `parallel`, `rush`, `rust-parallel`, `find -exec`, `fd -x`, `watch`) and wrappers that change only *how* the same visible command runs (`time`, `timeout`, `nice`, `stdbuf`, `setsid`).
@@ -1631,7 +1646,8 @@ flowchart TD
     S859["✅ #859<br/>.. as a whole segment"] -.soft.-> S957["✅ #957<br/>A quoted --flag=value is still a flag"]
     S957 -.soft.-> S609
     S924["✅ #924<br/>sed/awk presumed readers"] -.soft.-> S992["#992<br/>Computed words withdraw the claim"]
-    S992 -.soft.-> S963["#963<br/>Execution-modifier wrappers inherit the verdict"]
+    S992 -.soft.-> S995["#995<br/>A reassigned $HOME is not known"]
+    S995 -.soft.-> S963["#963<br/>Execution-modifier wrappers inherit the verdict"]
     S963 -.soft.-> S880["#880<br/>commandEffects"]
     S880 --> S881["#881<br/>Blame reaches the ask"]
     S609 -.soft.-> S881
@@ -1656,7 +1672,7 @@ The diagram is laid out by dependency instead, so its shape and the working sequ
 - **Track A — role-carrying projection:** [#945] → [#863] → [#859] → [#957] → [#609] → [#977] → [#979] → [#985] → [#978].
   [#977] also re-enters `command-enumeration.ts` and the argument words `command-effects.ts`'s guards read, which Track B's [#924] and [#880] edit — sequence it against whichever of them is in flight rather than concurrently.
   Owns `src/access-intent/bash/token-collection.ts`, `token-classification.ts`, `bash-path-resolver.ts`, and the bash-path tests.
-- **Track B — proven and declared effects, and blame:** [#924] → [#992] → [#963] → [#880] → [#881].
+- **Track B — proven and declared effects, and blame:** [#924] → [#992] → [#995] → [#963] → [#880] → [#881].
   [#924] owns `command-effects.ts` and the pure-reader core section of `docs/configuration.md`; [#963] owns `wrapper-analysis.ts` and ADR 0013 §11; [#880] owns `src/config/` and re-enters `command-effects.ts`; [#881] owns `src/presentation/` and the two bash path gates.
   [#881] touches `bash-path.ts` / `bash-external-directory.ts`; [#609]'s plan leaves both gates unchanged, but [#881]'s blame reads the candidate set [#609] widens, so sequence [#881] after [#609].
 - **Track C — the judgment lane:** [#882], a deliberation first; its code half touches `authority/delegation-envelope.ts`, `authority/permission-forwarding.ts`, and the payload core [#881] owns, so it lands after [#881].
@@ -1667,7 +1683,7 @@ The sandbox seam that Phase 15 briefly carried as a fourth track is now Phase 16
 
 - **Batch "declared-effects":** [#880], [#881] (ship together; tail = [#881]; release vehicle = [#880]'s `feat:` with [#881]'s `fix:` riding the same release).
   They ship together because [#881]'s blame line names the config key [#880] creates, and a prompt telling the user to declare an effect they cannot declare is worse than the prompt it replaces.
-- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
+- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix:`), [#995] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
 
 ## Refactoring history
 
@@ -1817,5 +1833,6 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#985]: https://github.com/gotgenes/pi-packages/issues/985
 [#986]: https://github.com/gotgenes/pi-packages/issues/986
 [#992]: https://github.com/gotgenes/pi-packages/issues/992
+[#995]: https://github.com/gotgenes/pi-packages/issues/995
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
