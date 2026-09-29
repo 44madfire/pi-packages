@@ -37,6 +37,7 @@ const ROSTER = [
   "fd",
   "sort",
   "sed",
+  "awk",
 ];
 
 /**
@@ -45,6 +46,7 @@ const ROSTER = [
  */
 const MINIMAL_ARGUMENTS: ReadonlyMap<string, readonly string[]> = new Map([
   ["sed", ["p"]],
+  ["awk", ["{print}"]],
 ]);
 
 /** Prove a head word's effect over plain argument spellings. */
@@ -95,7 +97,6 @@ describe("proveCommandEffect", () => {
     it.each([
       "pnpm",
       "git",
-      "awk",
       "gawk",
       "uniq",
       "tee",
@@ -131,6 +132,7 @@ describe("proveCommandEffect", () => {
       "C:\\tools\\grep",
       "/bin/sed",
       "./sed",
+      "./awk",
     ])("refuses the core for the path-qualified head word %s", (word) => {
       expect(prove(word, [])).toEqual(UNPROVEN_EFFECT);
     });
@@ -238,6 +240,16 @@ describe("proveCommandEffect", () => {
           { value: "f.md", computed: false },
         ]),
       ).toEqual(RETRACTED);
+    });
+  });
+
+  describe("the awk guard", () => {
+    it("keeps the read claim for a program that only prints", () => {
+      expect(prove("awk", ["{print $1}", "data"])).toEqual(CORE_READ);
+    });
+
+    it("retracts the read claim for a program that redirects its output", () => {
+      expect(prove("awk", ['{print > "out"}', "data"])).toEqual(RETRACTED);
     });
   });
 

@@ -1385,6 +1385,7 @@ describe("BashProgram", () => {
         "sudo timeout 5 xargs grep foo",
         "xargs sed -n p",
         "find . -name '*.md' -exec sed -n 1p {} +",
+        "xargs awk '{print}'",
       ])("exempts %s", async (command) => {
         await expect(exemptions(command)).resolves.toEqual(["core-reader"]);
       });
@@ -1396,6 +1397,7 @@ describe("BashProgram", () => {
         ["xargs sort -o /tmp/x", "`-o` withdraws sort's read claim"],
         ["xargs sed -i s/a/b/", "`-i` withdraws sed's read claim"],
         ["xargs sed 'w out'", "a `w` command withdraws sed's read claim"],
+        ["xargs awk -f p.awk", "`-f` withdraws awk's read claim"],
       ])("does not exempt %s (%s)", async (command) => {
         await expect(exemptions(command)).resolves.toEqual([undefined]);
       });

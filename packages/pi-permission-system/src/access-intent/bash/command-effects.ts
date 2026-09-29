@@ -1,4 +1,5 @@
 import { type TokenEffect, UNPROVEN_EFFECT } from "#src/access-intent/effect";
+import { awkWithdrawsReadClaim } from "./awk-invocation";
 import type { ArgWord } from "./node-text";
 import { sedWithdrawsReadClaim } from "./sed-invocation";
 
@@ -118,7 +119,7 @@ interface CoreAdmission {
  *
  * | Word                                            | Why not                                                        |
  * | ----------------------------------------------- | -------------------------------------------------------------- |
- * | `awk`, `gawk`, `nawk`                           | The program text can `print > "file"` — not stable under args  |
+ * | `gawk`, `nawk`                                  | Their own dialects' options are unaudited; `awk` is guarded instead |
  * | `uniq`                                          | `uniq IN OUT` writes its second positional                     |
  * | `tee`, `dd`, `split`, `csplit`, `xxd`, `tree`, `curl`, `wget` | Each has a positional or option that writes a file |
  * | `less`, `more`                                  | Interactive shell escape (`!cmd`) and `LESSOPEN` preprocessing |
@@ -163,6 +164,11 @@ function coreAdmissions(): readonly CoreAdmission[] {
       words: ["sed"],
       reason:
         "Read-only until the command line says otherwise: an allowlist proof over its options and script — see sed-invocation.ts",
+    },
+    {
+      words: ["awk"],
+      reason:
+        "Read-only until the command line says otherwise: an allowlist proof over its options and program text — see awk-invocation.ts",
     },
   ];
 }
@@ -212,9 +218,11 @@ function optionGuard(guard: RetractionGuard): ClaimWithdrawal {
  * `find`, `fd`, and `sort` are guarded by option spellings alone, chosen
  * because their write options spell identically in GNU and BSD. `sed` needs a
  * proof over its script too, since a `w` command writes whatever its options
- * say, so it owns a predicate of its own. `find`'s options are single-dash long words that never cluster, so
- * they match as exact words; `sort`'s only short option containing `o` is `-o`
- * itself, so the cluster rule cannot over-retract there.
+ * say, and `awk` a proof over its program, since `print >` does the same — so
+ * each owns a predicate of its own. `find`'s options are single-dash long
+ * words that never cluster, so they match as exact words; `sort`'s only short
+ * option containing `o` is `-o` itself, so the cluster rule cannot
+ * over-retract there.
  */
 const RETRACTION_GUARDS: ReadonlyMap<string, ClaimWithdrawal> = new Map([
   [
@@ -248,6 +256,7 @@ const RETRACTION_GUARDS: ReadonlyMap<string, ClaimWithdrawal> = new Map([
     }),
   ],
   ["sed", sedWithdrawsReadClaim],
+  ["awk", awkWithdrawsReadClaim],
 ]);
 
 // ── Private helpers ────────────────────────────────────────────────────────

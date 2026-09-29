@@ -266,6 +266,27 @@ describe("a presumed reader under a directional read grant", () => {
     expect(resolvedState(result)).not.toBe("allow");
   });
 
+  it("silences awk that only reads its input", async () => {
+    const result = await externalDirectoryGate(
+      "awk '{print $1}' /outside/data",
+      readAllowed,
+    );
+
+    expect(resolvedState(result)).toBe("allow");
+  });
+
+  it("does not silence awk that writes back to its input", async () => {
+    const result = await externalDirectoryGate(
+      "awk '{print > FILENAME}' /outside/data",
+      readAllowed,
+    );
+
+    expect(resolvedState(result)).not.toBe("allow");
+    expect(isGateDescriptor(result) && result.surface).toBe(
+      "external_directory",
+    );
+  });
+
   it("keeps a redirect's write proof over a print-only sed", async () => {
     const result = await externalDirectoryGate(
       "sed -n p /outside/a > /outside/b",
