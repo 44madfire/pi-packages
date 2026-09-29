@@ -1201,5 +1201,132 @@ describe("BashProgram", () => {
         ).toEqual(["/etc/hosts"]);
       });
     });
+
+    describe("a leading cd", () => {
+      it("leaves a traversal back into cwd from a cd'd subdirectory alone", async () => {
+        // A real command that prompted as a false positive: the traversal
+        // resolves inside cwd from the cd target, but outside it from cwd.
+        expect(
+          await externalValuesOf(
+            'cd /projects/my-app/packages/sub && grep -n "pattern" .pi/../../../.pi/skills/pkg/SKILL.md',
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves the same traversal alone after a relative cd", async () => {
+        expect(
+          await externalValuesOf(
+            'cd packages/sub && grep -n "x" .pi/../../../.pi/skills/pkg/SKILL.md',
+          ),
+        ).toEqual([]);
+      });
+
+      it("still projects an absolute external path after a cd into a subdirectory", async () => {
+        expect(
+          await externalValuesOf(
+            "cd /projects/my-app/packages/sub && cat /etc/hosts",
+          ),
+        ).toEqual(["/etc/hosts"]);
+      });
+
+      it("resolves a traversal against an external cd target", async () => {
+        // `cd /tmp` makes /tmp the base, so the cd target itself is projected
+        // and ../etc/hosts resolves to /etc/hosts.
+        expect(await externalValuesOf("cd /tmp && cat ../etc/hosts")).toEqual([
+          "/tmp",
+          "/etc/hosts",
+        ]);
+      });
+
+      it("resolves an escape against a cd that is not the first command", async () => {
+        expect(
+          await externalValuesOf(
+            "echo hello && cd /projects/my-app/src && cat ../../outside.txt",
+          ),
+        ).toEqual(["/projects/outside.txt"]);
+      });
+
+      it("folds a cd joined by a semicolon", async () => {
+        expect(
+          await externalValuesOf("cd /projects/my-app/src ; cat ../README.md"),
+        ).toEqual([]);
+      });
+    });
+
+    describe("Git Bash tokens on a win32 host", () => {
+      const gitBash = new PathNormalizer(win32PathFlavor, "C:/projects/app");
+
+      it.each([
+        [
+          "a forward-slash drive path",
+          "cat C:/Windows/win.ini",
+          "c:\\windows\\win.ini",
+        ],
+        [
+          "a different drive letter",
+          "cat D:/secrets/password.txt",
+          "d:\\secrets\\password.txt",
+        ],
+      ])("projects %s outside cwd", async (_label, command, expected) => {
+        expect(await externalValuesOf(command, gitBash)).toEqual([expected]);
+      });
+
+      it("leaves a drive path inside cwd alone", async () => {
+        expect(
+          await externalValuesOf("cat C:/projects/app/inside.txt", gitBash),
+        ).toEqual([]);
+      });
+
+      it("leaves a drive path inside cwd alone after a non-literal cd", async () => {
+        // C:/ is absolute on win32, so it takes the resolved branch with its
+        // inside-cwd check rather than the unknown-base conservative branch.
+        expect(
+          await externalValuesOf(
+            'cd "$D" && cat C:/projects/app/inside.txt',
+            gitBash,
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves all four safe device paths alone", async () => {
+        expect(
+          await externalValuesOf(
+            "cat /dev/stdin /dev/stdout /dev/stderr /dev/null",
+            gitBash,
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves an in-cwd drive mount alone", async () => {
+        expect(
+          await externalValuesOf("cat /c/projects/app/inside.txt", gitBash),
+        ).toEqual([]);
+      });
+
+      it.each([
+        [
+          "an out-of-cwd drive mount",
+          "cat /c/Other/secret.txt",
+          "c:\\other\\secret.txt",
+        ],
+        [
+          "a different-drive mount",
+          "cat /d/secrets/pw.txt",
+          "d:\\secrets\\pw.txt",
+        ],
+      ])(
+        "projects %s as its translated Windows path",
+        async (_label, command, expected) => {
+          expect(await externalValuesOf(command, gitBash)).toEqual([expected]);
+        },
+      );
+
+      it("keeps distinct literal-only POSIX absolutes apart", async () => {
+        expect(await externalValuesOf("cat /tmp/a /tmp/b", gitBash)).toEqual([
+          "/tmp/a",
+          "/tmp/b",
+        ]);
+      });
+    });
   });
 });
