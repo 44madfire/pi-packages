@@ -29,4 +29,32 @@ Filed [#992] (computed words in `find`/`fd`/`sort`) and recorded it as a new Pha
 
 - `scripts/measure-core-coverage.mjs`: its header claims a drift check in `command-effects.test.ts` that does not exist.
 
+## Stage: Implementation — TDD (2026-09-29T13:46:04Z)
+
+### Session summary
+
+All seven planned TDD steps landed, plus one reviewer-driven fix and its docs commit: the guard-predicate reshape, the `prove()` test helper, the quoted-option wrapper bypass fix, `sed` in two steps (option walk and minimal grammar, then the full grammar), `awk`, and the docs (configuration, ADR 0013 §7 amendment, architecture `✅`).
+The `pi-permission-system` suite went from 4824 to 4992 tests (+168).
+
+### Observations
+
+- Deviation, step 4: the `computed` rule needed two additions to be sound.
+  `readArgWord` also marks a word computed when the shell rewrites its spelling (an escape, a glob, an ANSI-C string), and `commandArgumentWords` now reads every named non-prefix, non-redirect child, not only `ARG_NODE_TYPES`.
+  Without the second, a bare `$opt` vanished from the argument list, so `sed -n 1p $opt ~/x/f` proved read-only while `$opt` could be `-i`.
+- Deviation, step 5: the corpus re-run measured 901/1013 `sed` units proven, not the plan's "913 or more"; the gap is bare `$f` operands the widened argument list now sees.
+- Three test cases in the plan were wrong about the dialect rule: `s/[]/]x/y/` and `s,[^,]*,x,` put the delimiter inside a bracket, so they withdraw.
+  A label swallows a `}` (`:done}`), so the proven block form needs a newline before `}`.
+- Killing mutations that did not kill as planned: adding `w` to the read-only command set left every test green, because the trailing-text rule already refuses `w out`.
+  The load-bearing mutations were deleting the allowlist check (kills `v`, `}`) and relaxing the trailing rule, which needed a new fidelity pin (`pd`).
+  Likewise, accepting `w` as an `s` flag survives through the trailing rule, while accepting `e` kills.
+- The plan's step-5 bracket mutation needed a new case where only GNU's reading writes: `s/[/]/w out/`.
+- Pre-completion reviewer, round 1: WARN, because comma-form brace expansion (`{-i,-n}`, `-n{,i}`) was not marked computed.
+  Fixed in `fix(pi-permission-system): a brace-expanded argument withdraws sed's and awk's read claim`.
+  `tree-sitter-bash` splits a comma brace into a `concatenation` of plain words, so the check reads the concatenation's text; a first attempt on `word` nodes also flagged `find -exec … {} +`'s empty placeholder, which bash does not expand.
+- Pre-completion reviewer, delta round: PASS.
+- A full-suite run once failed two `test/authority/` forwarding tests at about 87 s each; a clean re-run passed, which matches the package skill's host-load note.
+- Issue [#880]'s body still cites `xargs sed -n` as floored; the roadmap entry was updated, the issue body was not.
+
+[#880]: https://github.com/gotgenes/pi-packages/issues/880
+
 [#992]: https://github.com/gotgenes/pi-packages/issues/992
