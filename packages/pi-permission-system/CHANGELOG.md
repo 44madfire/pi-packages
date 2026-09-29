@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [35.0.3](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v35.0.2...pi-permission-system-v35.0.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** a quoted withdrawing option keeps a wrapped find, fd, or sort floored ([d60653a](https://github.com/gotgenes/pi-packages/commit/d60653a3e53847851e889e8133a7fdab143b8cbb)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+* **pi-permission-system:** sed that only prints resolves on the read surface ([274ba89](https://github.com/gotgenes/pi-packages/commit/274ba8963d899f97306bfcfd2ece10ca2720d29d)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+* **pi-permission-system:** sed substitutions and regex addresses resolve on the read surface ([fbbc940](https://github.com/gotgenes/pi-packages/commit/fbbc94099fd7f0b31155b73c5c46b99359482ab9)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+* **pi-permission-system:** awk that only reads its input resolves on the read surface ([136c739](https://github.com/gotgenes/pi-packages/commit/136c739e2025d3d47bfcfc72929533411e515232)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+* **pi-permission-system:** a brace-expanded argument withdraws sed's and awk's read claim ([5b38dd3](https://github.com/gotgenes/pi-packages/commit/5b38dd3fb6e87ffa011dd25a80df372a955b4696)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+
+### Documentation
+
+* **pi-permission-system:** document sed and awk as presumed readers ([d3d0314](https://github.com/gotgenes/pi-packages/commit/d3d0314bf1a2940db237f384d1f377f727a3ea66)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+* **pi-permission-system:** name brace expansion among the computed spellings ([e4fee09](https://github.com/gotgenes/pi-packages/commit/e4fee09286705c898dd211ed5618ab4c040472d1)), closes [#924](https://github.com/gotgenes/pi-packages/issues/924)
+
 ## [35.0.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v35.0.1...pi-permission-system-v35.0.2) (2026-09-28)
 
 
