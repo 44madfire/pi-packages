@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.8.1](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.8.0...pi-subagents-v21.8.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **pi-subagents:** stop Pi's host-provided dependency warning at startup ([4525649](https://github.com/gotgenes/pi-packages/commit/4525649b04955788191b8de10af0721bd33a81b3)), closes [#994](https://github.com/gotgenes/pi-packages/issues/994)
+
 ## [21.8.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.7.7...pi-subagents-v21.8.0) (2026-09-28)
 
 
