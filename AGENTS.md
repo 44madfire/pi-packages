@@ -125,7 +125,7 @@ Before adding a passage here, answer three questions in order:
    If yes, keep the rule and drop the story; a `(Refs #N)` stays only when the issue encodes a constraint a reader may need to trace.
 
 A rule whose incident has not recurred in any retro since 2026-07-20 is a delete candidate — guidance, not a verdict, since the rule may be why it has not recurred.
-`/audit-agent-docs` applies this test to the whole file and the skills on demand.
+`/audit-agent-docs` applies this test on demand to this file, the skills, the prompt templates, and the subagent definitions.
 
 ## Index
 
