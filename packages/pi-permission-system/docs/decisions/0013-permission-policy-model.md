@@ -164,7 +164,7 @@ The `find`, `fd`, and `sort` guards matched each argument's source text against 
 
 **A computed argument withdraws an option-guarded word's claim whenever it may reach the program beginning with `-`** ([#992]).
 Every guarded option has that shape, and a computed word's source text is not what the program receives, so the guard asks only that question of it.
-The answer is `false` only when a literal leading character survives every rewrite the shell applies (globbing, brace expansion, and escape removal each keep a literal prefix) and no expansion can split the word (an unquoted one, or a quoted `$@`/`${arr[@]}`, which still yields one word per element), so `"x$y"`, `packages/*/docs`, and `\(` leave the claim standing while `"x$@"` withdraws it.
+The answer is `false` only when a literal leading character survives every rewrite the shell applies (globbing, brace expansion, and escape removal each keep a literal prefix) and no expansion can split the word (an unquoted one, or a quoted `$@`/`${arr[@]}` or indirect `${!name}`, which can still yield one word per element), so `"x$y"`, `packages/*/docs`, and `\(` leave the claim standing while `"x$@"` withdraws it.
 `sed` and `awk` keep the stricter rule above, since a computed word there can be the script itself.
 
 Measured over 70,961 unique bash commands from session transcripts and the review log, 96 `find` units that proved a read now withdraw, against 625 under a rule withdrawing on any computed word; none of the 96 wrote.
