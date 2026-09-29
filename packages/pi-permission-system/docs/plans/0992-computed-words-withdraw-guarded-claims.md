@@ -55,6 +55,12 @@ Since [#924] every argument word already carries `ArgWord.computed`, and `sed`/`
 
 ## Design Overview
 
+### Amended during implementation
+
+Pre-completion review found three words that split inside double quotes, so the predicate below was widened before shipping: a quoted `"x$@"` / `"x${arr[@]}"`, an indirect `"x${!a}"`, and finally any quoted variable, which may be a nameref (`declare -n s='arr[@]'`).
+Every quoted parameter expansion now counts as possibly splitting, so `"x$y"` **withdraws** the claim wherever this plan says it reads; the operator chose that over documenting the limit, at a measured cost of 3 more `find` units.
+ADR 0013's 2026-09-29 amendment and `docs/configuration.md` describe the shipped rule.
+
 ### How the evidence was produced
 
 A disposable Vitest spike (not committed) read 70,961 unique bash commands from real artifacts: every `bash` tool call in the 1,867 session transcripts under `~/.pi/agent/sessions/`, plus every `command` in the local review log.
