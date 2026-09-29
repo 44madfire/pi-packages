@@ -23,3 +23,16 @@ The plan (`docs/plans/0973-run-vitest-unpiped.md`) rewrites the `testing` skill'
   Also noted: `.pi/**` is excluded from ESLint and has no tsc or Vitest coverage, so a project-local extension would ship untested.
 - The `git-workflow` and `ship.md` redirect-then-`tail` idiom is predicted unchanged; it is correct for long-output gates and plausibly what agents over-generalize to Vitest.
 - No follow-up issue filed; the trigger to revisit is a recurrence in later retros.
+
+## Stage: Implementation — Build (2026-09-29T06:07:31Z)
+
+### Session summary
+
+Both plan steps landed as separate commits: two new bullets plus a reworded failure bullet in `.pi/skills/testing/SKILL.md` `## Running tests`, and an "unpiped" Red-step sentence in `.pi/prompts/tdd-plan.md`.
+The four Test Impact commands were re-run before committing and reproduced the plan's figures (9 lines, 4824 tests, `-t` narrowing, `&&` pairing).
+
+### Observations
+
+- No deviations from the plan; the drafted text went in verbatim and the em-dashes emitted cleanly.
+- Baseline and per-step `pnpm run lint` passed; no `.ts`, `src/`, or `test/` files were touched, so `check` and the full suite were not required.
+- Pre-completion reviewer: PASS; it independently re-ran all four commands and confirmed the `git-workflow`/`ship.md` redirect idiom does not contradict the new guidance.
