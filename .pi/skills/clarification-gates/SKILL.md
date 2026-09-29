@@ -36,4 +36,5 @@ Label every number in an option as measured or estimated; measure when the comma
 When every option shares a premise — the same object grown, the same representation assumed, the same vocabulary kept — name it and offer the option that removes it, or say why it is not viable.
 When the change adopts a third-party artifact, that artifact's own decomposition — its config surface, its precedence order, its field set — is a premise like any other.
 Derive the option space from the problem, then check the contribution against it.
+Mark `recommended` on the option your own substance supports: when the evidence you presented shows a no-mechanism option meets the goal, recommending a mechanism requires naming the gap it closes.
 An option whose differentiator is a dependency's behavior is a claim about that dependency — read its compiled source before writing the option, never its type declaration or its name.
