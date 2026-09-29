@@ -223,6 +223,7 @@ Then an H1 title (e.g., `# <short descriptive title>`) — required by markdownl
   For a prompt or skill change, the shell commands the new text prescribes are its testable surface: dry-run each at planning time and record the expected output, so `/build-plan` can re-run them as verification.
   When the plan introduces a parser or matcher, its testable surface is the input domain rather than the inputs you can picture.
   Run the candidate over every real sample available, and include this repo's own authoring conventions among the shapes it must survive, such as `markdown-conventions`' four-backtick fence.
+  When a prototype exists, run each case and killing mutation the TDD Order names through it, and record the outcome it produced rather than the one you expect.
   When the change's goal is a token's **absence** from output, apply that predicate to every literal the plan specifies, and assert it across the whole variant set rather than one example.
 - **Invariants at risk** — when the change touches a surface a prior phase step already refactored, list that step's documented invariants (the architecture roadmap's `Outcome:`/`Landed:` bullets) and name the test that pins each — add a test if the invariant lives only in prose.
   Open each test you name — a file that mocks the layer under test pins nothing about it.

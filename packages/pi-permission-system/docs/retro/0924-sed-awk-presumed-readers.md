@@ -55,6 +55,60 @@ The `pi-permission-system` suite went from 4824 to 4992 tests (+168).
 - A full-suite run once failed two `test/authority/` forwarding tests at about 87 s each; a clean re-run passed, which matches the package skill's host-load note.
 - Issue [#880]'s body still cites `xargs sed -n` as floored; the roadmap entry was updated, the issue body was not.
 
+## Stage: Final Retrospective (2026-09-29T16:35:24Z)
+
+### Session summary
+
+One session ran all four stages on trunk: planning, TDD (seven planned steps plus one reviewer-driven fix), ship (`pi-permission-system-v35.0.3`), and this retro.
+`sed` and `awk` joined the pure-reader core behind allowlist proofs, and a pre-existing wrapper-path bypass (a quoted `'-delete'` skipping the floor) was fixed along the way.
+
+### Observations
+
+#### What went well
+
+- Real-corpus spikes produced every number that reached the design, the ADR, and the planning gate: the 981 review-log commands run through the real `tree-sitter` parser gave 913/1013 and 134/218 before any code, and 901/1013 after it.
+- A consumer-level spike during planning (`BashProgram.parse` over `xargs find . '-delete'`) found a real floor bypass the issue never mentioned, and the operator folded it in at the gate.
+- The mandatory mutation step caught two plan-predicted killing mutations that were vacuous (adding `w` to the command set, accepting `w` as an `s` flag), which led to a fidelity pin (`pd`) that no planned test covered.
+- The reviewer's re-derivation mandate ("enumerate your own candidate inputs") produced the one finding, brace expansion, that no planned test and no author check had considered.
+
+#### What caused friction (agent side)
+
+- `missing-context`: the planning spike built its argument words through the production filter (`ARG_NODE_TYPES`), so it inherited that filter's blind spot.
+  A bare `$opt` is a `simple_expansion`, dropped before the computed check could see it.
+  Self-identified mid-TDD (step 4).
+  Impact: an unplanned soundness change to `commandArgumentWords`, a lower relief figure (901, not 913 or more), and a plan claim ("any computed word withdraws") that was false as planned.
+- `premature-convergence`: three test inputs and two killing mutations in the plan were written from expectation, not run through the prototype that existed at planning time.
+  `s/[]/]x/y/` and `s,[^,]*,x,` violate the plan's own bracket rule; `:done}` swallows its brace; `w` mutations are shadowed by the trailing-text rule.
+  Impact: about six extra red/green runs during TDD and one new test, with no rework to shipped code.
+- `premature-convergence`: the first brace-expansion fix matched `word` nodes before dumping the parse tree.
+  `tree-sitter-bash` splits `{-i,-n}` into a `concatenation` of plain words, and the regex also flagged `find -exec … {} +`'s empty placeholder.
+  Impact: one failed attempt and a 900 s tool timeout from chaining the full suite, `check`, `lint`, `fallow`, and `commit` in one call.
+- `instruction-violation` (self-identified): `\u2014` and `\u2026` escapes were written into an `Edit` body twice, in the ADR 0013 amendment and inside retro code spans.
+  The lint gate skips code spans, so the second needed a hand fix and an amend.
+  Impact: two scripted repairs, and no escape shipped.
+- `other`: the ship stage's close comment says "a majority of `awk` invocations now prove read-only", which was never re-measured after implementation (134/218 was the prototype).
+  It also addresses the self-filed issue's author as "your".
+  Impact: an imprecise public claim, with no rework.
+
+#### What caused friction (user side)
+
+- The first `/ship` attempt stalled on empty assistant turns across a model switch, and the operator re-sent the command ("Trying again").
+  No work was lost, since nothing ran before the stall.
+
+### Diagnostic details
+
+- **Model-performance correlation**: planning, TDD, and retro ran on `claude-opus-5-5`; ship ran on `claude-sonnet-5`, which suits a scripted flow.
+  Its one judgment output, the close comment, carried the unmeasured "majority" claim.
+  Both `pre-completion-reviewer` rounds ran on `claude-sonnet-5` and took 12837 s and 7841 s of wall time (1.1M and 339k tokens).
+  The first round did produce the one real finding, but the wall time is far beyond what the review's surface warrants and is worth watching across issues.
+- **Feedback-loop gap analysis**: `check` ran after every interface-changing step and the full package suite before every commit, which is incremental.
+  The one gap was chaining the full suite with the commit in a single 900 s-bounded call.
+
+### Changes made
+
+1. `.pi/prompts/plan-issue.md`: the parser/matcher bullet under Test Impact Analysis now says to run the TDD Order's named cases and killing mutations through an existing prototype, and to record the observed outcome.
+2. `.pi/skills/reproduction/SKILL.md`: "Build it from real artifacts" now warns that a probe selecting its input through the code under test's own filter inherits that filter's blind spot.
+
 [#880]: https://github.com/gotgenes/pi-packages/issues/880
 
 [#992]: https://github.com/gotgenes/pi-packages/issues/992
