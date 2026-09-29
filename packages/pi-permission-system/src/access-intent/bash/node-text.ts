@@ -72,6 +72,9 @@ function isSpelledExactly(node: TSNode): boolean {
     case "expansion":
       return resolvePlainVariableExpansion(node) !== null;
     case "string":
+    // A digit run is an ordinary word to the shell; the grammar's `10#$x` form
+    // carries an expansion child, which answers for itself.
+    case "number":
       return childrenSpelledExactly(node);
     case "concatenation":
       // The grammar splits `{-i,-n}` into plain words, so the expansion is

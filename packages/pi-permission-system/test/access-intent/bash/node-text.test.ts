@@ -242,6 +242,8 @@ describe("readArgWord", () => {
       ["a tilde path", "~/notes.md", "~/notes.md"],
       ["a concatenation of quoted parts", "-'i'\"\"", "-i"],
       ["an empty brace pair, which bash leaves alone", "{}", "{}"],
+      ["a number", "2", "2"],
+      ["a negative number", "-20", "-20"],
     ])("reads %s as exact (%s)", async (_label, argument, value) => {
       await expect(argWordOf(argument)).resolves.toEqual({
         value,
@@ -264,6 +266,7 @@ describe("readArgWord", () => {
       ["an ANSI-C string", "$'-i'"],
       ["a variable", "$OPT"],
       ["a command substitution", "$(echo -i)"],
+      ["a based number with an expansion", "10#$x"],
     ])("marks %s computed (%s)", async (_label, argument) => {
       await expect(argWordOf(argument)).resolves.toMatchObject({
         computed: true,

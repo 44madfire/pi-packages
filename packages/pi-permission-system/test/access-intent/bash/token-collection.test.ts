@@ -1238,6 +1238,13 @@ describe("effect attribution", () => {
     ]);
   });
 
+  it("keeps sed's read claim over a digit argument, which the shell passes as written", async () => {
+    const read = { effect: "read", source: "core" };
+    expect(await attributedTokens("sed -n 1p 2 /etc/hosts")).toEqual([
+      { token: "/etc/hosts", effect: read },
+    ]);
+  });
+
   it("retracts a guarded word's claim when an option withdraws it", async () => {
     const retracted = { effect: "unproven", source: "retracted" };
     expect(await attributedTokens("find /etc -delete")).toEqual([
