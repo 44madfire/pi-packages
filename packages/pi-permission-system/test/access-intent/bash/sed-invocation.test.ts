@@ -31,6 +31,29 @@ describe("sedWithdrawsReadClaim", () => {
       expect(sedWithdrawsReadClaim(literal(...args))).toBe(false);
     });
 
+    it.each([
+      [["-n", "/x/,/y/p", "f.md"]],
+      [["-n", "/```mermaid/,/```/p", "f.md"]],
+      [["-n", "/^export/Ip", "f.md"]],
+      [["-n", "\\|a/b|p", "f.md"]],
+      [["-n", "0,/re/p", "f.md"]],
+      [["s/a/b/g", "f.md"]],
+      [["s|a|b|", "f.md"]],
+      [["-n", "s/a/b/2p", "f.md"]],
+      [["-E", "s/(a)\\/b/\\1/gI", "f.md"]],
+      [["s/\\.[0-9]\\+/[]/g", "f.md"]],
+      [["s/[[:space:]]*$//", "f.md"]],
+      [["y/abc/xyz/", "f.md"]],
+      [["/^#/d", "f.md"]],
+      [["-n", "/start/,/end/{/skip/!p}", "f.md"]],
+      [["-n", "/a/{p;q}", "f.md"]],
+      [[":a;N;$!ba;s/\\n/ /g", "f.md"]],
+      [["-n", "/x/{s/a/b/;t done;p;:done\n}", "f.md"]],
+      [["-n", "# a comment\n1p", "f.md"]],
+    ])("keeps the claim for the extended script in sed %j", (args) => {
+      expect(sedWithdrawsReadClaim(literal(...args))).toBe(false);
+    });
+
     it("keeps the claim across a multi-line script", () => {
       expect(sedWithdrawsReadClaim(literal("-n", "1p\n$p", "f.md"))).toBe(
         false,
@@ -113,6 +136,50 @@ describe("sedWithdrawsReadClaim", () => {
       "}",
     ])("withdraws the claim for the script %j", (script) => {
       expect(sedWithdrawsReadClaim(literal("-n", script, "f.md"))).toBe(true);
+    });
+
+    it.each([
+      "s/a/b/w out",
+      "s/a/b/gw out",
+      "s/a/b/e",
+      "s/a/b/x",
+      "s/a/b",
+      "s/a/b/;w out",
+      "saxayaw out",
+      "s\\a\\b\\",
+      "y/ab/c",
+      "/x/w out",
+      "/x",
+      "{p",
+      "b end;w out",
+      "s/[]/]x/y/",
+      "s,[^,]*,x,",
+      "/x/{p;:done}",
+    ])("withdraws the claim for the extended script %j", (script) => {
+      expect(sedWithdrawsReadClaim(literal("-n", script, "f.md"))).toBe(true);
+    });
+
+    it("withdraws the claim for a delimiter inside a bracket expression", () => {
+      // BSD reads `[/]` as a bracket, so the substitution ends at the third
+      // `/` and `w out` is its write flag; GNU ends the regex at the first
+      // `/` and rejects the rest. The two readings disagree about the flags.
+      expect(sedWithdrawsReadClaim(literal("s/[/]/x/w out", "f.md"))).toBe(
+        true,
+      );
+    });
+
+    it("withdraws the claim where only GNU's reading writes", () => {
+      // GNU ends the regex at `[`, reads `]` as the replacement, and takes
+      // `w out/` as its write flag; BSD reads the bracket and sees no flag.
+      expect(sedWithdrawsReadClaim(literal("s/[/]/w out/", "f.md"))).toBe(true);
+    });
+
+    it("withdraws the claim for a delimiter inside an address bracket", () => {
+      expect(sedWithdrawsReadClaim(literal("-n", "/[/]/p", "f.md"))).toBe(true);
+    });
+
+    it("withdraws the claim for an unterminated bracket expression", () => {
+      expect(sedWithdrawsReadClaim(literal("-n", "/[ab/p", "f.md"))).toBe(true);
     });
 
     it("withdraws the claim for a command glued to the next one", () => {
