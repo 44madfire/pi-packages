@@ -103,15 +103,16 @@ const UNSPLIT_TYPES: ReadonlySet<string> = new Set([
 /**
  * Whether any expansion in the word may produce more than one word.
  *
- * Unquoted, every expansion splits. Double quotes stop splitting except for
- * `$@` and `${arr[@]}` (and their slices and transforms), which still expand to
- * one word per element; any quoted expansion spelling `@` is read as one of
- * them, which over-counts only an operand such as `${x:-a@b}`. An indirect
- * `${!name}` is read as one too, since `name` may hold `arr[@]` or `@`.
+ * Unquoted, every expansion splits. Inside double quotes a command
+ * substitution or arithmetic expansion is one word, but a parameter expansion
+ * may not be: `$@` and `${arr[@]}` expand to one word per element, an indirect
+ * `${!name}` may name either, and any variable may be a nameref
+ * (`declare -n s='arr[@]'`), with nothing in its own spelling to show it. So
+ * every quoted parameter expansion counts, over-counting a joined `$*`.
  */
 function maySplitIntoWords(node: TSNode, quoted: boolean): boolean {
   if (WORD_SPLITTING_TYPES.has(node.type)) {
-    return !quoted || expandsPerElement(node);
+    return !quoted || PARAMETER_EXPANSION_TYPES.has(node.type);
   }
   if (UNSPLIT_TYPES.has(node.type)) return false;
   const childrenQuoted = quoted || node.type === "string";
@@ -122,13 +123,11 @@ function maySplitIntoWords(node: TSNode, quoted: boolean): boolean {
   return false;
 }
 
-/** A quoted parameter expansion that still yields one word per element. */
-function expandsPerElement(node: TSNode): boolean {
-  return (
-    (node.type === "simple_expansion" || node.type === "expansion") &&
-    (node.text.includes("@") || node.text.includes("${!"))
-  );
-}
+/** Parameter expansions, which may yield several words even when quoted. */
+const PARAMETER_EXPANSION_TYPES: ReadonlySet<string> = new Set([
+  "simple_expansion",
+  "expansion",
+]);
 
 /**
  * Whether the first character the word produces may be `-`, or `undefined`

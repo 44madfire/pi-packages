@@ -1287,9 +1287,15 @@ describe("effect attribution", () => {
       );
     });
 
-    it("keeps find's claim for a computed word behind a literal", async () => {
+    it("retracts find's claim for a quoted variable, which may be a nameref", async () => {
       expect(await attributedTokens('find /etc -name "x$y"')).toEqual(
-        attributed(["/etc", "-name", "x$y"], read),
+        attributed(["/etc", "-name", "x$y"], retracted),
+      );
+    });
+
+    it("keeps find's claim for a glob behind a literal", async () => {
+      expect(await attributedTokens("find /etc/* -name x")).toEqual(
+        attributed(["/etc/*", "-name", "x"], read),
       );
     });
 

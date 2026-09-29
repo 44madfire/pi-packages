@@ -304,6 +304,14 @@ describe("readArgWord", () => {
         // expands per element with no `@` in the source.
         ["a quoted indirect expansion after a literal", '"x${!a}"'],
         ["an indirect expansion nested in a default", '"x${y:-${!b}}"'],
+        // Any variable may be a nameref (`declare -n s='arr[@]'`), which
+        // expands per element with nothing in its own spelling to show it.
+        ["a quoted variable after a literal", '"x$y"'],
+        ["a quoted braced variable after a literal", '"x${y}"'],
+        // `$*` and `${arr[*]}` join into one word inside quotes; answering
+        // true for them is the conservative over-count of the rule above.
+        ["quoted joined positional parameters after a literal", '"x$*"'],
+        ["a quoted joined array after a literal", '"x${arr[*]}"'],
         ["a leading glob", "*"],
         ["a dash before a glob", "-*"],
         ["an escaped dash", "\\-delete"],
@@ -320,10 +328,8 @@ describe("readArgWord", () => {
 
     describe("a word whose leading literal survives every rewrite", () => {
       it.each([
-        ["a quoted variable after a literal", '"x$y"'],
-        // `$*` and `${arr[*]}` join into one word inside quotes.
-        ["quoted joined positional parameters after a literal", '"x$*"'],
-        ["a quoted joined array after a literal", '"x${arr[*]}"'],
+        ["a quoted command substitution after a literal", '"x$(echo -o)"'],
+        ["a quoted arithmetic expansion after a literal", '"x$((1))"'],
         ["a glob after a literal", "packages/*/docs"],
         ["an escaped parenthesis", "\\("],
         ["a brace expansion after a literal", "x{a,-b}"],

@@ -241,7 +241,7 @@ describe("proveCommandEffect", () => {
         expect(
           proveCommandEffect(headWord, [
             ...literalArgWords("in"),
-            computedArgWord("x$y", false),
+            computedArgWord("x*", false),
           ]),
         ).toEqual(CORE_READ);
       },
