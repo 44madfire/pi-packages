@@ -28,3 +28,23 @@ That file also takes `program.test.ts`'s `externalPaths` describe (81 tests, lin
 #### Deferred tidyings
 
 - `test/**/*.test.ts` — 18 files inline the same `vi.hoisted` `realpathSync` pass-through `node:fs` mock; the assessor judged a shared helper the wrong abstraction for this change.
+
+## Stage: Implementation — TDD (2026-09-29T03:25:50Z)
+
+### Session summary
+
+Completed all six plan steps: the `externalPaths` describe moved verbatim into `program-external-accesses.test.ts`, three batches migrated the facade cases with no equivalent, and the facade plus its test file were deleted, with the roadmap step marked landed.
+Package test count across the three files went from 475 to 420, since 55 cases with a cited equivalent were deleted, and `program.test.ts` went from 2916 to 2082 lines.
+
+### Observations
+
+- Deviation: 78 cases migrated and 55 deleted as equivalent (the plan said 77/56).
+  The unquoted `awk -F:` case was migrated because the cited equivalent tests the quoted `-F':'` concatenation, a different construct.
+- Deviation: the win32 cases went into a new `Git Bash tokens on a win32 host` describe instead of the existing win32 describe, because the facade's cwd (`C:/projects/app`) differs from the existing one's.
+- Several planned killing mutations left their tests green, and each finding is recorded in its commit body.
+  Dropping `comment` or `heredoc_body` from `SKIP_SUBTREE_TYPES` changed nothing, even with the type also added to `ARG_NODE_TYPES`, so those cases pin grammar structure rather than the skip set.
+  Renaming the `sed`/`grep` keys in `PATTERN_FIRST_COMMANDS` left the cases whose pattern has no path shape green (`s/foo.*/`, the alternation, `^/usr/bin`), because the classifier rejects those patterns anyway.
+- Every tightened `toEqual` value came from a run, and all matched what the facade test's name claimed (`cd /tmp && cat ../etc/hosts` → `/tmp`, `/etc/hosts`; `C:/Windows/win.ini` → `c:\windows\win.ini`).
+- Once step 4 stripped the facade suite's wholesale `node:fs` and `/mock/home` mocks, it held only presentation cases, so step 5 was a clean deletion.
+- Pre-completion reviewer: PASS.
+  It re-derived 20+ equivalence rows and confirmed all 81 moved test names survive.
