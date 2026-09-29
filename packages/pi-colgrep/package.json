@@ -60,7 +60,8 @@
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.75.0",
-    "@earendil-works/pi-tui": ">=0.75.0"
+    "@earendil-works/pi-tui": ">=0.75.0",
+    "typebox": "*"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
