@@ -1396,6 +1396,25 @@ describe("BashProgram", () => {
         await expect(exemptions(command)).resolves.toEqual([undefined]);
       });
 
+      describe("a withdrawing option spelled with quotes", () => {
+        // The shell removes the quotes before the program sees the option, so
+        // the core must read the same resolved word the program receives.
+        it.each([
+          "xargs find . '-delete'",
+          'xargs find . "-delete"',
+          "xargs sort '-o' /tmp/x",
+          "xargs fd foo '--exec' rm",
+        ])("does not exempt %s", async (command) => {
+          await expect(exemptions(command)).resolves.toEqual([undefined]);
+        });
+
+        it("still exempts a quoted argument that withdraws nothing", async () => {
+          await expect(exemptions("xargs grep 'foo'")).resolves.toEqual([
+            "core-reader",
+          ]);
+        });
+      });
+
       it("is absent for a command that is not a wrapper", async () => {
         await expect(exemptions("grep foo")).resolves.toEqual([undefined]);
       });

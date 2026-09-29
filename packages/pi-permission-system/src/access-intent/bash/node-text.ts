@@ -28,6 +28,25 @@ export const ARG_NODE_TYPES = new Set([
 ]);
 
 /**
+ * One argument as the program receives it, and whether that is knowable.
+ *
+ * A capability proof must read the value after quote removal, since `'-o'` and
+ * `-o` reach `sort` identically, and must know when the value is computed,
+ * since a word only the shell decides can spell any option at all.
+ */
+export interface ArgWord {
+  /** The string the shell passes after quote removal ({@link resolveNodeText}). */
+  readonly value: string;
+  /** Whether only running the command decides the value ({@link hasComputedPart}). */
+  readonly computed: boolean;
+}
+
+/** Read an argument node into the word the program receives. */
+export function readArgWord(node: TSNode): ArgWord {
+  return { value: resolveNodeText(node), computed: hasComputedPart(node) };
+}
+
+/**
  * Whether an argument node's value is decided at run time: it contains a
  * command or process substitution, an arithmetic expansion, or a variable
  * expansion {@link resolvePlainVariableExpansion} cannot resolve.

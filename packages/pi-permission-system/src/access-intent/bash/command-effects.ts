@@ -1,4 +1,5 @@
 import { type TokenEffect, UNPROVEN_EFFECT } from "#src/access-intent/effect";
+import type { ArgWord } from "./node-text";
 
 // ── Public surface ─────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ import { type TokenEffect, UNPROVEN_EFFECT } from "#src/access-intent/effect";
  */
 export function proveCommandEffect(
   headWord: string,
-  argWords: readonly string[],
+  argWords: readonly ArgWord[],
 ): TokenEffect {
   if (!isBareCoreWord(headWord)) return UNPROVEN_EFFECT;
   const withdrawsClaim = RETRACTION_GUARDS.get(headWord);
@@ -192,11 +193,12 @@ interface RetractionGuard {
  * Each guarded word owns its own predicate, so a word whose proof needs more
  * than option spellings can supply one without widening the option shape.
  */
-type ClaimWithdrawal = (argWords: readonly string[]) => boolean;
+type ClaimWithdrawal = (argWords: readonly ArgWord[]) => boolean;
 
 /** A withdrawal decided by option spellings alone: any argument naming one. */
 function optionGuard(guard: RetractionGuard): ClaimWithdrawal {
-  return (argWords) => argWords.some((word) => retractsClaim(word, guard));
+  return (argWords) =>
+    argWords.some(({ value }) => retractsClaim(value, guard));
 }
 
 /**

@@ -40,7 +40,10 @@ const ROSTER = [
 
 /** Prove a head word's effect over plain argument spellings. */
 function prove(headWord: string, argWords: readonly string[]) {
-  return proveCommandEffect(headWord, argWords);
+  return proveCommandEffect(
+    headWord,
+    argWords.map((value) => ({ value, computed: false })),
+  );
 }
 
 describe("PURE_READER_CORE", () => {

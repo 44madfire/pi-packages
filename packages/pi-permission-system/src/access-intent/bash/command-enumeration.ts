@@ -1,5 +1,6 @@
 import type { BashCommandContext, FloorExemption } from "#src/types";
 import { EXECUTION_HOST_TYPES, forEachExecutionIn } from "./nested-execution";
+import { readArgWord } from "./node-text";
 import { parseUnresolvedWithin } from "./parse-health";
 import type { TSNode } from "./parser";
 import { REDIRECT_NODE_TYPES, redirectMayWriteFile } from "./redirect-analysis";
@@ -284,7 +285,11 @@ export function collectSalvagedCommands(node: TSNode): BashCommand[] {
 export function inlineShellPayloadNode(command: TSNode): TSNode | null {
   const nodes = commandWordNodes(command);
   const index = inlineShellPayloadIndex(
-    nodes.map((node) => ({ text: node.text, offset: node.startIndex })),
+    nodes.map((node) => ({
+      ...readArgWord(node),
+      text: node.text,
+      offset: node.startIndex,
+    })),
   );
   return index === -1 ? null : (nodes.at(index) ?? null);
 }
@@ -490,7 +495,7 @@ function readCommandUnit(node: TSNode): {
   let previous: TSNode | undefined;
   for (const word of nodes) {
     if (previous) text += gapBetween(node, previous, word, redirects);
-    words.push({ text: word.text, offset: text.length });
+    words.push({ ...readArgWord(word), text: word.text, offset: text.length });
     text += word.text;
     previous = word;
   }
