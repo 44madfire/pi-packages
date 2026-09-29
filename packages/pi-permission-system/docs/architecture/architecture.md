@@ -1494,7 +1494,7 @@ Every unit under the statement is floored to `ask`, so an explicit `deny` on the
 
 Release: independent
 
-#### [#978] The bash-path facade nobody calls
+#### ✅ [#978] The bash-path facade nobody calls
 
 **Cause:** `extractExternalPathsFromBashCommand` (`src/handlers/gates/bash-path-extractor.ts`) has no production caller (both bash path gates read `BashProgram` directly), so its 1300-line test file re-tests `BashProgram` through a seam nothing uses; that file is the concentrated test-design cluster the craftsmanship scout found.
 
@@ -1503,6 +1503,10 @@ Release: independent
 - **Soft dependency:** [#985], which lands directly after [#979], the step this one now follows.
 - **Outcome:** no test file re-tests `BashProgram` through an unused facade; the `bash-path-extractor.ts` module-tree entry matches the decision.
 - **Commit type:** `test:`/`refactor:` (no release).
+
+  Landed: `test(pi-permission-system): give BashProgram.externalAccesses its own test file`, `test(pi-permission-system): pin the shell-syntax external-access cases on BashProgram`, `test(pi-permission-system): pin the pattern-first command external-access cases on BashProgram`, `test(pi-permission-system): pin the cd-prefix and win32 external-access cases on BashProgram`, and `refactor(pi-permission-system): retire the unused bash external-path facade`.
+  The facade is retired, and `test/access-intent/bash/program-external-accesses.test.ts` is the one home for `BashProgram.externalAccesses()`: `program.test.ts`'s `externalPaths` describe (81 tests) plus the 78 facade cases with no equivalent elsewhere; the other 55 had a cited equivalent and were deleted.
+  `program.test.ts` went from 2916 to 2082 lines.
 
 Release: independent
 
@@ -1611,7 +1615,7 @@ flowchart TD
     S609 -.soft.-> S977["✅ #977<br/>Arguments after a redirect"]
     S977 -.soft.-> S979["✅ #979<br/>A heredoc's tail"]
     S979 -.soft.-> S985["✅ #985<br/>A tail the grammar cannot parse"]
-    S985 -.soft.-> S978["#978<br/>The facade nobody calls"]
+    S985 -.soft.-> S978["✅ #978<br/>The facade nobody calls"]
     S881 -.soft.-> S882["#882<br/>May a link dismiss a nonexistent-path ask?"]
 ```
 
