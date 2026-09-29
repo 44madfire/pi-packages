@@ -8,9 +8,29 @@
 // class is its body words times its invocations — the workflow corpus's
 // counterpart to always-loaded.mjs.
 //
-// Reads the same machine-local session store as model-usage.mjs.
+// Reads the same machine-local session store as model-usage.mjs. The window
+// defaults to the 30 days before --until (exclusive, default today UTC); an
+// audit passes the same --until to its before and after runs so both count the
+// same invocations and differ only in words.
+//
+// Usage: node scripts/agent-docs/invocation-volume.mjs [--since YYYY-MM-DD]
+//   [--until YYYY-MM-DD] [--root DIR] [--sessions-dir DIR] [--prefix NAME]
+//   [--total]
 
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { countWords } from "./doc-growth.mjs";
 import { markdownBody } from "./frontmatter.mjs";
+import {
+  DEFAULT_PREFIX,
+  DEFAULT_SESSIONS_DIR,
+  transcriptPaths,
+} from "./model-usage.mjs";
+
+const DEFAULT_WINDOW_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * A template's match key: the first `# ` line of its body, or "" when the
@@ -106,4 +126,83 @@ function isDispatch(part) {
     typeof part.arguments?.subagent_type === "string" &&
     part.arguments.resume === undefined
   );
+}
+
+function parseArgs(argv) {
+  const options = {
+    root: process.cwd(),
+    sessionsDir: DEFAULT_SESSIONS_DIR,
+    prefix: DEFAULT_PREFIX,
+    until: new Date().toISOString().slice(0, 10),
+    since: undefined,
+    total: false,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i];
+    if (flag === "--total") options.total = true;
+    else if (flag === "--root") options.root = argv[++i];
+    else if (flag === "--sessions-dir") options.sessionsDir = argv[++i];
+    else if (flag === "--prefix") options.prefix = argv[++i];
+    else if (flag === "--since") options.since = argv[++i];
+    else if (flag === "--until") options.until = argv[++i];
+    else throw new Error(`unknown option: ${flag}`);
+  }
+  options.since ??= new Date(
+    Date.parse(options.until) - DEFAULT_WINDOW_DAYS * DAY_MS,
+  )
+    .toISOString()
+    .slice(0, 10);
+  return options;
+}
+
+function corpusFiles(root) {
+  const read = (kind, dir, keyOf) =>
+    readdirSync(dir)
+      .filter((name) => name.endsWith(".md"))
+      .sort()
+      .map((name) => {
+        const markdown = readFileSync(path.join(dir, name), "utf8");
+        return {
+          kind,
+          file: name,
+          key: keyOf(name, markdown),
+          words: countWords(markdownBody(markdown)),
+        };
+      });
+  return [
+    ...read("template", path.join(root, ".pi", "prompts"), (_, markdown) =>
+      templateHeading(markdown),
+    ),
+    ...read("agent", path.join(root, ".pi", "agents"), (name) =>
+      name.replace(/\.md$/, ""),
+    ),
+  ];
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const options = parseArgs(process.argv.slice(2));
+  const window = { since: options.since, until: options.until };
+  const events = transcriptPaths(options).flatMap((transcript) => [
+    ...invocations(readFileSync(transcript, "utf8").split("\n"), window),
+  ]);
+  const rows = volumeRows(corpusFiles(options.root), events);
+
+  if (options.total) {
+    const sum = (kind) =>
+      rows
+        .filter((row) => row.kind === kind)
+        .reduce((total, row) => total + row.volume, 0);
+    const templates = sum("template");
+    const agents = sum("agent");
+    process.stdout.write(
+      `templates=${templates} agents=${agents} total=${templates + agents} since=${window.since} until=${window.until}\n`,
+    );
+  } else {
+    process.stdout.write("kind,file,words,invocations,volume\n");
+    for (const row of rows) {
+      process.stdout.write(
+        `${row.kind},${row.file},${row.words},${row.invocations},${row.volume}\n`,
+      );
+    }
+  }
 }
