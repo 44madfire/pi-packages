@@ -36,6 +36,16 @@ describe("BashProgram", () => {
       realpathSync.mockImplementation((p: string) => p);
     });
 
+    /** The external paths a command reaches, in their as-typed form. */
+    async function externalValuesOf(
+      command: string,
+      at: PathNormalizer = normalizer,
+    ): Promise<string[]> {
+      return (await BashProgram.parse(command, at))
+        .externalAccesses()
+        .map(({ path }) => path.value());
+    }
+
     it("returns absolute paths resolving outside cwd", async () => {
       const program = await BashProgram.parse("cat /etc/hosts", normalizer);
       // Subset matcher: the path is normalized before comparison.
@@ -198,6 +208,18 @@ describe("BashProgram", () => {
         expect(
           program.externalAccesses().map(({ path }) => path.value()),
         ).toEqual([expected]);
+      });
+
+      it("projects a bracket glob in a home-relative path", async () => {
+        expect(await externalValuesOf("cat ~/.ssh/[i]d_rsa")).toEqual([
+          join(homedir(), ".ssh/[i]d_rsa"),
+        ]);
+      });
+
+      it("leaves a glob resolving within cwd alone", async () => {
+        expect(
+          await externalValuesOf("cat /projects/my-app/src/[i]ndex.ts"),
+        ).toEqual([]);
       });
     });
 
@@ -855,6 +877,220 @@ describe("BashProgram", () => {
         new PathNormalizer(pathFlavorForPlatform(process.platform), symlinkCwd),
       );
       expect(program.externalAccesses()).toHaveLength(0);
+    });
+
+    describe("plain operands", () => {
+      it("leaves an absolute path within cwd alone", async () => {
+        expect(
+          await externalValuesOf("cat /projects/my-app/src/index.ts"),
+        ).toEqual([]);
+      });
+
+      it("projects a home-relative path outside cwd", async () => {
+        expect(await externalValuesOf("cat ~/documents/secret.txt")).toEqual([
+          join(homedir(), "documents/secret.txt"),
+        ]);
+      });
+
+      it("leaves a home-relative path resolving within cwd alone", async () => {
+        const underHome = new PathNormalizer(
+          pathFlavorForPlatform(process.platform),
+          join(homedir(), "myproject"),
+        );
+        expect(
+          await externalValuesOf("cat ~/myproject/file.ts", underHome),
+        ).toEqual([]);
+      });
+
+      it("leaves a .. traversal that stays within cwd alone", async () => {
+        expect(await externalValuesOf("cat src/../lib/utils.ts")).toEqual([]);
+      });
+
+      it("projects the path after a command's flags", async () => {
+        expect(await externalValuesOf("ls -la /etc/passwd")).toEqual([
+          "/etc/passwd",
+        ]);
+      });
+    });
+
+    describe("statement separators", () => {
+      it.each([
+        ["a pipe", "echo hello | tee /tmp/output.txt", "/tmp/output.txt"],
+        ["a semicolon", "echo done; cat /etc/hosts", "/etc/hosts"],
+        ["&&", "true && cat /etc/hosts", "/etc/hosts"],
+      ])("projects the path after %s", async (_label, command, expected) => {
+        expect(await externalValuesOf(command)).toEqual([expected]);
+      });
+    });
+
+    describe("quoted strings", () => {
+      it("leaves a path inside a double-quoted string alone", async () => {
+        expect(
+          await externalValuesOf(
+            'git commit -m "fix: update /etc/hosts handler"',
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves a path inside a single-quoted string alone", async () => {
+        expect(
+          await externalValuesOf("echo 'see /usr/local/docs for info'"),
+        ).toEqual([]);
+      });
+
+      it("still projects an unquoted path alongside quoted content", async () => {
+        expect(await externalValuesOf('cat /etc/hosts && echo "done"')).toEqual(
+          ["/etc/hosts"],
+        );
+      });
+
+      it("leaves a path alone when adjacent quoted segments form one word", async () => {
+        // tree-sitter parses adjacent quoted/unquoted segments as one
+        // concatenation whose resolved text is 'path is /etc/hosts' (one
+        // token, not a path candidate).
+        expect(await externalValuesOf('echo "path is "/etc/hosts""')).toEqual(
+          [],
+        );
+      });
+
+      it("leaves a path inside a string with an escaped quote alone", async () => {
+        expect(
+          await externalValuesOf(
+            'git commit -m "fix: update \\"the /etc/hosts\\" handler"',
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves a path inside a node -e script's single-quoted string alone", async () => {
+        expect(
+          await externalValuesOf(
+            "node -e \"const p = '/etc/hosts'; console.log(p);\"",
+          ),
+        ).toEqual([]);
+      });
+
+      it("leaves a path after an escaped quote in a multi-line node -e script alone", async () => {
+        // The shape of a command that prompted during dog-fooding: the outer
+        // "..." argument holds real newlines and \" escapes, with /etc/hosts
+        // after a \" boundary.
+        const command = [
+          'node -e "',
+          "import('shell-quote').then(({ parse }) => {",
+          "  const cmd = \\\"cat << 'EOF'\\n/etc/hosts\\nsome content\\nEOF\\\";",
+          "  console.log(JSON.stringify(parse(cmd)));",
+          "});",
+          '"',
+        ].join("\n");
+        expect(await externalValuesOf(command)).toEqual([]);
+      });
+
+      it("still projects a real operand beside a quoted flag value", async () => {
+        expect(
+          await externalValuesOf("grep --regexp='/etc/passwd' /etc/hosts"),
+        ).toEqual(["/etc/hosts"]);
+      });
+    });
+
+    describe("safe device paths", () => {
+      it.each([
+        ["a /dev/null stderr redirect", "command 2>/dev/null"],
+        ["a /dev/null redirect target", "echo hello > /dev/null"],
+        ["/dev/stdin", "cat /dev/stdin"],
+        ["/dev/stdout", "cat /dev/stdout"],
+        ["/dev/stderr", "cat /dev/stderr"],
+      ])("leaves %s alone", async (_label, command) => {
+        expect(await externalValuesOf(command)).toEqual([]);
+      });
+
+      it("still projects a real external path alongside /dev/null", async () => {
+        expect(await externalValuesOf("cat /etc/hosts 2>/dev/null")).toEqual([
+          "/etc/hosts",
+        ]);
+      });
+
+      it("projects a path under a device, which is no device", async () => {
+        expect(await externalValuesOf("cat /dev/null/subdir")).toEqual([
+          "/dev/null/subdir",
+        ]);
+      });
+    });
+
+    describe("the filesystem root", () => {
+      it("projects the root find / scans", async () => {
+        expect(await externalValuesOf("find /")).toEqual(["/"]);
+      });
+
+      it("projects the root find / scans behind search predicates", async () => {
+        expect(
+          await externalValuesOf('find / -path "*/pi-coding-agent/*.d.ts"'),
+        ).toEqual(["/"]);
+      });
+
+      it.each([
+        ["//", "echo //"],
+        ["///", "echo ///"],
+      ])("normalizes a bare %s to the root", async (_label, command) => {
+        expect(await externalValuesOf(command)).toEqual(["/"]);
+      });
+
+      it("projects the root once among other arguments", async () => {
+        expect(await externalValuesOf("echo // hello")).toEqual(["/"]);
+      });
+
+      it("projects the root alongside another external path", async () => {
+        expect(await externalValuesOf("cat /etc/hosts; echo //")).toEqual([
+          "/etc/hosts",
+          "/",
+        ]);
+      });
+    });
+
+    describe("shell comments", () => {
+      it("leaves a path appearing only in a comment alone", async () => {
+        expect(await externalValuesOf("echo hello # /etc/shadow")).toEqual([]);
+      });
+
+      it("projects the path before a comment but not the one inside it", async () => {
+        expect(
+          await externalValuesOf("cat /etc/hosts # see also /etc/shadow"),
+        ).toEqual(["/etc/hosts"]);
+      });
+    });
+
+    describe("heredocs", () => {
+      it.each([
+        ["a single-quoted delimiter", "cat << 'EOF'\n/etc/hosts\nEOF"],
+        ["a double-quoted delimiter", 'cat << "EOF"\n/etc/hosts\nEOF'],
+        ["an indented (<<-) heredoc", "cat <<- 'EOF'\n\t/etc/hosts\nEOF"],
+      ])("leaves a path in the body of %s alone", async (_label, command) => {
+        expect(await externalValuesOf(command)).toEqual([]);
+      });
+
+      it("projects the command's operand but not the heredoc body", async () => {
+        expect(
+          await externalValuesOf("cat /etc/hosts << 'EOF'\nsome content\nEOF"),
+        ).toEqual(["/etc/hosts"]);
+      });
+    });
+
+    describe("command substitution and subshells", () => {
+      it.each([
+        ["a command substitution", "echo $(cat /etc/hosts)"],
+        ["a nested command substitution", "echo $(echo $(cat /etc/hosts))"],
+        ["a subshell", "(cat /etc/hosts)"],
+      ])("projects the path inside %s", async (_label, command) => {
+        expect(await externalValuesOf(command)).toEqual(["/etc/hosts"]);
+      });
+    });
+
+    describe("redirect operators", () => {
+      it.each([
+        ["an append redirect", "echo hello >> /tmp/out.txt", "/tmp/out.txt"],
+        ["an input redirect", "sort < /etc/hosts", "/etc/hosts"],
+        ["a stderr redirect", "command 2>/tmp/errors.log", "/tmp/errors.log"],
+      ])("projects the target of %s", async (_label, command, expected) => {
+        expect(await externalValuesOf(command)).toEqual([expected]);
+      });
     });
   });
 });
