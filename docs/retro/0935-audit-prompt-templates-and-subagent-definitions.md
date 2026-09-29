@@ -50,3 +50,50 @@ As in #934, the prune itself runs as a separate fresh-session step (plan step 9)
 - `scripts/agent-docs/*.mjs` — four hand-rolled `parseArgs` loops.
   A shared declarative parser does not fit order-dependent defaults (`--since` derived from `--until`), so the assessor rated it optional.
 - `scripts/agent-docs/always-loaded.mjs` — the CLI's skills and agents `readdirSync().map()` blocks are near-identical; the assessor rated extracting them optional.
+
+## Stage: Implementation — TDD (2026-09-29T05:01:11Z)
+
+### Session summary
+
+Plan steps 1–8 landed in eight commits:
+
+- three preparatory refactors: `frontmatter.mjs`, the exported session-store defaults, and the `invocations` generator;
+- `volumeRows`, `templateHeading`, and `markdownBody`;
+- the two `feat(scripts):` commits: agent descriptions in `always-loaded.mjs`, and the `invocation-volume.mjs` CLI;
+- the extended `/audit-agent-docs` template;
+- the widened `/retro` Step 7 gate.
+
+Root script tests went from 247 to 267 (+20).
+Step 9, the `workflow` audit, runs in a fresh session by design.
+It comes before `/ship 935`, not after.
+Pre-completion reviewer: PASS.
+
+### Observations
+
+- **The parallel `cp`-then-`Edit` race recurred on step 3,** the same failure #934's TDD retro recorded.
+  The green save and the mutation went out in one tool block, so `/tmp/green-al.mjs` captured the mutant, and the restore reinstated the mutation.
+  It was caught because the restored suite was still red, and fixed by re-applying the line by hand.
+  After that, every green save ran in its own call.
+  The rule is already in `/tdd-plan` step 3, so this is an `instruction-violation`, not a missing rule.
+- **One step-4 test was vacuous, and the plan's mutation exposed it.**
+  The "other tool carrying a `subagent_type`" test passed without ever reaching the name check, because the cheap `"subagent"` text pre-filter dropped the line first.
+  The probe now carries that token, and deleting the name check turns it red.
+  The pre-filter is an optimization that sits in front of every guard it can shadow.
+- **Measured numbers against the plan's predictions:**
+  - `always-loaded.mjs` gained `agentDescriptions=70`, total 2,517, exactly as predicted.
+  - The `AGENTS.md` pointer edit added +5, for a total of 2,522.
+  - `invocation-volume.mjs` over 2026-08-29..2026-09-29 gave `templates=1364619 agents=480017 total=1844636`.
+    Each count is within 1 of the throwaway scan, which had no `until` bound and so also counted today.
+  - Body word counts exclude frontmatter: `plan-issue.md` is 6,272, against `wc -w`'s 6,292.
+- **Small deviations:**
+  - The `--total` line also prints `since=`/`until=`, so the recorded number carries its window.
+  - The template tells Step 6 to re-derive `D`/`UNTIL` from the directory name and `invocation-volume-before.txt`, because each `bash` call is a fresh shell.
+  - The cross-reference grep is narrowed to `.pi/prompts .pi/agents .pi/skills AGENTS.md`, because a dry-run over `.pi` walked `.pi/npm/node_modules`.
+  - The `(Refs #937)` suffix in Step 6 item 4 was kept rather than pruned, so the audit judges it instead of this step.
+- **The permission gate read a commit-body paragraph as a path.**
+  The `-m` paragraph began with `/audit-agent-docs`, which the `external_directory` rule matched.
+  The message was committed with `-F` from a file written by `Write` into `.git/`.
+- The reviewer noted that `grep -h '^# ' .pi/prompts/*.md` now returns 15 lines, not the plan's 14.
+  The new template's own fenced inventory example adds a second H1-shaped line.
+  First-occurrence matching and the Step 6 before/after diff are unaffected.
+- **Next step:** a fresh session runs `/audit-agent-docs workflow`, and after its two commits land, `/ship 935`.
