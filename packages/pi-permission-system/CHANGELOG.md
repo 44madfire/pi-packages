@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [36.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v35.0.3...pi-permission-system-v36.0.0) (2026-09-29)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** a digit argument no longer withdraws sed's or awk's read claim ([18df901](https://github.com/gotgenes/pi-packages/commit/18df9012843b5811746098bcd106c52d1bc15510)), closes [#992](https://github.com/gotgenes/pi-packages/issues/992)
+* **pi-permission-system:** **breaking:** a computed argument that may spell an option withdraws find's, fd's, and sort's read claim ([8116d72](https://github.com/gotgenes/pi-packages/commit/8116d725b7d74ec610ef97cfb26e6a2df64a839d)), closes [#992](https://github.com/gotgenes/pi-packages/issues/992)
+* **pi-permission-system:** a quoted "$@" after a literal withdraws find's, fd's, and sort's read claim ([45da982](https://github.com/gotgenes/pi-packages/commit/45da9825f80ce4fe2955081f2692a1bc678ddb26)), closes [#992](https://github.com/gotgenes/pi-packages/issues/992)
+* **pi-permission-system:** a quoted indirect expansion after a literal withdraws find's, fd's, and sort's read claim ([dd78839](https://github.com/gotgenes/pi-packages/commit/dd78839f6327e7de51b1024b07ea21653e34b680)), closes [#992](https://github.com/gotgenes/pi-packages/issues/992)
+* **pi-permission-system:** a quoted variable after a literal withdraws find's, fd's, and sort's read claim ([7727223](https://github.com/gotgenes/pi-packages/commit/7727223ec01b5dd0e8560248dd965e7f638930ae)), closes [#992](https://github.com/gotgenes/pi-packages/issues/992)
+
+### Documentation
+
+* **pi-permission-system:** document the computed-word rule for find, fd, and sort ([9f7deb9](https://github.com/gotgenes/pi-packages/commit/9f7deb9ca270a17c99a820f79e40fa64afc444d0))
+* **pi-permission-system:** name a quoted "$@" among the words that split ([1595490](https://github.com/gotgenes/pi-packages/commit/15954901cc61154ad5548f3b5553b60bb48ab4d6))
+* **pi-permission-system:** name an indirect expansion among the words that split ([7d875c3](https://github.com/gotgenes/pi-packages/commit/7d875c37d4130d06ae1969b4739f030b5ce79dd7))
+* **pi-permission-system:** a quoted variable may split, since it may be a nameref ([0df4871](https://github.com/gotgenes/pi-packages/commit/0df4871f2ca42d4df6639f9bcf7d11d0647b3e31))
+
 ## [35.0.3](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v35.0.2...pi-permission-system-v35.0.3) (2026-09-29)
 
 
