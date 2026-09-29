@@ -38,6 +38,11 @@ const ROSTER = [
   "sort",
 ];
 
+/** Prove a head word's effect over plain argument spellings. */
+function prove(headWord: string, argWords: readonly string[]) {
+  return proveCommandEffect(headWord, argWords);
+}
+
 describe("PURE_READER_CORE", () => {
   it("holds exactly the 21 audited words", () => {
     expect([...PURE_READER_CORE].sort()).toEqual([...ROSTER].sort());
@@ -66,13 +71,11 @@ describe("PURE_READER_CORE", () => {
 describe("proveCommandEffect", () => {
   describe("a core word", () => {
     it.each(ROSTER)("proves a read for %s", (word) => {
-      expect(proveCommandEffect(word, [])).toEqual(CORE_READ);
+      expect(prove(word, [])).toEqual(CORE_READ);
     });
 
     it("proves a read whatever its arguments are", () => {
-      expect(proveCommandEffect("cat", ["-n", "~/.ssh/id_rsa"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("cat", ["-n", "~/.ssh/id_rsa"])).toEqual(CORE_READ);
     });
   });
 
@@ -95,17 +98,15 @@ describe("proveCommandEffect", () => {
       "node",
       "rm",
     ])("proves nothing for %s", (word) => {
-      expect(proveCommandEffect(word, [])).toEqual(UNPROVEN_EFFECT);
+      expect(prove(word, [])).toEqual(UNPROVEN_EFFECT);
     });
 
     it("proves nothing for an unresolvable head word", () => {
-      expect(proveCommandEffect("", ["~/outside"])).toEqual(UNPROVEN_EFFECT);
+      expect(prove("", ["~/outside"])).toEqual(UNPROVEN_EFFECT);
     });
 
     it("never proves a write, so rm cannot ride a read grant", () => {
-      expect(proveCommandEffect("rm", ["-rf", "~/outside"])).toEqual(
-        UNPROVEN_EFFECT,
-      );
+      expect(prove("rm", ["-rf", "~/outside"])).toEqual(UNPROVEN_EFFECT);
     });
   });
 
@@ -118,7 +119,7 @@ describe("proveCommandEffect", () => {
       "bin\\grep",
       "C:\\tools\\grep",
     ])("refuses the core for the path-qualified head word %s", (word) => {
-      expect(proveCommandEffect(word, [])).toEqual(UNPROVEN_EFFECT);
+      expect(prove(word, [])).toEqual(UNPROVEN_EFFECT);
     });
   });
 
@@ -134,21 +135,15 @@ describe("proveCommandEffect", () => {
       "-fprintf",
       "-fls",
     ])("retracts the read claim on %s", (option) => {
-      expect(
-        proveCommandEffect("find", [".", option, "rm", "{}", ";"]),
-      ).toEqual(RETRACTED);
+      expect(prove("find", [".", option, "rm", "{}", ";"])).toEqual(RETRACTED);
     });
 
     it("keeps the read claim for an ordinary search", () => {
-      expect(proveCommandEffect("find", [".", "-name", "*.ts"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("find", [".", "-name", "*.ts"])).toEqual(CORE_READ);
     });
 
     it("does not retract on a word that merely contains a guarded option", () => {
-      expect(proveCommandEffect("find", [".", "-name", "-delete.txt"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("find", [".", "-name", "-delete.txt"])).toEqual(CORE_READ);
     });
   });
 
@@ -156,38 +151,30 @@ describe("proveCommandEffect", () => {
     it.each(["-x", "-X", "--exec", "--exec-batch"])(
       "retracts the read claim on %s",
       (option) => {
-        expect(proveCommandEffect("fd", ["foo", option, "rm"])).toEqual(
-          RETRACTED,
-        );
+        expect(prove("fd", ["foo", option, "rm"])).toEqual(RETRACTED);
       },
     );
 
     it("retracts on a long stem carrying an attached value", () => {
-      expect(proveCommandEffect("fd", ["foo", "--exec=rm"])).toEqual(RETRACTED);
+      expect(prove("fd", ["foo", "--exec=rm"])).toEqual(RETRACTED);
     });
 
     it("retracts on a guarded letter inside a short cluster", () => {
-      expect(proveCommandEffect("fd", ["-Hx", "rm"])).toEqual(RETRACTED);
+      expect(prove("fd", ["-Hx", "rm"])).toEqual(RETRACTED);
     });
 
     it("keeps the read claim for an ordinary search", () => {
-      expect(proveCommandEffect("fd", ["-H", "--type", "f", "foo"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("fd", ["-H", "--type", "f", "foo"])).toEqual(CORE_READ);
     });
   });
 
   describe("the sort retraction guard", () => {
     it.each(["-o", "--output"])("retracts the read claim on %s", (option) => {
-      expect(proveCommandEffect("sort", [option, "/tmp/out", "in"])).toEqual(
-        RETRACTED,
-      );
+      expect(prove("sort", [option, "/tmp/out", "in"])).toEqual(RETRACTED);
     });
 
     it("retracts on a long stem carrying an attached value", () => {
-      expect(proveCommandEffect("sort", ["--output=/tmp/out", "in"])).toEqual(
-        RETRACTED,
-      );
+      expect(prove("sort", ["--output=/tmp/out", "in"])).toEqual(RETRACTED);
     });
 
     it.each(["--out", "--outp", "--o"])(
@@ -195,54 +182,42 @@ describe("proveCommandEffect", () => {
       (option) => {
         // GNU getopt_long resolves any unambiguous abbreviation to --output,
         // so an abbreviation reaches the same write the full spelling does.
-        expect(proveCommandEffect("sort", [option, "/tmp/out", "in"])).toEqual(
-          RETRACTED,
-        );
+        expect(prove("sort", [option, "/tmp/out", "in"])).toEqual(RETRACTED);
       },
     );
 
     it("retracts on an abbreviation carrying an attached value", () => {
-      expect(proveCommandEffect("sort", ["--out=/tmp/out", "in"])).toEqual(
-        RETRACTED,
-      );
+      expect(prove("sort", ["--out=/tmp/out", "in"])).toEqual(RETRACTED);
     });
 
     it("does not treat a bare -- end-of-options marker as an abbreviation", () => {
-      expect(proveCommandEffect("sort", ["--", "in"])).toEqual(CORE_READ);
+      expect(prove("sort", ["--", "in"])).toEqual(CORE_READ);
     });
 
     it("retracts on the attached-value short form", () => {
-      expect(proveCommandEffect("sort", ["-o/tmp/out", "in"])).toEqual(
-        RETRACTED,
-      );
+      expect(prove("sort", ["-o/tmp/out", "in"])).toEqual(RETRACTED);
     });
 
     it("retracts on a guarded letter inside a short cluster", () => {
-      expect(proveCommandEffect("sort", ["-uo", "/tmp/out", "in"])).toEqual(
-        RETRACTED,
-      );
+      expect(prove("sort", ["-uo", "/tmp/out", "in"])).toEqual(RETRACTED);
     });
 
     it("keeps the read claim for an ordinary sort", () => {
-      expect(proveCommandEffect("sort", ["-u", "-k2", "in"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("sort", ["-u", "-k2", "in"])).toEqual(CORE_READ);
     });
   });
 
   describe("a guard belongs to its own word only", () => {
     it("does not apply find's guard to cat", () => {
-      expect(proveCommandEffect("cat", ["-delete"])).toEqual(CORE_READ);
+      expect(prove("cat", ["-delete"])).toEqual(CORE_READ);
     });
 
     it("does not apply sort's guard to grep", () => {
-      expect(proveCommandEffect("grep", ["-o", "pattern", "file"])).toEqual(
-        CORE_READ,
-      );
+      expect(prove("grep", ["-o", "pattern", "file"])).toEqual(CORE_READ);
     });
 
     it("does not apply fd's guard to find", () => {
-      expect(proveCommandEffect("find", [".", "-x"])).toEqual(CORE_READ);
+      expect(prove("find", [".", "-x"])).toEqual(CORE_READ);
     });
   });
 });
