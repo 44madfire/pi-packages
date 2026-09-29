@@ -42,3 +42,17 @@ Step 4 is confirmed: `next-version.sh` prints `pi-subagents-v21.8.1`, `pi-colgre
 - `verify:public-types` passed, and `dist/*.d.ts` still has no typebox references.
 - Pre-completion reviewer: PASS.
   It noted that the plan's manifest scan omitted the `@mariozechner/pi-*` names from Pi's `HOST_PROVIDED_EXTENSION_PACKAGES`; it re-ran the scan with all 10 names and found no host-provided dependencies.
+
+## Stage: Sync (worktree) (2026-09-29T23:25:02Z)
+
+### Session summary
+
+Pre-push checks passed: `pnpm run lint` and `pnpm fallow dead-code` are both clean.
+The plan's marker is `**Release:** ship independently`; the root should dispatch `pi-subagents`, `pi-colgrep`, and `pi-github-tools` in one release run.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-994--/2026-09-29T22-59-24-028Z_01a0ef64-ecfb-7281-a4f9-847675f5c2f5.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+No follow-ups were filed and nothing was deferred.
+The reporter is credited by `Co-authored-by` on the `fix(pi-subagents)` commit; name them in the close comment as well.
