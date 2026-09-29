@@ -241,7 +241,7 @@ A destination that does not exist is a design choice for a separate change; the 
        done
    ````
 
-   Every line it prints must be a recorded `delete`/`compress` target, a heading the destination re-shaped, or a `pi-autoformat` reflow; anything else is a lost line (Refs #937).
+   Every line it prints must be a recorded `delete`/`compress` target, a heading the destination re-shaped, or a `pi-autoformat` reflow; anything else is a lost line.
 5. For `workflow`, confirm the structure the executing agents depend on survived:
    - `grep -h '^# ' .pi/prompts/*.md | diff /tmp/audit-h1-before.txt -` prints nothing — no H1 moved.
    - For each edited template, the skills it loads are a superset of the pre-prune set; this prints nothing when they are:
