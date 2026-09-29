@@ -31,6 +31,17 @@ export function frontmatterDescription(markdown) {
 }
 
 /**
+ * The markdown after the closing frontmatter fence — what Pi sends to the
+ * model for a prompt template or subagent definition — or the whole text when
+ * there is no frontmatter.
+ *
+ * @param {string} markdown
+ */
+export function markdownBody(markdown) {
+  return splitFrontmatter(markdown).body.join("\n");
+}
+
+/**
  * The frontmatter lines (between the opening and closing `---`) and the body
  * lines after the closing fence. A file that does not open with `---` has no
  * frontmatter; an unclosed fence makes the rest of the file frontmatter.

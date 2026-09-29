@@ -10,6 +10,23 @@
 //
 // Reads the same machine-local session store as model-usage.mjs.
 
+import { markdownBody } from "./frontmatter.mjs";
+
+/**
+ * A template's match key: the first `# ` line of its body, or "" when the
+ * body has none. The first occurrence matters — a template can carry a later
+ * H1 inside a fenced example.
+ *
+ * @param {string} markdown
+ */
+export function templateHeading(markdown) {
+  return (
+    markdownBody(markdown)
+      .split("\n")
+      .find((line) => line.startsWith("# ")) ?? ""
+  );
+}
+
 /**
  * Every template invocation and subagent dispatch in one transcript, in order.
  *
@@ -50,6 +67,28 @@ export function* invocations(lines, { since, until }) {
       }
     }
   }
+}
+
+/**
+ * One row per file: body words, invocations counted from `events`, and their
+ * product, largest volume first. Events whose kind and key match no file are
+ * dropped; a file no event matches reports zero.
+ *
+ * @param {{ kind: string, file: string, key: string, words: number }[]} files
+ * @param {Iterable<{ kind: string, key: string }>} events
+ */
+export function volumeRows(files, events) {
+  const counts = new Map();
+  for (const { kind, key } of events) {
+    const id = `${kind}\u0000${key}`;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return files
+    .map(({ kind, file, key, words }) => {
+      const invocations = counts.get(`${kind}\u0000${key}`) ?? 0;
+      return { kind, file, words, invocations, volume: words * invocations };
+    })
+    .sort((a, b) => b.volume - a.volume);
 }
 
 function firstLine(content) {

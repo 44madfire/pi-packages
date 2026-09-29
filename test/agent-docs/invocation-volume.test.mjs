@@ -1,6 +1,21 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { invocations } from "../../scripts/agent-docs/invocation-volume.mjs";
+import {
+  invocations,
+  templateHeading,
+  volumeRows,
+} from "../../scripts/agent-docs/invocation-volume.mjs";
+
+const PROMPTS_DIR = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  ".pi",
+  "prompts",
+);
 
 const WINDOW = { since: "2026-09-01", until: "2026-09-29" };
 const INSIDE = "2026-09-15T12:00:00.000Z";
@@ -148,5 +163,111 @@ describe("invocations", () => {
         ]),
       ).toEqual([]);
     });
+  });
+});
+
+describe("templateHeading", () => {
+  it("returns the body's first H1, not one later in a fenced example", () => {
+    const md =
+      "---\ndescription: x\n---\n\n# Review session\n\n````markdown\n# Retro: #N\n````\n";
+    expect(templateHeading(md)).toBe("# Review session");
+  });
+
+  it("skips a frontmatter line that looks like a heading", () => {
+    expect(templateHeading("---\n# not a heading\n---\n\n# Real\n")).toBe(
+      "# Real",
+    );
+  });
+
+  it("returns an empty string when the body has no H1", () => {
+    expect(templateHeading("---\ndescription: x\n---\n\n## Only H2\n")).toBe(
+      "",
+    );
+  });
+
+  it("yields a non-empty heading, unique across the set, for every real template", () => {
+    const headings = readdirSync(PROMPTS_DIR)
+      .filter((name) => name.endsWith(".md"))
+      .map((name) =>
+        templateHeading(readFileSync(path.join(PROMPTS_DIR, name), "utf8")),
+      );
+    expect(headings.length).toBeGreaterThan(0);
+    expect(headings.filter((heading) => heading === "")).toEqual([]);
+    expect(new Set(headings).size).toBe(headings.length);
+    expect(
+      templateHeading(readFileSync(path.join(PROMPTS_DIR, "retro.md"), "utf8")),
+    ).toBe("# Review session and persist retro notes");
+  });
+});
+
+describe("volumeRows", () => {
+  const files = [
+    { kind: "template", file: "plan-issue.md", key: "# Plan", words: 100 },
+    { kind: "template", file: "ship.md", key: "# Ship", words: 50 },
+    { kind: "agent", file: "reviewer.md", key: "reviewer", words: 30 },
+  ];
+
+  it("multiplies body words by invocations and sorts by volume, largest first", () => {
+    const events = [
+      { kind: "template", key: "# Ship" },
+      { kind: "template", key: "# Ship" },
+      { kind: "template", key: "# Ship" },
+      { kind: "template", key: "# Plan" },
+      { kind: "agent", key: "reviewer" },
+    ];
+    expect(volumeRows(files, events)).toEqual([
+      {
+        kind: "template",
+        file: "ship.md",
+        words: 50,
+        invocations: 3,
+        volume: 150,
+      },
+      {
+        kind: "template",
+        file: "plan-issue.md",
+        words: 100,
+        invocations: 1,
+        volume: 100,
+      },
+      {
+        kind: "agent",
+        file: "reviewer.md",
+        words: 30,
+        invocations: 1,
+        volume: 30,
+      },
+    ]);
+  });
+
+  it("drops events matching no file and reports never-invoked files at zero", () => {
+    const events = [
+      { kind: "template", key: "Why did step 3 do that?" },
+      { kind: "agent", key: "Explore" },
+      { kind: "agent", key: "# Plan" },
+    ];
+    expect(volumeRows(files, events)).toEqual([
+      {
+        kind: "template",
+        file: "plan-issue.md",
+        words: 100,
+        invocations: 0,
+        volume: 0,
+      },
+      {
+        kind: "template",
+        file: "ship.md",
+        words: 50,
+        invocations: 0,
+        volume: 0,
+      },
+      {
+        kind: "agent",
+        file: "reviewer.md",
+        words: 30,
+        invocations: 0,
+        volume: 0,
+      },
+    ]);
   });
 });
