@@ -1383,6 +1383,8 @@ describe("BashProgram", () => {
         "xargs -0 rg pattern",
         "find . -name '*.ts' -exec wc -l {} +",
         "sudo timeout 5 xargs grep foo",
+        "xargs sed -n p",
+        "find . -name '*.md' -exec sed -n 1p {} +",
       ])("exempts %s", async (command) => {
         await expect(exemptions(command)).resolves.toEqual(["core-reader"]);
       });
@@ -1392,6 +1394,8 @@ describe("BashProgram", () => {
         ["xargs -I{} sh -c 'grep -l x {}'", "the payload is not re-parsed"],
         ["find . -exec sh -c 'grep x' \\;", "the payload is not re-parsed"],
         ["xargs sort -o /tmp/x", "`-o` withdraws sort's read claim"],
+        ["xargs sed -i s/a/b/", "`-i` withdraws sed's read claim"],
+        ["xargs sed 'w out'", "a `w` command withdraws sed's read claim"],
       ])("does not exempt %s (%s)", async (command) => {
         await expect(exemptions(command)).resolves.toEqual([undefined]);
       });

@@ -36,7 +36,16 @@ const ROSTER = [
   "find",
   "fd",
   "sort",
+  "sed",
 ];
+
+/**
+ * The least a presumed reader needs to prove a read: `sed` with no script at
+ * all is not a proven reader, so its roster row names one.
+ */
+const MINIMAL_ARGUMENTS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["sed", ["p"]],
+]);
 
 /** Prove a head word's effect over plain argument spellings. */
 function prove(headWord: string, argWords: readonly string[]) {
@@ -47,7 +56,7 @@ function prove(headWord: string, argWords: readonly string[]) {
 }
 
 describe("PURE_READER_CORE", () => {
-  it("holds exactly the 21 audited words", () => {
+  it("holds exactly the audited words", () => {
     expect([...PURE_READER_CORE].sort()).toEqual([...ROSTER].sort());
   });
 
@@ -74,7 +83,7 @@ describe("PURE_READER_CORE", () => {
 describe("proveCommandEffect", () => {
   describe("a core word", () => {
     it.each(ROSTER)("proves a read for %s", (word) => {
-      expect(prove(word, [])).toEqual(CORE_READ);
+      expect(prove(word, MINIMAL_ARGUMENTS.get(word) ?? [])).toEqual(CORE_READ);
     });
 
     it("proves a read whatever its arguments are", () => {
@@ -86,7 +95,6 @@ describe("proveCommandEffect", () => {
     it.each([
       "pnpm",
       "git",
-      "sed",
       "awk",
       "gawk",
       "uniq",
@@ -121,6 +129,8 @@ describe("proveCommandEffect", () => {
       "/tmp/evil/grep",
       "bin\\grep",
       "C:\\tools\\grep",
+      "/bin/sed",
+      "./sed",
     ])("refuses the core for the path-qualified head word %s", (word) => {
       expect(prove(word, [])).toEqual(UNPROVEN_EFFECT);
     });
@@ -210,7 +220,32 @@ describe("proveCommandEffect", () => {
     });
   });
 
+  describe("the sed guard", () => {
+    // The prover's own cases live in sed-invocation.test.ts; these pin that
+    // the core consults it.
+    it("keeps the read claim for a print-only script", () => {
+      expect(prove("sed", ["-n", "1,80p", "f.md"])).toEqual(CORE_READ);
+    });
+
+    it("retracts the read claim for an in-place edit", () => {
+      expect(prove("sed", ["-i", "s/a/b/", "f.md"])).toEqual(RETRACTED);
+    });
+
+    it("retracts the read claim for a computed script", () => {
+      expect(
+        proveCommandEffect("sed", [
+          { value: "$range", computed: true },
+          { value: "f.md", computed: false },
+        ]),
+      ).toEqual(RETRACTED);
+    });
+  });
+
   describe("a guard belongs to its own word only", () => {
+    it("does not apply sed's guard to cat", () => {
+      expect(prove("cat", ["-i", "w", "out"])).toEqual(CORE_READ);
+    });
+
     it("does not apply find's guard to cat", () => {
       expect(prove("cat", ["-delete"])).toEqual(CORE_READ);
     });

@@ -1,5 +1,6 @@
 import { type TokenEffect, UNPROVEN_EFFECT } from "#src/access-intent/effect";
 import type { ArgWord } from "./node-text";
+import { sedWithdrawsReadClaim } from "./sed-invocation";
 
 // ── Public surface ─────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ export function proveCommandEffect(
 }
 
 /**
- * The frozen v1 pure-reader core: 21 command words that are read-only for any
+ * The pure-reader core: the command words that are read-only for any
  * arguments, in any implementation.
  *
  * Exported so `docs/configuration.md`'s published roster is held to it by a
@@ -118,7 +119,6 @@ interface CoreAdmission {
  * | Word                                            | Why not                                                        |
  * | ----------------------------------------------- | -------------------------------------------------------------- |
  * | `awk`, `gawk`, `nawk`                           | The program text can `print > "file"` — not stable under args  |
- * | `sed`                                           | `-i` is in-place, and BSD needs a separate argument where GNU attaches one, so the guard is dialect-variant |
  * | `uniq`                                          | `uniq IN OUT` writes its second positional                     |
  * | `tee`, `dd`, `split`, `csplit`, `xxd`, `tree`, `curl`, `wget` | Each has a positional or option that writes a file |
  * | `less`, `more`                                  | Interactive shell escape (`!cmd`) and `LESSOPEN` preprocessing |
@@ -158,6 +158,11 @@ function coreAdmissions(): readonly CoreAdmission[] {
       words: ["find", "fd", "sort"],
       reason:
         "Read-only until an argument says otherwise — see RETRACTION_GUARDS",
+    },
+    {
+      words: ["sed"],
+      reason:
+        "Read-only until the command line says otherwise: an allowlist proof over its options and script — see sed-invocation.ts",
     },
   ];
 }
@@ -202,11 +207,12 @@ function optionGuard(guard: RetractionGuard): ClaimWithdrawal {
 }
 
 /**
- * The three guarded words and what withdraws each one's claim.
+ * The guarded words and what withdraws each one's claim.
  *
- * All three were chosen because their write options spell identically in GNU
- * and BSD — which is exactly why `sed` is excluded outright rather than
- * guarded. `find`'s options are single-dash long words that never cluster, so
+ * `find`, `fd`, and `sort` are guarded by option spellings alone, chosen
+ * because their write options spell identically in GNU and BSD. `sed` needs a
+ * proof over its script too, since a `w` command writes whatever its options
+ * say, so it owns a predicate of its own. `find`'s options are single-dash long words that never cluster, so
  * they match as exact words; `sort`'s only short option containing `o` is `-o`
  * itself, so the cluster rule cannot over-retract there.
  */
@@ -241,6 +247,7 @@ const RETRACTION_GUARDS: ReadonlyMap<string, ClaimWithdrawal> = new Map([
       shortLetters: new Set(["o"]),
     }),
   ],
+  ["sed", sedWithdrawsReadClaim],
 ]);
 
 // ── Private helpers ────────────────────────────────────────────────────────

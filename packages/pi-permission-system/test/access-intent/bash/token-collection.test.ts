@@ -1281,13 +1281,13 @@ describe("effect attribution", () => {
   });
 
   it("gives an argument-hosted execution's tokens their own attribution", async () => {
-    // `sed` is outside the pure-reader core and `cat` is in it, so the two
-    // tokens must disagree — a token that inherited the enclosing command's
-    // proof would read unproven here (#945).
+    // `sed`'s script is computed, which withdraws its read claim, while `cat`
+    // proves one — so the two tokens must disagree, and a token that inherited
+    // the enclosing command's proof would read retracted here (#945).
     expect(await attributedTokens('sed -e "$(cat /etc/shadow)" f.txt')).toEqual(
       [
         { token: "/etc/shadow", effect: { effect: "read", source: "core" } },
-        { token: "f.txt", effect: UNPROVEN_EFFECT },
+        { token: "f.txt", effect: { effect: "unproven", source: "retracted" } },
       ],
     );
   });

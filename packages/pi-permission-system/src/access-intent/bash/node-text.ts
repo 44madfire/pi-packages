@@ -37,14 +37,60 @@ export const ARG_NODE_TYPES = new Set([
 export interface ArgWord {
   /** The string the shell passes after quote removal ({@link resolveNodeText}). */
   readonly value: string;
-  /** Whether only running the command decides the value ({@link hasComputedPart}). */
+  /**
+   * Whether `value` may differ from what the program receives: a part only
+   * running the command decides ({@link hasComputedPart}), or a spelling the
+   * shell rewrites before the program sees it — an escape, a glob, an ANSI-C
+   * string — which {@link resolveNodeText} passes through as written.
+   */
   readonly computed: boolean;
 }
 
 /** Read an argument node into the word the program receives. */
 export function readArgWord(node: TSNode): ArgWord {
-  return { value: resolveNodeText(node), computed: hasComputedPart(node) };
+  return {
+    value: resolveNodeText(node),
+    computed: hasComputedPart(node) || !isSpelledExactly(node),
+  };
 }
+
+/**
+ * Whether {@link resolveNodeText} returns exactly the string the shell passes.
+ *
+ * Answers `false` for any node type it does not know, which is the
+ * fail-closed direction for a caller proving what a word cannot be.
+ */
+function isSpelledExactly(node: TSNode): boolean {
+  switch (node.type) {
+    case "raw_string":
+      return true;
+    case "word":
+      return !SHELL_REWRITTEN_CHARACTERS.test(node.text);
+    case "string_content":
+      return !node.text.includes("\\");
+    case "simple_expansion":
+    case "expansion":
+      return resolvePlainVariableExpansion(node) !== null;
+    case "string":
+    case "concatenation":
+      return childrenSpelledExactly(node);
+    default:
+      return false;
+  }
+}
+
+/** A `"` delimiter is spelled exactly; every named child must be too. */
+function childrenSpelledExactly(node: TSNode): boolean {
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (!child || child.type === '"') continue;
+    if (!isSpelledExactly(child)) return false;
+  }
+  return true;
+}
+
+/** An escape, or a glob the shell may expand into other words. */
+const SHELL_REWRITTEN_CHARACTERS = /[\\*?[]/;
 
 /**
  * Whether an argument node's value is decided at run time: it contains a

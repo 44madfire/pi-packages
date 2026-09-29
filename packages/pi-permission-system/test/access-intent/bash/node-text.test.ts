@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { describe, expect, it } from "vitest";
 import {
   hasComputedPart,
+  readArgWord,
   resolveNodeText,
   SKIP_SUBTREE_TYPES,
 } from "#src/access-intent/bash/node-text";
@@ -214,5 +215,56 @@ describe("hasComputedPart", () => {
     ["an arithmetic expansion", "out-$((1+1)).txt"],
   ])("answers true for %s (%s)", async (_label, argument) => {
     await expect(argumentIsComputed(argument)).resolves.toBe(true);
+  });
+});
+
+describe("readArgWord", () => {
+  /** Parse `echo <argument>` and read the command's first argument. */
+  async function argWordOf(argument: string) {
+    const parser = await getParser();
+    const tree = parser.parse(`echo ${argument}`);
+    if (!tree) throw new Error("parse returned null");
+    try {
+      const node = tree.rootNode.child(0)?.child(1);
+      if (!node) throw new Error(`no argument node in: echo ${argument}`);
+      return readArgWord(node);
+    } finally {
+      tree.delete();
+    }
+  }
+
+  describe("a value the source spells exactly", () => {
+    it.each([
+      ["a bare word", "-n", "-n"],
+      ["a single-quoted word", "'-i'", "-i"],
+      ["a double-quoted word", '"1,80p"', "1,80p"],
+      ["a single-quoted backslash", "'s/\\./x/'", "s/\\./x/"],
+      ["a tilde path", "~/notes.md", "~/notes.md"],
+      ["a concatenation of quoted parts", "-'i'\"\"", "-i"],
+    ])("reads %s as exact (%s)", async (_label, argument, value) => {
+      await expect(argWordOf(argument)).resolves.toEqual({
+        value,
+        computed: false,
+      });
+    });
+  });
+
+  describe("a value only the shell decides", () => {
+    // The shell removes an escape, expands a glob, and decodes an ANSI-C
+    // string before the program sees the word, so the source spelling is not
+    // the value a capability proof must read.
+    it.each([
+      ["an unquoted escape", "-\\i"],
+      ["an escape inside double quotes", '"-\\i"'],
+      ["an unquoted glob", "-*"],
+      ["a bracket glob", "-[i]"],
+      ["an ANSI-C string", "$'-i'"],
+      ["a variable", "$OPT"],
+      ["a command substitution", "$(echo -i)"],
+    ])("marks %s computed (%s)", async (_label, argument) => {
+      await expect(argWordOf(argument)).resolves.toMatchObject({
+        computed: true,
+      });
+    });
   });
 });

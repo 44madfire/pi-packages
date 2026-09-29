@@ -12,6 +12,7 @@ import {
 } from "./node-text";
 import type { TSNode } from "./parser";
 import {
+  REDIRECT_NODE_TYPES,
   redirectEffectForDestination,
   redirectTargetIndex,
 } from "./redirect-analysis";
@@ -312,14 +313,19 @@ export function extractCommandWord(node: TSNode): string | undefined {
  *
  * Reads the argument nodes directly rather than the collected tokens, because
  * a guard fires on an *option* (`find -delete`) and no collector emits one.
+ *
+ * Every named child but the prefix and a hosted redirect is a word, including
+ * a bare `$opt` or `$(cmd)` outside {@link ARG_NODE_TYPES}: such a word
+ * reaches the program as an argument too, and a proof that never saw it could
+ * not know it might spell `-i`.
  */
 function commandArgumentWords(node: TSNode): ArgWord[] {
   const words: ArgWord[] = [];
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
-    if (!child) continue;
+    if (!child?.isNamed) continue;
     if (COMMAND_PREFIX_TYPES.has(child.type)) continue;
-    if (!ARG_NODE_TYPES.has(child.type)) continue;
+    if (REDIRECT_NODE_TYPES.has(child.type)) continue;
     words.push(readArgWord(child));
   }
   return words;
