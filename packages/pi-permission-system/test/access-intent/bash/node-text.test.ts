@@ -241,6 +241,7 @@ describe("readArgWord", () => {
       ["a single-quoted backslash", "'s/\\./x/'", "s/\\./x/"],
       ["a tilde path", "~/notes.md", "~/notes.md"],
       ["a concatenation of quoted parts", "-'i'\"\"", "-i"],
+      ["an empty brace pair, which bash leaves alone", "{}", "{}"],
     ])("reads %s as exact (%s)", async (_label, argument, value) => {
       await expect(argWordOf(argument)).resolves.toEqual({
         value,
@@ -258,6 +259,8 @@ describe("readArgWord", () => {
       ["an escape inside double quotes", '"-\\i"'],
       ["an unquoted glob", "-*"],
       ["a bracket glob", "-[i]"],
+      ["a comma brace expansion", "{-i,-n}"],
+      ["a brace expansion glued to an option", "-n{,i}"],
       ["an ANSI-C string", "$'-i'"],
       ["a variable", "$OPT"],
       ["a command substitution", "$(echo -i)"],

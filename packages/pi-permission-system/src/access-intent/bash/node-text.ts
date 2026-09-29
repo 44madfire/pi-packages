@@ -40,8 +40,8 @@ export interface ArgWord {
   /**
    * Whether `value` may differ from what the program receives: a part only
    * running the command decides ({@link hasComputedPart}), or a spelling the
-   * shell rewrites before the program sees it — an escape, a glob, an ANSI-C
-   * string — which {@link resolveNodeText} passes through as written.
+   * shell rewrites before the program sees it — an escape, a glob, a brace
+   * expansion, an ANSI-C string — which {@link resolveNodeText} passes through as written.
    */
   readonly computed: boolean;
 }
@@ -72,8 +72,11 @@ function isSpelledExactly(node: TSNode): boolean {
     case "expansion":
       return resolvePlainVariableExpansion(node) !== null;
     case "string":
-    case "concatenation":
       return childrenSpelledExactly(node);
+    case "concatenation":
+      // The grammar splits `{-i,-n}` into plain words, so the expansion is
+      // visible only across the whole concatenation's text.
+      return !BRACE_EXPANSION.test(node.text) && childrenSpelledExactly(node);
     default:
       return false;
   }
@@ -91,6 +94,14 @@ function childrenSpelledExactly(node: TSNode): boolean {
 
 /** An escape, or a glob the shell may expand into other words. */
 const SHELL_REWRITTEN_CHARACTERS = /[\\*?[]/;
+
+/**
+ * A brace the shell expands: one holding a `,` or a `..` range.
+ *
+ * An empty `{}` is left alone by bash, which is why `find -exec … {} +` keeps
+ * its placeholder as written.
+ */
+const BRACE_EXPANSION = /\{[^}]*(,|\.\.)[^}]*\}/;
 
 /**
  * Whether an argument node's value is decided at run time: it contains a
