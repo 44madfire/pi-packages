@@ -897,7 +897,8 @@ Three members are read-only **until an argument says otherwise**, and naming one
 A long option is matched by any unambiguous abbreviation too (`sort --out=…` withdraws the claim exactly as `--output` does), and a short letter is matched anywhere in a cluster (`-uo`) or with its value attached (`-o/tmp/x`).
 
 An argument whose value only the shell decides withdraws the claim too when it may arrive beginning with `-`, since it could spell any of these options: `$opt`, `"$dir"`, `$(cmd)`, and a leading glob such as `*` all do.
-One whose first character is a literal other than `-` cannot become an option unless it can split into several words (a quoted `"x$@"` still yields one word per positional parameter, and an indirect `"x${!name}"` may, so both withdraw), so `find /src -name "x$y"`, `find packages/*/docs`, and `find . \( -name a \)` still read.
+One whose first character is a literal other than `-` cannot become an option unless it can split into several words, so `find packages/*/docs` and `find . \( -name a \)` still read.
+A variable can split even inside double quotes (`"x$@"` yields one word per positional parameter, and any variable may be a name reference to an array), so `find /src -name "x$y"` withdraws the claim too.
 
 A core word counts only as a **bare basename**.
 `./grep`, `/usr/bin/grep`, and `bin\grep` name programs this audit never saw, so they prove nothing and consult both surfaces.
