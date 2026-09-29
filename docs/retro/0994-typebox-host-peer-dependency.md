@@ -27,3 +27,18 @@ Per the operator's call, the plan also folds in `"*"` peers for `pi-colgrep` and
 - Tidy-First assessor: no preparatory tidyings.
   It flagged ADR 0003 line 45 and `docs/comparison-with-upstream.md` line 19 as current-behavior prose to update, and both are in the plan.
 - Left out of scope: changing the `>=x` ranges on the `@earendil-works/pi-*` peers to `"*"` as Pi's docs recommend, because Pi does not warn on them.
+
+## Stage: Implementation — Build (2026-09-29T23:20:32Z)
+
+### Session summary
+
+All three plan steps were implemented as separate `fix:` commits: `pi-subagents` (imports, manifest, lockfile, rollup `external`, and two docs), then `pi-colgrep` and `pi-github-tools` (one `typebox: "*"` peer line each).
+Step 4 is confirmed: `next-version.sh` prints `pi-subagents-v21.8.1`, `pi-colgrep-v1.5.4`, and `pi-github-tools-v5.0.1`, as the plan predicted.
+
+### Observations
+
+- There were no deviations from the plan.
+  `pnpm install` did not change `pnpm-lock.yaml` for the sibling peers, because the existing `typebox` devDependency satisfies them.
+- `verify:public-types` passed, and `dist/*.d.ts` still has no typebox references.
+- Pre-completion reviewer: PASS.
+  It noted that the plan's manifest scan omitted the `@mariozechner/pi-*` names from Pi's `HOST_PROVIDED_EXTENSION_PACKAGES`; it re-ran the scan with all 10 names and found no host-provided dependencies.
