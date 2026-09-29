@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ArgWord } from "#src/access-intent/bash/node-text";
 import { sedWithdrawsReadClaim } from "#src/access-intent/bash/sed-invocation";
-
-/** Arguments the source spells exactly. */
-function literal(...values: string[]): ArgWord[] {
-  return values.map((value) => ({ value, computed: false }));
-}
+import { literalArgWords as literal } from "#test/helpers/arg-words";
 
 describe("sedWithdrawsReadClaim", () => {
   describe("a print-only invocation", () => {

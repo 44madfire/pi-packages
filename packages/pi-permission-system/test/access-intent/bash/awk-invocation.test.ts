@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { awkWithdrawsReadClaim } from "#src/access-intent/bash/awk-invocation";
-import type { ArgWord } from "#src/access-intent/bash/node-text";
-
-/** Arguments the source spells exactly. */
-function literal(...values: string[]): ArgWord[] {
-  return values.map((value) => ({ value, computed: false }));
-}
+import { literalArgWords as literal } from "#test/helpers/arg-words";
 
 describe("awkWithdrawsReadClaim", () => {
   describe("a program that only reads", () => {

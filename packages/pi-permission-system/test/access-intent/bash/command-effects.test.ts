@@ -7,6 +7,7 @@ import {
   redirectDestinationEffect,
 } from "#src/access-intent/bash/command-effects";
 import { UNPROVEN_EFFECT } from "#src/access-intent/effect";
+import { literalArgWords } from "#test/helpers/arg-words";
 
 const CORE_READ = { effect: "read", source: "core" } as const;
 const RETRACTED = { effect: "unproven", source: "retracted" } as const;
@@ -51,10 +52,7 @@ const MINIMAL_ARGUMENTS: ReadonlyMap<string, readonly string[]> = new Map([
 
 /** Prove a head word's effect over plain argument spellings. */
 function prove(headWord: string, argWords: readonly string[]) {
-  return proveCommandEffect(
-    headWord,
-    argWords.map((value) => ({ value, computed: false })),
-  );
+  return proveCommandEffect(headWord, literalArgWords(...argWords));
 }
 
 describe("PURE_READER_CORE", () => {
