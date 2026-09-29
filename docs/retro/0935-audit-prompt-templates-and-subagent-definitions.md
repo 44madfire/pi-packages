@@ -97,3 +97,61 @@ Pre-completion reviewer: PASS.
   The new template's own fenced inventory example adds a second H1-shaped line.
   First-occurrence matching and the Step 6 before/after diff are unaffected.
 - **Next step:** a fresh session runs `/audit-agent-docs workflow`, and after its two commits land, `/ship 935`.
+
+## Stage: Final Retrospective (2026-09-29T05:42:23Z)
+
+### Session summary
+
+Four sessions shipped #935.
+This one planned, implemented steps 1–8 (eight commits, +20 script tests) and shipped; a fresh session ran `/audit-agent-docs workflow` as step 9 (`ad166056`, `731f9fd1`).
+The audit cut invocation volume 1,737,783 → 1,660,076 words (−4.5%) with 142 `compress` and 30 `delete` rows and no `offload`; `/ship` closed the issue with no release, since nothing under `packages/` changed.
+
+### Observations
+
+#### What went well
+
+- **Measuring the premise changed the design.**
+  The issue assumed invocation-time cost lowered the bar for templates.
+  A 0.8 s throwaway transcript scan showed templates and agents cost about 3.5× the post-#937 `AGENTS.md`, so the operator declined a per-class cost clause on evidence rather than argument.
+  The same scan became `invocation-volume.mjs`, whose counts landed within 1 of the throwaway's.
+- **The fresh-session split held.**
+  #934's TDD retro recorded a summary that pointed at `/ship` with the prune unstarted.
+  This time the plan, the TDD summary, and the stage note all named the fresh-session audit as the next step, and it ran before `/ship`.
+- **The template's structural guards worked on first use.**
+  The audit session ran the H1 diff, the loaded-skills `comm`, and the step cross-reference grep; all passed after 172 applied rows, and 8 whole-step candidates were parked as `keep (revisit)` instead of renumbering prose.
+
+#### What caused friction (agent side)
+
+- `wrong-abstraction` — the plan's per-class reading of admission question 2 for templates ("fires at this template's step and no skill the template loads already owns it") makes the `offload` branch unreachable: every planning rule fires at the step that uses it.
+  The audit's own `## Assessment` caught it ("disconnected for templates, not satisfied").
+  Impact: zero `offload` rows; four passages stayed in templates for want of a route, among them the retro-append rule repeated in five templates and `plan-issue.md`'s 20 "When …" rules.
+- `instruction-violation` (self-identified) — the parallel `cp`-then-`Edit` race in TDD step 3, the second issue running.
+  Impact: one restore by hand.
+- `instruction-violation` (self-identified) — wrote `\u2014` escapes in an `Edit` `oldText` for the TDD stage note, against the addendum's literal-character rule.
+  It recurred in this retro's own append, where `unicode-escapes.mjs --fix` repaired it.
+  Impact: one rejected edit, one repair.
+- `instruction-violation` (self-identified) — in `/ship`, ran `"$PLAN"^..HEAD` in a fresh shell after `PLAN` was set in an earlier call; the template warns about exactly this in step 10.
+  Impact: one failed call.
+- `other` — the audit session set its name to `Agent-doc audit — 2026-07-23` from memory, in the same batch as the `date -u` that would have supplied it; corrected on the next turn.
+  Impact: one rename.
+- `other` — the audit gate stated 7 `keep (revisit)` rows; there were 8. #934's audit authored its summary table from estimates the same way.
+  Impact: a correction in the final report; the gate decision did not depend on it.
+- `other` — a commit body paragraph starting with `/audit-agent-docs` tripped the `external_directory` permission rule as a path.
+  Impact: one blocked commit, rewritten with `-F`.
+
+#### What caused friction (user side)
+
+- None of note; every gate was answered with the recommended option, and the design gate's substance (measured volume) did the persuading.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning, TDD, and retro ran on `anthropic/claude-opus-5-5`; `/ship`'s mechanical checklist on `anthropic/claude-sonnet-5`; the audit's judgment-heavy classification on `anthropic/claude-opus-5-5` (pinned in the template).
+  The `tidy-first-assessor` and `pre-completion-reviewer` ran on `sonnet-5` and both returned correct, verifiable reports (one line-number slip from the assessor).
+  No mismatch.
+- **Feedback-loop gap analysis** — each TDD step ran its file, a mutation, `biome`/`eslint`, and `fallow dead-code` before committing; root lint ran after the template edit.
+  No gap.
+
+### Changes made
+
+1. `.pi/prompts/audit-agent-docs.md` — the by-class table's template reading of question 2 now passes only a procedure step unique to the template; a rule whose trigger a skill's description names fails even when the skill does not yet say it, so the `offload` branch is reachable and the next `workflow` audit can route the four stranded passages.
+2. `.pi/prompts/audit-agent-docs.md` — Step 4 takes every count in the gate message from a `grep -c` over the inventory, after the second audit in two to state a count that was not measured.
