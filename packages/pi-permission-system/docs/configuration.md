@@ -918,7 +918,7 @@ A long option is matched only when spelled in full, so every abbreviation (`--in
 
 Two more shapes withdraw the claim:
 
-- An argument whose value only the shell decides (`"$range"`, `$f`, `$(cmd)`, `-*`, `-\i`), wherever it sits, because it could arrive as `-i` or as the script itself.
+- An argument whose value only the shell decides (`"$range"`, `$f`, `$(cmd)`, `-*`, `-\i`, `{-i,-n}`), wherever it sits, because it could arrive as `-i` or as the script itself.
 - A `sed` script where GNU and BSD would read different commands: a delimiter inside a bracket expression (`s/[/]/x/`), or an `-e` after the first positional.
 
 #### Wrapper transparency
