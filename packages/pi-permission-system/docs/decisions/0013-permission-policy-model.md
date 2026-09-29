@@ -145,6 +145,19 @@ The candidate is derived rather than sliced, but the derivation only removes spa
 Measured over the local review log against the pre-change code, 9156 distinct intact `bash` commands: 7 change, all the `git commit -F - <<'MSG' 2>&1 | tail -N` shape the region salvage already handled.
 Each gains only duplicated units, and no decision changes; the fail-open forms above occur nowhere in that log, so the change closes a spelling an agent could produce rather than one it has.
 
+### Amendment, 2026-09-29 — a core word may be guarded by a proof over its script
+
+§7 excluded `sed` and `awk` outright: their script or program writes as surely as an option does (`sed 'w out'`, `awk '{print > FILENAME}'`), so no option-spelling guard can speak for them.
+
+**A core word may instead be admitted behind a proof over its whole command line — options and script alike — when that proof is an allowlist** ([#924]).
+The proof names what it accepts and withdraws the claim for everything else: an option outside its list, a script command outside its grammar, an argument whose value only the shell decides (it could spell `-i`), and any shape two implementations read differently.
+`sed`'s grammar refuses a delimiter inside a bracket expression for that last reason, since BSD reads `[/]` as a bracket where GNU ends the regex at its `/`.
+`awk`'s proof is a scan rather than a grammar, so it over-retracts a comparison such as `NR>=100`; the cost is relief, never a write.
+
+This keeps the admission bar rather than lowering it.
+The bar asks for effects stable under argument content, and a guarded word meets it only for the argument lists the guard proves; everywhere else it consults both surfaces, exactly as it did outside the core.
+Measured over the local review log, 901 of 1013 `sed` invocations prove read-only, and 134 of 218 `awk` invocations did under the prototype scan.
+
 ## Context
 
 ### The reported gap
@@ -754,5 +767,6 @@ Issue [#620] carries the judgment slice the chain retains under §7.
 [#814]: https://github.com/gotgenes/pi-packages/issues/814
 [#840]: https://github.com/gotgenes/pi-packages/issues/840
 [#875]: https://github.com/gotgenes/pi-packages/issues/875
+[#924]: https://github.com/gotgenes/pi-packages/issues/924
 [#985]: https://github.com/gotgenes/pi-packages/issues/985
 [openai/codex#28732]: https://github.com/openai/codex/issues/28732

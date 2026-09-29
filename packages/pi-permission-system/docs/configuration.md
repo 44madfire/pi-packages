@@ -884,7 +884,7 @@ A path token owned by one of them consults the `_read` surface alone:
 <!-- END PURE_READER_CORE -->
 
 The bar for admission is structural, not popularity: implementation-independent read-only-ness across GNU and BSD alike, no option that redirects output to a file, and effects that do not depend on argument content.
-`awk` and `sed` are excluded because their program text and `-i` flag can write; `uniq`, `tee`, `dd`, and `split` each have a positional or option that writes a file; `file` is excluded because `-C`/`--compile` writes a `magic.mgc` file; `less` and `more` can escape to a shell; `git`, `pnpm`, and `node` are subcommand-dependent.
+`uniq`, `tee`, `dd`, and `split` each have a positional or option that writes a file; `file` is excluded because `-C`/`--compile` writes a `magic.mgc` file; `less` and `more` can escape to a shell; `git`, `pnpm`, and `node` are subcommand-dependent; `gawk` and `nawk` are not admitted.
 
 Three members are read-only **until an argument says otherwise**, and naming one of these options withdraws the claim — the token falls back to consulting both surfaces:
 
@@ -901,6 +901,25 @@ A core word counts only as a **bare basename**.
 
 The core cannot be extended or removed from configuration.
 If you do not trust a member of it, deny or ask on the paths themselves — an effect proof only chooses which surface answers, and never overrides the answer.
+
+##### `sed` and `awk`
+
+`sed` and `awk` can write through their script or program as well as their options (`sed 'w out'`, `awk '{print > FILENAME}'`), so a withdrawing option is not enough to guard them.
+They are read-only only when the whole command line is **proven** read-only, and anything the proof does not recognize withdraws the claim:
+
+| Command | Proven read-only when                                                                                                                                                                                                                                                            |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sed`   | every option is one of `-n`, `-E`, `-r`, `-s`, `-u`, `-z` (clustered or not), `-e`/`--expression`, `--quiet`, `--silent`, `--regexp-extended`, `--separate`, `--unbuffered`, `--null-data`, `--posix`, `--debug`, and `--sandbox`, and every script uses only read-only commands |
+| `awk`   | the only options are `-F` and `-v`, and the program text holds no `>`, `\|`, `system`, or `@`                                                                                                                                                                                    |
+
+So `sed -n '1,80p' file`, `sed 's/a/b/g' file`, and `awk '{print $1}' file` read, while `sed -i …`, `sed -f script.sed …`, a script with a `w`, `r`, `e`, `a`, `i`, or `c` command, `s///w` or `s///e`, `awk -f prog.awk …`, and `awk '{print > "out"}' …` consult both surfaces.
+A long option is matched only when spelled in full, so every abbreviation (`--in`, `--qui`) withdraws the claim.
+`awk`'s check is a character scan rather than a parse, so a comparison such as `NR>=100` withdraws it too.
+
+Two more shapes withdraw the claim:
+
+- An argument whose value only the shell decides (`"$range"`, `$f`, `$(cmd)`, `-*`, `-\i`), wherever it sits, because it could arrive as `-i` or as the script itself.
+- A `sed` script where GNU and BSD would read different commands: a delimiter inside a bracket expression (`s/[/]/x/`), or an `-e` after the first positional.
 
 #### Wrapper transparency
 
@@ -921,7 +940,7 @@ All four of these must hold, and each is a way the floor's reason could still ap
 4. The enclosing statement provably writes no file through a redirect.
    A destination the parse cannot resolve — `> $OUT`, `> $(mktemp)` — counts against the exemption rather than for it.
 
-So `xargs grep -l foo`, `xargs wc -l`, and `find . -name '*.ts' -exec cat {} +` stop prompting under a matching `bash` allow, while `xargs rm`, `xargs sed -i`, `time pnpm test`, and `find . -exec sh -c '…' \;` still prompt.
+So `xargs grep -l foo`, `xargs wc -l`, `xargs sed -n 1p`, and `find . -name '*.ts' -exec cat {} +` stop prompting under a matching `bash` allow, while `xargs rm`, `xargs sed -i`, `time pnpm test`, and `find . -exec sh -c '…' \;` still prompt.
 
 Three things this does **not** change:
 
