@@ -16,7 +16,7 @@ import { sedWithdrawsReadClaim } from "./sed-invocation";
  * without reading the host's path language.
  *
  * A guarded word's claim is withdrawn when an argument names one of its
- * write-capable options, yielding `retracted` rather than a write: the command
+ * write-capable options, or is computed and may arrive as one, yielding `retracted` rather than a write: the command
  * may still only read, so the fail-closed base case is the honest answer and
  * `retracted` is the blame line that says why.
  *
@@ -206,17 +206,27 @@ interface RetractionGuard {
  */
 type ClaimWithdrawal = (argWords: readonly ArgWord[]) => boolean;
 
-/** A withdrawal decided by option spellings alone: any argument naming one. */
+/**
+ * A withdrawal decided by option spellings: any argument naming one.
+ *
+ * A computed argument's value is its unresolved source spelling, not what the
+ * program receives, so it is asked only whether it may arrive beginning with
+ * `-`, the shape every guarded option has.
+ */
 function optionGuard(guard: RetractionGuard): ClaimWithdrawal {
   return (argWords) =>
-    argWords.some(({ value }) => retractsClaim(value, guard));
+    argWords.some((word) =>
+      word.computed ? word.mayLeadWithDash : retractsClaim(word.value, guard),
+    );
 }
 
 /**
  * The guarded words and what withdraws each one's claim.
  *
- * `find`, `fd`, and `sort` are guarded by option spellings alone, chosen
- * because their write options spell identically in GNU and BSD. `sed` needs a
+ * `find`, `fd`, and `sort` are guarded by option spellings, chosen because
+ * their write options spell identically in GNU and BSD; a computed argument
+ * that may lead with `-` withdraws their claim too, since it could spell any
+ * of them. `sed` needs a
  * proof over its script too, since a `w` command writes whatever its options
  * say, and `awk` a proof over its program, since `print >` does the same — so
  * each owns a predicate of its own. `find`'s options are single-dash long

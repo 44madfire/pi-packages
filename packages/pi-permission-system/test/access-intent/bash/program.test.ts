@@ -1414,6 +1414,18 @@ describe("BashProgram", () => {
           await expect(exemptions(command)).resolves.toEqual([undefined]);
         });
 
+        it("does not exempt a computed word that may spell a withdrawing option", async () => {
+          await expect(exemptions("xargs find . $A")).resolves.toEqual([
+            undefined,
+          ]);
+        });
+
+        it("still exempts a computed word behind a literal", async () => {
+          await expect(exemptions('xargs find . -name "x$y"')).resolves.toEqual(
+            ["core-reader"],
+          );
+        });
+
         it("still exempts a quoted argument that withdraws nothing", async () => {
           await expect(exemptions("xargs grep 'foo'")).resolves.toEqual([
             "core-reader",

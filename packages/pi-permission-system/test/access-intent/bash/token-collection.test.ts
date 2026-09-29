@@ -1253,6 +1253,46 @@ describe("effect attribution", () => {
     ]);
   });
 
+  describe("a computed argument to an option-guarded word", () => {
+    const read = { effect: "read", source: "core" };
+    const retracted = { effect: "unproven", source: "retracted" };
+
+    /** Every collected token of a command, attributed the one effect. */
+    function attributed(tokens: string[], effect: object) {
+      return tokens.map((token) => ({ token, effect }));
+    }
+
+    it("retracts find's claim when a variable may spell a withdrawing option", async () => {
+      expect(await attributedTokens("A=-delete; find /etc $A")).toEqual(
+        attributed(["/etc"], retracted),
+      );
+    });
+
+    it("retracts find's claim when a quoted variable leads its start point", async () => {
+      expect(await attributedTokens('find "$dir" -name /etc/x')).toEqual(
+        attributed(["$dir", "-name", "/etc/x"], retracted),
+      );
+    });
+
+    it("retracts sort's claim when a quoted variable may spell -o", async () => {
+      expect(await attributedTokens('sort "$O" /etc/out in')).toEqual(
+        attributed(["$O", "/etc/out", "in"], retracted),
+      );
+    });
+
+    it("keeps find's claim for a computed word behind a literal", async () => {
+      expect(await attributedTokens('find /etc -name "x$y"')).toEqual(
+        attributed(["/etc", "-name", "x$y"], read),
+      );
+    });
+
+    it("keeps find's claim for a quoted glob and a depth limit", async () => {
+      expect(
+        await attributedTokens("find /etc -maxdepth 2 -name '*.ts'"),
+      ).toEqual(attributed(["/etc", "-maxdepth", "-name", "*.ts"], read));
+    });
+  });
+
   it("proves a write for an output redirect destination", async () => {
     expect(await attributedTokens("cat /etc/hosts > /tmp/out.txt")).toEqual([
       { token: "/etc/hosts", effect: { effect: "read", source: "core" } },

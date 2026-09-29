@@ -220,6 +220,34 @@ describe("proveCommandEffect", () => {
     });
   });
 
+  describe("a computed argument to an option-guarded word", () => {
+    // Its value is the unresolved source spelling, which is not what the
+    // program receives, so only whether it may lead with `-` can decide.
+    it.each(["find", "fd", "sort"])(
+      "retracts %s's read claim when the word may lead with a dash",
+      (headWord) => {
+        expect(
+          proveCommandEffect(headWord, [
+            ...literalArgWords("in"),
+            computedArgWord("$A", true),
+          ]),
+        ).toEqual(RETRACTED);
+      },
+    );
+
+    it.each(["find", "fd", "sort"])(
+      "keeps %s's read claim when the word cannot lead with a dash",
+      (headWord) => {
+        expect(
+          proveCommandEffect(headWord, [
+            ...literalArgWords("in"),
+            computedArgWord("x$y", false),
+          ]),
+        ).toEqual(CORE_READ);
+      },
+    );
+  });
+
   describe("the sed guard", () => {
     // The prover's own cases live in sed-invocation.test.ts; these pin that
     // the core consults it.
