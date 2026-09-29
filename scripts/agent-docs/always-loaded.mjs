@@ -19,38 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { countWords } from "./doc-growth.mjs";
-
-/**
- * The `description:` value from a SKILL.md's YAML frontmatter, dedented, or
- * "" when the file has no frontmatter or no description.
- *
- * Handles the three forms the repo uses: a literal block (`|`), a folded
- * block (`>-`), and a single-line value. Block bodies end at the closing
- * `---` or at the next unindented key.
- *
- * @param {string} markdown
- */
-export function skillDescription(markdown) {
-  const lines = markdown.split("\n");
-  if (lines[0] !== "---") return "";
-
-  const close = lines.indexOf("---", 1);
-  const frontmatter = close === -1 ? lines.slice(1) : lines.slice(1, close);
-  const start = frontmatter.findIndex((line) =>
-    line.startsWith("description:"),
-  );
-  if (start === -1) return "";
-
-  const inline = frontmatter[start].slice("description:".length).trim();
-  if (inline !== "" && !/^[|>]/.test(inline)) return inline;
-
-  const body = [];
-  for (const line of frontmatter.slice(start + 1)) {
-    if (!/^\s/.test(line)) break;
-    body.push(line.trim());
-  }
-  return body.join("\n");
-}
+import { frontmatterDescription } from "./frontmatter.mjs";
 
 /**
  * @param {{ agentsMd: string, skillDescriptions: string[] }} corpus
@@ -82,7 +51,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const skillsDir = path.join(root, ".pi", "skills");
   const skillDescriptions = readdirSync(skillsDir)
     .map((name) => path.join(skillsDir, name, "SKILL.md"))
-    .map((file) => skillDescription(readFileSync(file, "utf8")));
+    .map((file) => frontmatterDescription(readFileSync(file, "utf8")));
   const result = alwaysLoadedWords({
     agentsMd: readFileSync(path.join(root, "AGENTS.md"), "utf8"),
     skillDescriptions,
