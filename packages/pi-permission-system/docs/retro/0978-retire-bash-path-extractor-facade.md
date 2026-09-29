@@ -62,3 +62,45 @@ The plan's `**Release:** ship independently` marker stands — every commit is `
 
 No deferred work and no follow-up issues from this implementation.
 The pre-completion reviewer's PASS re-derived the equivalence audit independently, so the root ship should need no additional verification beyond CI.
+
+## Stage: Final Retrospective (2026-09-29T03:48:18Z)
+
+### Session summary
+
+The root session fast-forward-merged the branch (pre-merge tip `57b81d63`, equal to the plan commit's parent), re-ran lint and `fallow dead-code` on the merged tree, pushed, and CI passed on `3ece1922`.
+The script `next-version.sh pi-permission-system` printed nothing to release, so no release was dispatched; #978 was closed citing `a79a4af7`, and the worktree and branch were torn down.
+Across all four stages the issue ran with no rework commits and no user corrections.
+
+### Observations
+
+#### What went well
+
+- The planning session's throwaway script (`/tmp/cmp978.mjs`) matched every facade test's command literal against the rest of `test/`, turning a 133-case equivalence audit into a mechanical first pass that the agent then corrected by hand.
+  A literal match found only 15 hits, which is what showed wholesale deletion was unsafe.
+- Surviving killing mutations were treated as findings, not failures, and each was explained in its commit body (`SKIP_SUBTREE_TYPES` cases pin grammar structure; non-path-shaped `sed`/`grep` patterns are rejected by the classifier too).
+  This is the `tdd-plan` mutation guidance working as written.
+- The plan's `Release Recommendation` already said the change cuts nothing, and `next-version.sh` confirmed it at ship time, so the no-release outcome was predicted three stages ahead.
+
+#### What caused friction (agent side)
+
+- `other` — the `Explore` audit's totals disagreed with its own table (46 equivalent reported, 57 listed).
+  The planning agent caught it and recounted, then corrected three verdicts to reach 56.
+  Impact: a few extra tool calls, no rework; the existing delegation rule (verify a subagent's count) did its job.
+- `other` — several planned killing mutations left their tests green because the plan predicted them without naming what observably changes.
+  Impact: about five extra mutation runs in TDD step 2 and step 3, no rework; the findings were recorded.
+- `instruction-violation` (not caught) — the peer prefixed package-scoped bash calls with `cd packages/pi-permission-system;` (72 matching lines in the peer transcript JSONL), against the `AGENTS.md` rule to run `pnpm --filter` from the root.
+  Impact: none observed, since each bash call starts fresh at the root.
+
+#### What caused friction (user side)
+
+- None; the operator's two planning decisions (retire rather than keep a documented seam, and give the tests a single home) were made up front at one gate, which is why the plan was not revised.
+
+### Diagnostic details
+
+- **Model-performance correlation:** planning and TDD ran on `claude-opus-5-5` and sync on `claude-sonnet-5`, and this ship and retro ran at the root.
+  All three subagents (`Explore`, `tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5` per their transcripts.
+  The `Explore` miscount happened on a count-heavy audit where Sonnet was adequate for the classification but not for the totals, and the parent's recount compensated.
+
+### Changes made
+
+None; no proposal was approved.
