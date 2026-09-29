@@ -48,3 +48,17 @@ Package test count across the three files went from 475 to 420, since 55 cases w
 - Once step 4 stripped the facade suite's wholesale `node:fs` and `/mock/home` mocks, it held only presentation cases, so step 5 was a clean deletion.
 - Pre-completion reviewer: PASS.
   It re-derived 20+ equivalence rows and confirmed all 81 moved test names survive.
+
+## Stage: Sync (worktree) (2026-09-29T03:27:10Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint`, `pnpm fallow dead-code`) both pass with no fixes needed.
+The plan's `**Release:** ship independently` marker stands — every commit is `test:`, `refactor:`, or `docs:`, so `/ship` lands the branch and dispatches no release.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-978--/2026-09-28T22-32-52-851Z_01a0ea26-4973-7313-8c6a-f6188fbe23db.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+No deferred work and no follow-up issues from this implementation.
+The pre-completion reviewer's PASS re-derived the equivalence audit independently, so the root ship should need no additional verification beyond CI.
