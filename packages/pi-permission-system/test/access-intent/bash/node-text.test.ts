@@ -295,6 +295,11 @@ describe("readArgWord", () => {
         ["an unquoted variable after a literal, which splits", "x$y"],
         ["an unquoted variable after an empty string", '""$x'],
         ["an unquoted variable after a single-quoted literal", "'x'$y"],
+        // A quoted `$@` still expands to one word per element, and only the
+        // first carries the literal prefix.
+        ["quoted positional parameters after a literal", '"x$@"'],
+        ["a quoted array expansion after a literal", '"x${arr[@]}"'],
+        ["a quoted positional slice after a literal", '"x${@:2}"'],
         ["a leading glob", "*"],
         ["a dash before a glob", "-*"],
         ["an escaped dash", "\\-delete"],
@@ -312,6 +317,9 @@ describe("readArgWord", () => {
     describe("a word whose leading literal survives every rewrite", () => {
       it.each([
         ["a quoted variable after a literal", '"x$y"'],
+        // `$*` and `${arr[*]}` join into one word inside quotes.
+        ["quoted joined positional parameters after a literal", '"x$*"'],
+        ["a quoted joined array after a literal", '"x${arr[*]}"'],
         ["a glob after a literal", "packages/*/docs"],
         ["an escaped parenthesis", "\\("],
         ["a brace expansion after a literal", "x{a,-b}"],

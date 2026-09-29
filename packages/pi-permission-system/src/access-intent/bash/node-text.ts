@@ -72,12 +72,12 @@ export function readArgWord(node: TSNode): ArgWord {
  *
  * Globbing, brace expansion, and escape removal each keep a literal prefix, so
  * a word whose leading character is a literal other than `-` cannot become an
- * option; an unquoted expansion anywhere can split into a new word of any
- * shape, so it decides nothing.
+ * option; an expansion that can split into several words decides nothing,
+ * since only the first of them carries the prefix.
  */
 function mayExpandToDashWord(node: TSNode): boolean {
   return (
-    hasUnquotedExpansion(node) || (leadingCharacterMayBeDash(node) ?? true)
+    maySplitIntoWords(node, false) || (leadingCharacterMayBeDash(node) ?? true)
   );
 }
 
@@ -90,24 +90,43 @@ const WORD_SPLITTING_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Nodes whose inside is never split into the argument's words: a quoted
- * string, and a process substitution, whose body belongs to its own command.
+ * Nodes whose inside is never split into the argument's words: a
+ * single-quoted or ANSI-C string, and a process substitution, whose body
+ * belongs to its own command.
  */
 const UNSPLIT_TYPES: ReadonlySet<string> = new Set([
-  "string",
   "raw_string",
   "ansi_c_string",
   "process_substitution",
 ]);
 
-function hasUnquotedExpansion(node: TSNode): boolean {
-  if (WORD_SPLITTING_TYPES.has(node.type)) return true;
+/**
+ * Whether any expansion in the word may produce more than one word.
+ *
+ * Unquoted, every expansion splits. Double quotes stop splitting except for
+ * `$@` and `${arr[@]}` (and their slices and transforms), which still expand to
+ * one word per element; any quoted expansion spelling `@` is read as one of
+ * them, which over-counts only an operand such as `${x:-a@b}`.
+ */
+function maySplitIntoWords(node: TSNode, quoted: boolean): boolean {
+  if (WORD_SPLITTING_TYPES.has(node.type)) {
+    return !quoted || expandsPerElement(node);
+  }
   if (UNSPLIT_TYPES.has(node.type)) return false;
+  const childrenQuoted = quoted || node.type === "string";
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
-    if (child && hasUnquotedExpansion(child)) return true;
+    if (child && maySplitIntoWords(child, childrenQuoted)) return true;
   }
   return false;
+}
+
+/** A quoted parameter expansion that still yields one word per element. */
+function expandsPerElement(node: TSNode): boolean {
+  return (
+    (node.type === "simple_expansion" || node.type === "expansion") &&
+    node.text.includes("@")
+  );
 }
 
 /**

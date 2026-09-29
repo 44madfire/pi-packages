@@ -1280,6 +1280,13 @@ describe("effect attribution", () => {
       );
     });
 
+    it('retracts find\'s claim when a quoted "$@" follows a literal', async () => {
+      // Each positional parameter after the first arrives as its own word.
+      expect(await attributedTokens('find /etc "x$@"')).toEqual(
+        attributed(["/etc", "x$@"], retracted),
+      );
+    });
+
     it("keeps find's claim for a computed word behind a literal", async () => {
       expect(await attributedTokens('find /etc -name "x$y"')).toEqual(
         attributed(["/etc", "-name", "x$y"], read),
