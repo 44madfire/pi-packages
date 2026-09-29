@@ -29,12 +29,18 @@ function words(unitText: string): CommandWord[] {
 
 /**
  * The value a stand-in word reaches its program with: the surrounding quotes
- * removed, and computed when an unquoted or double-quoted `$` decides it.
+ * removed, and computed when an unquoted or double-quoted `$` decides it. A
+ * computed stand-in may always lead with a dash, the conservative reading.
  */
 function argWordOf(text: string): ArgWord {
   const quoted = /^(['"])(.*)\1$/s.exec(text);
   const value = quoted ? quoted[2] : text;
-  return { value, computed: quoted?.[1] !== "'" && value.includes("$") };
+  const computed = quoted?.[1] !== "'" && value.includes("$");
+  return {
+    value,
+    computed,
+    mayLeadWithDash: computed || value.startsWith("-"),
+  };
 }
 
 describe("classifyWrapperWords", () => {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { sedWithdrawsReadClaim } from "#src/access-intent/bash/sed-invocation";
-import { literalArgWords as literal } from "#test/helpers/arg-words";
+import {
+  computedArgWord,
+  literalArgWords as literal,
+} from "#test/helpers/arg-words";
 
 describe("sedWithdrawsReadClaim", () => {
   describe("a print-only invocation", () => {
@@ -95,9 +98,9 @@ describe("sedWithdrawsReadClaim", () => {
     it("withdraws the claim for a computed script", () => {
       expect(
         sedWithdrawsReadClaim([
-          { value: "-n", computed: false },
-          { value: "$range", computed: true },
-          { value: "f.md", computed: false },
+          ...literal("-n"),
+          computedArgWord("$range", true),
+          ...literal("f.md"),
         ]),
       ).toBe(true);
     });
@@ -105,9 +108,21 @@ describe("sedWithdrawsReadClaim", () => {
     it("withdraws the claim for a computed file, which could spell -i", () => {
       expect(
         sedWithdrawsReadClaim([
-          { value: "-n", computed: false },
-          { value: "1p", computed: false },
-          { value: "$f", computed: true },
+          ...literal("-n", "1p"),
+          computedArgWord("$f", true),
+        ]),
+      ).toBe(true);
+    });
+
+    it("withdraws the claim for a computed word that cannot lead with a dash", () => {
+      // It could still be the script itself, so no leading-character test
+      // bounds what it does. The value is one the script grammar proves, so
+      // only the computed flag can withdraw the claim.
+      expect(
+        sedWithdrawsReadClaim([
+          ...literal("-n"),
+          computedArgWord("p", false),
+          ...literal("f.md"),
         ]),
       ).toBe(true);
     });

@@ -235,21 +235,25 @@ describe("readArgWord", () => {
 
   describe("a value the source spells exactly", () => {
     it.each([
-      ["a bare word", "-n", "-n"],
-      ["a single-quoted word", "'-i'", "-i"],
-      ["a double-quoted word", '"1,80p"', "1,80p"],
-      ["a single-quoted backslash", "'s/\\./x/'", "s/\\./x/"],
-      ["a tilde path", "~/notes.md", "~/notes.md"],
-      ["a concatenation of quoted parts", "-'i'\"\"", "-i"],
-      ["an empty brace pair, which bash leaves alone", "{}", "{}"],
-      ["a number", "2", "2"],
-      ["a negative number", "-20", "-20"],
-    ])("reads %s as exact (%s)", async (_label, argument, value) => {
-      await expect(argWordOf(argument)).resolves.toEqual({
-        value,
-        computed: false,
-      });
-    });
+      ["a bare word", "-n", "-n", true],
+      ["a single-quoted word", "'-i'", "-i", true],
+      ["a double-quoted word", '"1,80p"', "1,80p", false],
+      ["a single-quoted backslash", "'s/\\./x/'", "s/\\./x/", false],
+      ["a tilde path", "~/notes.md", "~/notes.md", false],
+      ["a concatenation of quoted parts", "-'i'\"\"", "-i", true],
+      ["an empty brace pair, which bash leaves alone", "{}", "{}", false],
+      ["a number", "2", "2", false],
+      ["a negative number", "-20", "-20", true],
+    ])(
+      "reads %s as exact (%s)",
+      async (_label, argument, value, mayLeadWithDash) => {
+        await expect(argWordOf(argument)).resolves.toEqual({
+          value,
+          computed: false,
+          mayLeadWithDash,
+        });
+      },
+    );
   });
 
   describe("a value only the shell decides", () => {
@@ -270,6 +274,55 @@ describe("readArgWord", () => {
     ])("marks %s computed (%s)", async (_label, argument) => {
       await expect(argWordOf(argument)).resolves.toMatchObject({
         computed: true,
+      });
+    });
+  });
+
+  describe("whether a computed word may lead with a dash", () => {
+    /** The two facts a guard reads, without the unresolved source spelling. */
+    async function shapeOf(argument: string) {
+      const { computed, mayLeadWithDash } = await argWordOf(argument);
+      return { computed, mayLeadWithDash };
+    }
+
+    describe("a word that may reach the program beginning with `-`", () => {
+      it.each([
+        ["a bare variable", "$A"],
+        ["a quoted variable", '"$O"'],
+        ["a command substitution", "$(echo -o)"],
+        ["a backtick substitution", "`echo -o`"],
+        ["a quoted variable leading a path", '"$pkg/src"'],
+        ["an unquoted variable after a literal, which splits", "x$y"],
+        ["an unquoted variable after an empty string", '""$x'],
+        ["an unquoted variable after a single-quoted literal", "'x'$y"],
+        ["a leading glob", "*"],
+        ["a dash before a glob", "-*"],
+        ["an escaped dash", "\\-delete"],
+        ["a leading brace expansion", "{-delete,}"],
+        ["an ANSI-C string", "$'-o'"],
+        ["an option glued to an ANSI-C string", "-t$'\\t'"],
+      ])("answers true for %s (%s)", async (_label, argument) => {
+        await expect(shapeOf(argument)).resolves.toEqual({
+          computed: true,
+          mayLeadWithDash: true,
+        });
+      });
+    });
+
+    describe("a word whose leading literal survives every rewrite", () => {
+      it.each([
+        ["a quoted variable after a literal", '"x$y"'],
+        ["a glob after a literal", "packages/*/docs"],
+        ["an escaped parenthesis", "\\("],
+        ["a brace expansion after a literal", "x{a,-b}"],
+        ["a glob under a tilde path", "~/*.ts"],
+        ["a process substitution", "<(cmd)"],
+        ["a process substitution whose body splits", "<(cmd $a)"],
+      ])("answers false for %s (%s)", async (_label, argument) => {
+        await expect(shapeOf(argument)).resolves.toEqual({
+          computed: true,
+          mayLeadWithDash: false,
+        });
       });
     });
   });

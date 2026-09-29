@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { awkWithdrawsReadClaim } from "#src/access-intent/bash/awk-invocation";
-import { literalArgWords as literal } from "#test/helpers/arg-words";
+import {
+  computedArgWord,
+  literalArgWords as literal,
+} from "#test/helpers/arg-words";
 
 describe("awkWithdrawsReadClaim", () => {
   describe("a program that only reads", () => {
@@ -64,8 +67,8 @@ describe("awkWithdrawsReadClaim", () => {
     it("withdraws the claim for a computed program", () => {
       expect(
         awkWithdrawsReadClaim([
-          { value: "$prog", computed: true },
-          { value: "data", computed: false },
+          computedArgWord("$prog", true),
+          ...literal("data"),
         ]),
       ).toBe(true);
     });
@@ -73,8 +76,19 @@ describe("awkWithdrawsReadClaim", () => {
     it("withdraws the claim for a computed file", () => {
       expect(
         awkWithdrawsReadClaim([
-          { value: "{print}", computed: false },
-          { value: "$f", computed: true },
+          ...literal("{print}"),
+          computedArgWord("$f", true),
+        ]),
+      ).toBe(true);
+    });
+
+    it("withdraws the claim for a computed word that cannot lead with a dash", () => {
+      // It could still be the program itself, so no leading-character test
+      // bounds what it does.
+      expect(
+        awkWithdrawsReadClaim([
+          ...literal("{print}"),
+          computedArgWord('"x$f"', false),
         ]),
       ).toBe(true);
     });

@@ -44,14 +44,122 @@ export interface ArgWord {
    * expansion, an ANSI-C string — which {@link resolveNodeText} passes through as written.
    */
   readonly computed: boolean;
+  /**
+   * Whether the program may receive this argument, or a word split from it,
+   * beginning with `-` — the shape every option has. Exact for a word that is
+   * not computed; for a computed one, `false` only when a literal leading
+   * character survives every rewrite the shell applies.
+   */
+  readonly mayLeadWithDash: boolean;
 }
 
 /** Read an argument node into the word the program receives. */
 export function readArgWord(node: TSNode): ArgWord {
+  const value = resolveNodeText(node);
+  const computed = hasComputedPart(node) || !isSpelledExactly(node);
   return {
-    value: resolveNodeText(node),
-    computed: hasComputedPart(node) || !isSpelledExactly(node),
+    value,
+    computed,
+    mayLeadWithDash: computed
+      ? mayExpandToDashWord(node)
+      : value.startsWith("-"),
   };
+}
+
+/**
+ * Whether a computed word may reach the program — whole, or as one of the
+ * words the shell splits it into — beginning with `-`.
+ *
+ * Globbing, brace expansion, and escape removal each keep a literal prefix, so
+ * a word whose leading character is a literal other than `-` cannot become an
+ * option; an unquoted expansion anywhere can split into a new word of any
+ * shape, so it decides nothing.
+ */
+function mayExpandToDashWord(node: TSNode): boolean {
+  return (
+    hasUnquotedExpansion(node) || (leadingCharacterMayBeDash(node) ?? true)
+  );
+}
+
+/** Expansions whose unquoted result the shell splits into words. */
+const WORD_SPLITTING_TYPES: ReadonlySet<string> = new Set([
+  "simple_expansion",
+  "expansion",
+  "command_substitution",
+  "arithmetic_expansion",
+]);
+
+/**
+ * Nodes whose inside is never split into the argument's words: a quoted
+ * string, and a process substitution, whose body belongs to its own command.
+ */
+const UNSPLIT_TYPES: ReadonlySet<string> = new Set([
+  "string",
+  "raw_string",
+  "ansi_c_string",
+  "process_substitution",
+]);
+
+function hasUnquotedExpansion(node: TSNode): boolean {
+  if (WORD_SPLITTING_TYPES.has(node.type)) return true;
+  if (UNSPLIT_TYPES.has(node.type)) return false;
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (child && hasUnquotedExpansion(child)) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether the first character the word produces may be `-`, or `undefined`
+ * while every part read so far produced nothing (`""`, `''`).
+ *
+ * A part this does not know is non-literal, and so may lead with anything.
+ */
+function leadingCharacterMayBeDash(node: TSNode): boolean | undefined {
+  switch (node.type) {
+    case "word":
+    case "number":
+      return unquotedLiteralMayLeadWithDash(node.text);
+    case "raw_string":
+      return quotedLiteralMayLeadWithDash(node.text.slice(1, -1));
+    case "string_content":
+      return quotedLiteralMayLeadWithDash(node.text);
+    case '"':
+      return undefined;
+    case "process_substitution":
+      // The program receives a `/dev/fd/N` path.
+      return false;
+    case "string":
+    case "concatenation":
+      for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        const lead = child ? leadingCharacterMayBeDash(child) : undefined;
+        if (lead !== undefined) return lead;
+      }
+      return undefined;
+    default:
+      return true;
+  }
+}
+
+/**
+ * An unquoted literal: a leading glob or brace can produce any character, and
+ * an escape yields the character after it.
+ */
+function unquotedLiteralMayLeadWithDash(text: string): boolean | undefined {
+  if (text === "") return undefined;
+  if (text.startsWith("\\")) return text.length < 2 || text[1] === "-";
+  return UNDETERMINED_LEAD.test(text);
+}
+
+/** A leading character that may become, or already is, `-`. */
+const UNDETERMINED_LEAD = /^[-*?[{]/;
+
+/** A quoted literal reaches the program as written. */
+function quotedLiteralMayLeadWithDash(text: string): boolean | undefined {
+  if (text === "") return undefined;
+  return text.startsWith("-");
 }
 
 /**

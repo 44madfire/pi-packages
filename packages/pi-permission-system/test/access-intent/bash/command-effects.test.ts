@@ -7,7 +7,7 @@ import {
   redirectDestinationEffect,
 } from "#src/access-intent/bash/command-effects";
 import { UNPROVEN_EFFECT } from "#src/access-intent/effect";
-import { literalArgWords } from "#test/helpers/arg-words";
+import { computedArgWord, literalArgWords } from "#test/helpers/arg-words";
 
 const CORE_READ = { effect: "read", source: "core" } as const;
 const RETRACTED = { effect: "unproven", source: "retracted" } as const;
@@ -234,8 +234,8 @@ describe("proveCommandEffect", () => {
     it("retracts the read claim for a computed script", () => {
       expect(
         proveCommandEffect("sed", [
-          { value: "$range", computed: true },
-          { value: "f.md", computed: false },
+          computedArgWord("$range", true),
+          ...literalArgWords("f.md"),
         ]),
       ).toEqual(RETRACTED);
     });
