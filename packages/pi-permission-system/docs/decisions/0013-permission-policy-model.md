@@ -158,6 +158,17 @@ This keeps the admission bar rather than lowering it.
 The bar asks for effects stable under argument content, and a guarded word meets it only for the argument lists the guard proves; everywhere else it consults both surfaces, exactly as it did outside the core.
 Measured over the local review log, 901 of 1013 `sed` invocations prove read-only, and 134 of 218 `awk` invocations did under the prototype scan.
 
+### Amendment, 2026-09-29 — an option guard sees a computed word
+
+The `find`, `fd`, and `sort` guards matched each argument's source text against their options, so a word only the shell decides (`A=-delete; find ~/other $A`) carried a withdrawing option past them.
+
+**A computed argument withdraws an option-guarded word's claim whenever it may reach the program beginning with `-`** ([#992]).
+Every guarded option has that shape, and a computed word's source text is not what the program receives, so the guard asks only that question of it.
+The answer is `false` only when a literal leading character survives every rewrite the shell applies (globbing, brace expansion, and escape removal each keep a literal prefix) and no unquoted expansion can split the word, so `"x$y"`, `packages/*/docs`, and `\(` leave the claim standing.
+`sed` and `awk` keep the stricter rule above, since a computed word there can be the script itself.
+
+Measured over 70,961 unique bash commands from session transcripts and the review log, 96 `find` units that proved a read now withdraw, against 625 under a rule withdrawing on any computed word; none of the 96 wrote.
+
 ## Context
 
 ### The reported gap
@@ -769,4 +780,5 @@ Issue [#620] carries the judgment slice the chain retains under §7.
 [#875]: https://github.com/gotgenes/pi-packages/issues/875
 [#924]: https://github.com/gotgenes/pi-packages/issues/924
 [#985]: https://github.com/gotgenes/pi-packages/issues/985
+[#992]: https://github.com/gotgenes/pi-packages/issues/992
 [openai/codex#28732]: https://github.com/openai/codex/issues/28732
