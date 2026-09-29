@@ -1092,5 +1092,114 @@ describe("BashProgram", () => {
         expect(await externalValuesOf(command)).toEqual([expected]);
       });
     });
+
+    describe("pattern-first commands", () => {
+      it("leaves a sed address pattern alone, whatever it holds", async () => {
+        const command = `sed -i '' '/source: "tool",/{/origin:/!s/source: "tool",/source: "tool",\n      origin: "builtin",/;}' tests/tool-input-preview.test.ts`;
+        expect(await externalValuesOf(command)).toEqual([]);
+      });
+
+      it("skips a sed address pattern starting with / and projects the file", async () => {
+        expect(await externalValuesOf("sed '/pattern/d' /etc/hosts")).toEqual([
+          "/etc/hosts",
+        ]);
+      });
+
+      it("leaves a sed whose only file is within cwd alone", async () => {
+        expect(await externalValuesOf("sed 's/foo/bar/' src/index.ts")).toEqual(
+          [],
+        );
+      });
+
+      it("reads sed -n as a flag that consumes nothing", async () => {
+        expect(
+          await externalValuesOf("sed -n '/pattern/p' /etc/hosts"),
+        ).toEqual(["/etc/hosts"]);
+      });
+
+      it("skips an awk program and projects the file", async () => {
+        expect(await externalValuesOf("awk '{print}' /etc/hosts")).toEqual([
+          "/etc/hosts",
+        ]);
+      });
+
+      it("consumes an unquoted awk -F separator and skips the program", async () => {
+        expect(
+          await externalValuesOf("awk -F: '{print $1}' /etc/passwd"),
+        ).toEqual(["/etc/passwd"]);
+      });
+
+      it("reads rg -e as consuming the pattern", async () => {
+        expect(
+          await externalValuesOf("rg -e '/usr/local' /etc/profile.d/"),
+        ).toEqual(["/etc/profile.d"]);
+      });
+
+      it("leaves an sd whose only file is within cwd alone", async () => {
+        expect(await externalValuesOf("sd 'foo' 'bar' src/index.ts")).toEqual(
+          [],
+        );
+      });
+
+      it("reads a path-qualified sed as sed", async () => {
+        expect(
+          await externalValuesOf("/usr/bin/sed 's/foo/bar/' /etc/hosts"),
+        ).toEqual(["/etc/hosts"]);
+      });
+
+      it("still projects a pattern-first command's redirect target", async () => {
+        expect(
+          await externalValuesOf(
+            "sed 's/foo/bar/' input.txt > /tmp/output.txt",
+          ),
+        ).toEqual(["/tmp/output.txt"]);
+      });
+
+      it("projects a later pipeline stage's operand", async () => {
+        expect(
+          await externalValuesOf(
+            "sed 's/foo/bar/' src/file.ts | cat /etc/hosts",
+          ),
+        ).toEqual(["/etc/hosts"]);
+      });
+
+      it("projects the operand of a substitution passed to a pattern-first command", async () => {
+        expect(
+          await externalValuesOf("grep 'pattern' $(cat /etc/file-list)"),
+        ).toEqual(["/etc/file-list"]);
+      });
+    });
+
+    // These arguments reach no path surface because `PATTERN_FIRST_COMMANDS`
+    // (token-collection.ts) skips a pattern-first command's inline pattern
+    // positional, not because the classifier inspects the token's characters.
+    describe("regex arguments of pattern-first commands", () => {
+      it.each([
+        [
+          "a grep -v //.* pattern in a pipeline",
+          'grep -n "glob" src/foo.ts 2>/dev/null | grep -v "//.*glob\\|globalConfig" | head -30',
+        ],
+        ["a grep -v //.* pattern", 'grep -v "//.*foo" file.txt'],
+        [
+          "a grep backslash-pipe alternation",
+          'grep "foo\\|bar\\|baz" src/file.ts',
+        ],
+        ["a grep -E ^/ anchored regex", 'grep -E "^/usr/bin" file.txt'],
+        ["a sed regex containing slashes", 'sed "s/foo.*/bar/g" file.txt'],
+        [
+          "an awk pattern holding an escaped absolute path",
+          'awk "/\\/etc\\/.*/" file.txt',
+        ],
+        ["an rg pattern shaped like an absolute path", 'rg "/etc/.*passwd" -l'],
+      ])("leaves %s alone", async (_label, command) => {
+        expect(await externalValuesOf(command)).toEqual([]);
+      });
+
+      it("still projects a real external path beside a regex argument", async () => {
+        expect(
+          await externalValuesOf('grep -v "//.*pattern" /etc/hosts'),
+        ).toEqual(["/etc/hosts"]);
+      });
+    });
   });
 });
