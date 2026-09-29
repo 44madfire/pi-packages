@@ -192,14 +192,16 @@ The skill exits at its first step when no phase is open.
 Retro-driven additions to `AGENTS.md` and prompt bodies should land as **rule + tight example**, not **rule + rationale + worked example**.
 The retro file is the right home for rationale and worked examples.
 
-First, put each proposed `AGENTS.md` addition through the `## Admission test` in `AGENTS.md`.
+First, put each proposed addition to `AGENTS.md`, a skill, a prompt template, or an agent definition through the `## Admission test` in `AGENTS.md`.
 A passage that fails its first question is not landed anywhere; one that fails its second is landed in the named skill's body instead.
-This retro is where `AGENTS.md` grows — 44 of its last 60 commits were `docs(retro):` — so this is the gate that decides whether the file re-grows.
+For a template, the second question fails when a skill the template loads already owns the rule — land it there, or nowhere if it is already said.
+For an agent definition, it fails when the child already gets the rule from `AGENTS.md`, its dispatch prompt, or a skill its body tells it to load.
+This retro is where all four grow, so this is the gate that decides whether they re-grow.
 
 Then, for what passes, ask:
 
 1. **Rationale placement** — is the *why* in the retro file, or has it leaked into `AGENTS.md`/prompt?
-   If the latter, move it back and leave a one-clause justification (or a `Refs #N` pointer).
+   If the latter, move it back and leave a one-clause justification, with a `Refs #N` pointer only when the issue encodes an active constraint a reader may need to trace.
 2. **Example tightness** — can the example fit in one or two lines?
 3. **Hedging audit** — phrases like "should generally," "typically," "usually" often signal the rule isn't crisp enough.
    Name the exceptions or drop the hedge.
