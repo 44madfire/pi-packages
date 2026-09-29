@@ -298,6 +298,8 @@ When planning a refactoring that touches handler wiring or shared interfaces, lo
 The bash `external_directory` gate only sees tokens that `classifyTokenAsPathCandidate` accepts, the broader `path` surface sees what `classifyTokenAsRuleCandidate` accepts, a bare filename is promoted into both when the existence probe finds it on disk, and a redirect's literal first destination reaches both by its `redirect-destination` role whether or not it exists; token shape is judged **after** `$HOME`/`$PWD` expansion, whose vocabulary lives only in `access-intent/bash/shell-variable-expansion.ts` — do not add a `$HOME` branch to a classifier.
 The classifiers, the probe, the option-value and statement-operand walkers, and their constraints are ADR 0009 (`docs/decisions/0009-bash-path-projection-completeness-contract.md`) and the `token-classification.ts`, `shell-variable-expansion.ts`, `token-collection.ts`, and `bash-path-resolver.ts` entries in `docs/architecture/architecture.md`.
 
+A predicate whose `false` lets a bash word skip a guard ("cannot lead with `-`", "is one word") is derived from bash's expansion rules, not the parse tree's node shapes: a quoted `"$@"`, an indirect `"${!a}"`, and a nameref (`declare -n`) each split with nothing in their node to show it, and `~` follows the inherited `HOME`.
+
 When a plan or test asserts a specific bash repro string, trace the token through the classifier first — an issue's headline repro can describe a symptom whose literal input never reaches the gate being changed.
 
 [#261]: https://github.com/gotgenes/pi-packages/issues/261

@@ -52,5 +52,55 @@ Mid-session, at the operator's request, the three subagent definitions and two E
 - The quoted-splitting gap recurred three times because the plan's predicate enumerated splitting by node shape; each round found a bash feature (`$@`, indirection, namerefs) where the shape does not reveal the word count.
   A rule stated as "every quoted parameter expansion may split" from the start would have been one round.
 
+## Stage: Final Retrospective (2026-09-29T21:28:25Z)
+
+### Session summary
+
+One session ran all four stages on trunk: planning, TDD (five planned steps plus three reviewer-driven fixes), ship (`pi-permission-system-v36.0.0`, a major), and this retro.
+`find`, `fd`, and `sort` now withdraw their read claim on a computed argument that may reach the program beginning with `-`, including any quoted parameter expansion, since `$@`, `${!name}`, and namerefs split inside double quotes.
+Mid-TDD, at the operator's request, the subagents moved to `claude-sonnet-5-5`.
+
+### Observations
+
+#### What went well
+
+- Widening the corpus from the review log to every `bash` tool call in `~/.pi/agent/sessions/*.jsonl` (70,961 unique commands, against the review log's asks and approvals only) measured every number a gate needed, including the round-3 decision: closing the nameref gap cost 3 `find` units of 2,025, which made the sound option an easy call.
+  The review log alone cannot price a change that newly prompts, because it holds few of the commands the gate allowed silently.
+- The planning spike found the `number`-node defect (460 of 625 would-be withdrawals caused by `-maxdepth 2`) before any design was settled, so it became a leading step instead of a regression.
+- The operator's "what will the end user notice?"
+  question produced the framing that decided the breaking-change call: the fix's visible effect is new prompts on benign reads, not blocked writes.
+
+#### What caused friction (agent side)
+
+- `premature-convergence` — `mayLeadWithDash` enumerated word splitting by parse-tree node shape (unquoted expansions split; a `string` does not), and the planning prototype shared the assumption, so it could only confirm it.
+  Three reviewer rounds each found a bash feature whose word count the node shape does not reveal: quoted `"x$@"`, an indirect `"x${!a}"`, and a nameref `declare -n s='arr[@]'`; a fourth found `~` following an inherited `HOME`.
+  Impact: three `fix:` commits, three `docs:` commits, three extra reviewer dispatches, and the plan's headline example (`find /src -name "x$y"` reads) reversed after an operator gate.
+  Deriving the predicate from the bash manual's expansion rules rather than the grammar would have reached "every quoted parameter expansion may split" in one step.
+- `missing-context` — two TDD test designs in the plan were not run through the real collector: a bare digit is never a collected token (`sed -n 1p 2` collects nothing), and `find`/`sort` collect their option words and computed operands too.
+  Impact: two red runs rewritten before Green, no rework to shipped code.
+- `instruction-violation` (self-identified) — an `Edit` body carried `\u2014` into a `command-effects.ts` doc comment, the same slip #924's retro recorded.
+  Impact: one repair edit before commit.
+- `other` — the round-3 delta dispatch listed "check/lint/fallow/full test green at `7d875c37`" in its prompt, and the reviewer reported those checks from the prompt instead of running them; round 2 also misread the root summary line (267) as the package's test count.
+  Impact: two review rounds whose deterministic sections were not independent evidence; round 4, told to run them itself, did.
+
+#### What caused friction (user side)
+
+- The first planning gate led with mechanism and a measurement table; the operator had to ask what an end user would notice before choosing.
+  The `clarification-gates` rule to name where behavior differs and where it does not already covers this, so it is a salience miss rather than a missing rule.
+- The model-reference update arrived mid-red-step; committing only the model files by pathspec and finishing the fix before the reviewer dispatch kept both changes clean, at the cost of one reload pause.
+
+### Diagnostic details
+
+- **Model-performance correlation**: planning, TDD, and this retro ran on `claude-opus-5-5` (205 assistant turns), and ship on `claude-sonnet-5-5` (13), which suits the scripted flow.
+  The `tidy-first-assessor` and round-1 `pre-completion-reviewer` ran on `claude-sonnet-5` (2 min and 12 min); rounds 2–4 ran on `claude-sonnet-5-5` (2, 1, and 3 min).
+  The faster rounds still found real gaps, but rounds 2 and 3 were sloppy on the deterministic section (a misread count, skipped checks), which the dispatch prompt invited.
+- **Feedback-loop gap analysis**: `check` ran after every interface-changing step and the bash test directory before every commit; the full suite ran after each fix round.
+
+### Changes made
+
+1. `.pi/skills/package-pi-permission-system/SKILL.md`: a guard-skipping bash predicate is derived from bash's expansion rules, not node shapes, naming the four cases this issue's reviews found.
+2. `packages/pi-permission-system/docs/architecture/investigating-a-report.md`: a change that newly prompts is priced against the session transcripts, with the `jq` recipe that produced this issue's corpus.
+3. `.pi/skills/pre-completion/SKILL.md`: a delta dispatch never states the dispatcher's own check results.
+
 [#609]: https://github.com/gotgenes/pi-packages/issues/609
 [#995]: https://github.com/gotgenes/pi-packages/issues/995
