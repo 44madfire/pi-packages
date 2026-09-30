@@ -1,5 +1,5 @@
 import type { TSNode } from "./parser";
-import { ShellVariables } from "./shell-variable-expansion";
+import type { ShellVariables } from "./shell-variable-expansion";
 
 /**
  * Node types whose text content is never a command argument, so no path
@@ -35,13 +35,13 @@ export const ARG_NODE_TYPES = new Set([
  * since a word only the shell decides can spell any option at all.
  */
 export interface ArgWord {
-  /** The string the shell passes after quote removal ({@link resolveNodeText}). */
+  /** The string the shell passes after quote removal ({@link resolveText}). */
   readonly value: string;
   /**
    * Whether `value` may differ from what the program receives: a part only
-   * running the command decides ({@link hasComputedPart}), or a spelling the
+   * running the command decides ({@link computedPart}), or a spelling the
    * shell rewrites before the program sees it — an escape, a glob, a brace
-   * expansion, an ANSI-C string — which {@link resolveNodeText} passes through as written.
+   * expansion, an ANSI-C string — which {@link resolveText} passes through as written.
    */
   readonly computed: boolean;
   /**
@@ -74,26 +74,15 @@ export class WordReader {
     };
   }
 
-  /** The string the shell passes after quote removal ({@link resolveNodeText}). */
+  /** The string the shell passes after quote removal ({@link resolveText}). */
   text(node: TSNode): string {
     return resolveText(node, this.variables);
   }
 
-  /** Whether the node's value is decided at run time ({@link hasComputedPart}). */
+  /** Whether the node's value is decided at run time ({@link computedPart}). */
   isComputed(node: TSNode): boolean {
     return computedPart(node, this.variables);
   }
-}
-
-/**
- * A reader for a program that rebinds nothing. Kept while the free functions
- * below still have callers; they move onto a per-program {@link WordReader}.
- */
-const UNREBOUND_READER = new WordReader(ShellVariables.UNREBOUND);
-
-/** Read an argument node into the word the program receives. */
-export function readArgWord(node: TSNode): ArgWord {
-  return UNREBOUND_READER.argWord(node);
 }
 
 /**
@@ -212,7 +201,7 @@ function quotedLiteralMayLeadWithDash(text: string): boolean | undefined {
 }
 
 /**
- * Whether {@link resolveNodeText} returns exactly the string the shell passes.
+ * Whether {@link resolveText} returns exactly the string the shell passes.
  *
  * Answers `false` for any node type it does not know, which is the
  * fail-closed direction for a caller proving what a word cannot be.
@@ -274,16 +263,12 @@ const BRACE_EXPANSION = /\{[^}]*(,|\.\.)[^}]*\}/;
  * command or process substitution, an arithmetic expansion, or a variable
  * expansion {@link ShellVariables.resolveReference} cannot resolve.
  *
- * The complement of what {@link resolveNodeText} can spell exactly. A plain
+ * The complement of what {@link resolveText} can spell exactly. A plain
  * `$HOME` / `$PWD` reference resolves, so `"$HOME/out"` is not computed; any
  * other expansion falls back to its own source text there, which names a file
  * that is not the one the shell will touch (ADR 0009's computed-path residual).
  * A single-quoted `'$x'` is a literal.
  */
-export function hasComputedPart(node: TSNode): boolean {
-  return UNREBOUND_READER.isComputed(node);
-}
-
 function computedPart(node: TSNode, variables: ShellVariables): boolean {
   if (COMPUTED_NODE_TYPES.has(node.type)) return true;
   if (VARIABLE_EXPANSION_TYPES.has(node.type)) {
@@ -321,10 +306,6 @@ const VARIABLE_EXPANSION_TYPES: ReadonlySet<string> = new Set([
  *   else `.text` (see `shell-variable-expansion.ts`)
  * - other           → `.text` as fallback
  */
-export function resolveNodeText(node: TSNode): string {
-  return UNREBOUND_READER.text(node);
-}
-
 function resolveText(node: TSNode, variables: ShellVariables): string {
   switch (node.type) {
     case "word":

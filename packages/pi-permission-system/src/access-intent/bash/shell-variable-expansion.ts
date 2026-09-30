@@ -53,14 +53,6 @@ export class ShellVariables {
 }
 
 /**
- * {@link ShellVariables.resolveReference} for a program that rebinds nothing.
- * Kept while its callers move onto a per-program {@link ShellVariables}.
- */
-export function resolvePlainVariableExpansion(node: TSNode): string | null {
-  return ShellVariables.UNREBOUND.resolveReference(node);
-}
-
-/**
  * How each resolvable variable is spelled as a path.
  *
  * `PWD` resolves to the base-relative marker rather than a directory: the

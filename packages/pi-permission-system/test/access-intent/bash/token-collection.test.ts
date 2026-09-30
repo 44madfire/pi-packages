@@ -121,7 +121,7 @@ describe("extractCommandName", () => {
 
   it("returns the substitution text when the command name is a command substitution", async () => {
     // $(which sed) parses with a command_name child whose text is "$(which sed)";
-    // resolveNodeText returns that text, so extractCommandName returns its basename.
+    // WordReader.text returns that text, so extractCommandName returns its basename.
     // PATTERN_FIRST_COMMANDS.get("$(which sed)") returns undefined, so
     // collectCommandTokens falls back to generic collection — correct behaviour.
     const { node, tree } = await parseCommandNode(

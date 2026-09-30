@@ -78,7 +78,7 @@ export function redactCommandSecrets(command: string): string {
  * carries.
  *
  * A payload is re-parsed from its **verbatim inner slice** rather than
- * `resolveNodeText`'s shell value: the resolved text concatenates children and
+ * `WordReader.text`'s shell value: the resolved text concatenates children and
  * expands `$HOME`, which destroys the offset correspondence this shift relies
  * on. Because the slice excludes the payload's quotes, no span recovered from it
  * can reach one, so the masked payload stays quoted as it was written.
@@ -197,7 +197,7 @@ function collectInlineShellPayloads(
  * A `word` payload is the program already. A `string`/`raw_string` wraps it in
  * one quote pair and an `ansi_c_string` in a `$` plus one quote pair, so each is
  * a slice at a known offset. Anything else — a `concatenation`, an expansion —
- * is stitched: `resolveNodeText` knows how to read its shell value, and that
+ * is stitched: `WordReader.text` knows how to read its shell value, and that
  * value's own offsets describe no span of the command.
  */
 function payloadSourceOf(node: TSNode): PayloadSource {

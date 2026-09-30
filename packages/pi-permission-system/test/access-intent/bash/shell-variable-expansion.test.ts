@@ -1,10 +1,7 @@
 import { homedir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { getParser, type TSNode } from "#src/access-intent/bash/parser";
-import {
-  resolvePlainVariableExpansion,
-  ShellVariables,
-} from "#src/access-intent/bash/shell-variable-expansion";
+import { ShellVariables } from "#src/access-intent/bash/shell-variable-expansion";
 import { makeTSNode } from "#test/helpers/fake-ts-node";
 
 /** `$NAME` as tree-sitter-bash builds it: a `$` delimiter plus the name. */
@@ -34,30 +31,18 @@ function findNodeOfType(node: TSNode, type: string): TSNode | null {
   return null;
 }
 
-describe("ShellVariables", () => {
-  describe("a program that rebinds nothing", () => {
-    it.each([
-      ["$HOME", homedir(), simpleExpansion("HOME")],
-      ["${HOME}", homedir(), bracedExpansion("HOME")],
-      ["$PWD", ".", simpleExpansion("PWD")],
-      ["${PWD}", ".", bracedExpansion("PWD")],
-      ["$HOMEDIR", null, simpleExpansion("HOMEDIR")],
-    ])("resolves %s to %s", (_label, expected, node) => {
-      expect(ShellVariables.UNREBOUND.resolveReference(node)).toBe(expected);
-    });
-  });
-});
+describe("ShellVariables.resolveReference", () => {
+  const variables = ShellVariables.UNREBOUND;
 
-describe("resolvePlainVariableExpansion", () => {
   describe("resolvable variables", () => {
     it("resolves $HOME to the OS home directory", () => {
-      expect(resolvePlainVariableExpansion(simpleExpansion("HOME"))).toBe(
+      expect(variables.resolveReference(simpleExpansion("HOME"))).toBe(
         homedir(),
       );
     });
 
     it("resolves ${HOME} to the OS home directory", () => {
-      expect(resolvePlainVariableExpansion(bracedExpansion("HOME"))).toBe(
+      expect(variables.resolveReference(bracedExpansion("HOME"))).toBe(
         homedir(),
       );
     });
@@ -66,11 +51,11 @@ describe("resolvePlainVariableExpansion", () => {
       // The shell's working directory is the projection's effective base, so
       // the base-relative form resolves correctly after any `cd` folding
       // without threading a base into this pure function.
-      expect(resolvePlainVariableExpansion(simpleExpansion("PWD"))).toBe(".");
+      expect(variables.resolveReference(simpleExpansion("PWD"))).toBe(".");
     });
 
     it("resolves ${PWD} to the base-relative marker", () => {
-      expect(resolvePlainVariableExpansion(bracedExpansion("PWD"))).toBe(".");
+      expect(variables.resolveReference(bracedExpansion("PWD"))).toBe(".");
     });
   });
 
@@ -78,8 +63,8 @@ describe("resolvePlainVariableExpansion", () => {
     it.each(["HOMEDIR", "CURRENT", "PATH", "PWDX", "TMPDIR"])(
       "leaves $%s unresolved",
       (name) => {
-        expect(resolvePlainVariableExpansion(simpleExpansion(name))).toBeNull();
-        expect(resolvePlainVariableExpansion(bracedExpansion(name))).toBeNull();
+        expect(variables.resolveReference(simpleExpansion(name))).toBeNull();
+        expect(variables.resolveReference(bracedExpansion(name))).toBeNull();
       },
     );
   });
@@ -93,7 +78,7 @@ describe("resolvePlainVariableExpansion", () => {
         makeTSNode("word", "/tmp"),
         makeTSNode("}", "}"),
       ]);
-      expect(resolvePlainVariableExpansion(node)).toBeNull();
+      expect(variables.resolveReference(node)).toBeNull();
     });
 
     it("leaves ${#HOME} unresolved", () => {
@@ -103,14 +88,14 @@ describe("resolvePlainVariableExpansion", () => {
         makeTSNode("variable_name", "HOME"),
         makeTSNode("}", "}"),
       ]);
-      expect(resolvePlainVariableExpansion(node)).toBeNull();
+      expect(variables.resolveReference(node)).toBeNull();
     });
   });
 
   describe("nodes that are not a plain variable reference", () => {
     it("returns null for a node with no children", () => {
       expect(
-        resolvePlainVariableExpansion(makeTSNode("simple_expansion", "$HOME")),
+        variables.resolveReference(makeTSNode("simple_expansion", "$HOME")),
       ).toBeNull();
     });
 
@@ -119,7 +104,7 @@ describe("resolvePlainVariableExpansion", () => {
         makeTSNode("${", "${"),
         makeTSNode("}", "}"),
       ]);
-      expect(resolvePlainVariableExpansion(node)).toBeNull();
+      expect(variables.resolveReference(node)).toBeNull();
     });
 
     it("returns null for a variable_assignment naming a resolvable variable", () => {
@@ -129,7 +114,7 @@ describe("resolvePlainVariableExpansion", () => {
         makeTSNode("=", "="),
         makeTSNode("word", "/tmp"),
       ]);
-      expect(resolvePlainVariableExpansion(node)).toBeNull();
+      expect(variables.resolveReference(node)).toBeNull();
     });
   });
 
@@ -151,7 +136,7 @@ describe("resolvePlainVariableExpansion", () => {
         const node = findNodeOfType(tree.rootNode, nodeType);
         expect(node).not.toBeNull();
         if (!node) return;
-        expect(resolvePlainVariableExpansion(node)).toBe(expected);
+        expect(variables.resolveReference(node)).toBe(expected);
       } finally {
         tree.delete();
       }
