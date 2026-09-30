@@ -1,5 +1,5 @@
 import type { TSNode } from "./parser";
-import { resolvePlainVariableExpansion } from "./shell-variable-expansion";
+import { ShellVariables } from "./shell-variable-expansion";
 
 /**
  * Node types whose text content is never a command argument, so no path
@@ -53,17 +53,47 @@ export interface ArgWord {
   readonly mayLeadWithDash: boolean;
 }
 
+/**
+ * Reads argument nodes as one program's shell expands them: the node-text
+ * reads bound to the {@link ShellVariables} that program rebinds.
+ */
+export class WordReader {
+  constructor(private readonly variables: ShellVariables) {}
+
+  /** Read an argument node into the word the program receives. */
+  argWord(node: TSNode): ArgWord {
+    const value = this.text(node);
+    const computed =
+      this.isComputed(node) || !isSpelledExactly(node, this.variables);
+    return {
+      value,
+      computed,
+      mayLeadWithDash: computed
+        ? mayExpandToDashWord(node)
+        : value.startsWith("-"),
+    };
+  }
+
+  /** The string the shell passes after quote removal ({@link resolveNodeText}). */
+  text(node: TSNode): string {
+    return resolveText(node, this.variables);
+  }
+
+  /** Whether the node's value is decided at run time ({@link hasComputedPart}). */
+  isComputed(node: TSNode): boolean {
+    return computedPart(node, this.variables);
+  }
+}
+
+/**
+ * A reader for a program that rebinds nothing. Kept while the free functions
+ * below still have callers; they move onto a per-program {@link WordReader}.
+ */
+const UNREBOUND_READER = new WordReader(ShellVariables.UNREBOUND);
+
 /** Read an argument node into the word the program receives. */
 export function readArgWord(node: TSNode): ArgWord {
-  const value = resolveNodeText(node);
-  const computed = hasComputedPart(node) || !isSpelledExactly(node);
-  return {
-    value,
-    computed,
-    mayLeadWithDash: computed
-      ? mayExpandToDashWord(node)
-      : value.startsWith("-"),
-  };
+  return UNREBOUND_READER.argWord(node);
 }
 
 /**
@@ -187,7 +217,7 @@ function quotedLiteralMayLeadWithDash(text: string): boolean | undefined {
  * Answers `false` for any node type it does not know, which is the
  * fail-closed direction for a caller proving what a word cannot be.
  */
-function isSpelledExactly(node: TSNode): boolean {
+function isSpelledExactly(node: TSNode, variables: ShellVariables): boolean {
   switch (node.type) {
     case "raw_string":
       return true;
@@ -197,27 +227,33 @@ function isSpelledExactly(node: TSNode): boolean {
       return !node.text.includes("\\");
     case "simple_expansion":
     case "expansion":
-      return resolvePlainVariableExpansion(node) !== null;
+      return variables.resolveReference(node) !== null;
     case "string":
     // A digit run is an ordinary word to the shell; the grammar's `10#$x` form
     // carries an expansion child, which answers for itself.
     case "number":
-      return childrenSpelledExactly(node);
+      return childrenSpelledExactly(node, variables);
     case "concatenation":
       // The grammar splits `{-i,-n}` into plain words, so the expansion is
       // visible only across the whole concatenation's text.
-      return !BRACE_EXPANSION.test(node.text) && childrenSpelledExactly(node);
+      return (
+        !BRACE_EXPANSION.test(node.text) &&
+        childrenSpelledExactly(node, variables)
+      );
     default:
       return false;
   }
 }
 
 /** A `"` delimiter is spelled exactly; every named child must be too. */
-function childrenSpelledExactly(node: TSNode): boolean {
+function childrenSpelledExactly(
+  node: TSNode,
+  variables: ShellVariables,
+): boolean {
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
     if (!child || child.type === '"') continue;
-    if (!isSpelledExactly(child)) return false;
+    if (!isSpelledExactly(child, variables)) return false;
   }
   return true;
 }
@@ -236,7 +272,7 @@ const BRACE_EXPANSION = /\{[^}]*(,|\.\.)[^}]*\}/;
 /**
  * Whether an argument node's value is decided at run time: it contains a
  * command or process substitution, an arithmetic expansion, or a variable
- * expansion {@link resolvePlainVariableExpansion} cannot resolve.
+ * expansion {@link ShellVariables.resolveReference} cannot resolve.
  *
  * The complement of what {@link resolveNodeText} can spell exactly. A plain
  * `$HOME` / `$PWD` reference resolves, so `"$HOME/out"` is not computed; any
@@ -245,13 +281,17 @@ const BRACE_EXPANSION = /\{[^}]*(,|\.\.)[^}]*\}/;
  * A single-quoted `'$x'` is a literal.
  */
 export function hasComputedPart(node: TSNode): boolean {
+  return UNREBOUND_READER.isComputed(node);
+}
+
+function computedPart(node: TSNode, variables: ShellVariables): boolean {
   if (COMPUTED_NODE_TYPES.has(node.type)) return true;
   if (VARIABLE_EXPANSION_TYPES.has(node.type)) {
-    return resolvePlainVariableExpansion(node) === null;
+    return variables.resolveReference(node) === null;
   }
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
-    if (child && hasComputedPart(child)) return true;
+    if (child && computedPart(child, variables)) return true;
   }
   return false;
 }
@@ -282,6 +322,10 @@ const VARIABLE_EXPANSION_TYPES: ReadonlySet<string> = new Set([
  * - other           → `.text` as fallback
  */
 export function resolveNodeText(node: TSNode): string {
+  return UNREBOUND_READER.text(node);
+}
+
+function resolveText(node: TSNode, variables: ShellVariables): string {
   switch (node.type) {
     case "word":
       return node.text;
@@ -302,7 +346,7 @@ export function resolveNodeText(node: TSNode): string {
         if (!child) continue;
         // Skip the literal `"` delimiters
         if (child.type === '"') continue;
-        result += resolveNodeText(child);
+        result += resolveText(child, variables);
       }
       return result;
     }
@@ -310,13 +354,13 @@ export function resolveNodeText(node: TSNode): string {
       return node.text;
     case "simple_expansion":
     case "expansion":
-      return resolvePlainVariableExpansion(node) ?? node.text;
+      return variables.resolveReference(node) ?? node.text;
     case "concatenation": {
       let result = "";
       for (let i = 0; i < node.childCount; i++) {
         const child = node.child(i);
         if (!child) continue;
-        result += resolveNodeText(child);
+        result += resolveText(child, variables);
       }
       return result;
     }

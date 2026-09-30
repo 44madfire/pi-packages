@@ -9,7 +9,9 @@ import {
   collectCommands,
   collectSalvagedCommands,
 } from "./command-enumeration";
+import { WordReader } from "./node-text";
 import { getParser } from "./parser";
+import { ShellVariables } from "./shell-variable-expansion";
 import { withSalvagedRoots } from "./unresolved-salvage";
 
 export type { BashCommand, BashExternalPath, BashPathRuleCandidate };
@@ -64,6 +66,7 @@ export class BashProgram {
       return withSalvagedRoots(tree.rootNode, parser, (salvaged) => {
         const { externalAccesses, ruleCandidates } = new BashPathResolver(
           normalizer,
+          new WordReader(ShellVariables.UNREBOUND),
           options?.workdir,
         ).resolve(tree.rootNode, salvaged);
         return new BashProgram(

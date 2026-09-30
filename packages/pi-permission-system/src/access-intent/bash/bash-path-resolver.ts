@@ -7,7 +7,11 @@ import {
 import { normalizePathPolicyLiteral } from "#src/access-intent/path-normalization";
 import type { PathNormalizer } from "#src/path/path-normalizer";
 import { isSafeSystemPath } from "#src/path/safe-system-paths";
-import { ARG_NODE_TYPES, SKIP_SUBTREE_TYPES } from "./node-text";
+import {
+  ARG_NODE_TYPES,
+  SKIP_SUBTREE_TYPES,
+  type WordReader,
+} from "./node-text";
 import type { TSNode } from "./parser";
 import { REDIRECT_NODE_TYPES } from "./redirect-analysis";
 import {
@@ -121,6 +125,7 @@ const UNKNOWN_BASE: EffectiveBase = { kind: "unknown" };
 export class BashPathResolver {
   constructor(
     private readonly normalizer: PathNormalizer,
+    private readonly words: WordReader,
     private readonly workdir?: string,
   ) {}
 
@@ -236,7 +241,7 @@ export class BashPathResolver {
       case "redirected_statement":
         return this.walkCurrentShellSequence(node, base, out);
       case "command":
-        tagTokens(collectCommandTokens(node), base, out);
+        tagTokens(collectCommandTokens(node, this.words), base, out);
         return this.foldCd(node, base);
       case "pipeline":
         // tree-sitter-bash mis-groups a redirect-bearing `&&`/`;` list as the
@@ -261,7 +266,7 @@ export class BashPathResolver {
         // substitution interiors: collect every candidate in the subtree tagged
         // with the enclosing base and do not fold their internal `cd`s. (Folding
         // inside substitutions is deferred — conservative, never under-flags.)
-        tagTokens(collectPathCandidateTokens(node), base, out);
+        tagTokens(collectPathCandidateTokens(node, this.words), base, out);
         return base;
     }
   }
@@ -321,7 +326,7 @@ export class BashPathResolver {
       }
       // Downstream stage (after a `|`): subshell — collect against the folded
       // base, do not fold.
-      tagTokens(collectPathCandidateTokens(child), current, out);
+      tagTokens(collectPathCandidateTokens(child, this.words), current, out);
     }
     return current;
   }
@@ -351,7 +356,7 @@ export class BashPathResolver {
         if (child.type === "file_redirect") {
           // Redirect destinations are part of the piped stage; collect them
           // against the folded base without folding.
-          tagTokens(collectRedirectTokens(child), current, out);
+          tagTokens(collectRedirectTokens(child, this.words), current, out);
           continue;
         }
         // The inner statement is the `list`/`command` being redirected; fold its
@@ -361,7 +366,7 @@ export class BashPathResolver {
       return current;
     }
     // Bare `command` or any other shape: a true subshell first stage.
-    tagTokens(collectPathCandidateTokens(node), base, out);
+    tagTokens(collectPathCandidateTokens(node, this.words), base, out);
     return base;
   }
 
@@ -389,7 +394,7 @@ export class BashPathResolver {
         current = this.walkForCandidates(child, current, out);
       } else {
         // Terminal child = the real pipe stage; collect without folding.
-        tagTokens(collectPathCandidateTokens(child), current, out);
+        tagTokens(collectPathCandidateTokens(child, this.words), current, out);
       }
     }
     return current;
@@ -412,7 +417,7 @@ export class BashPathResolver {
    * {@link PathNormalizer}; this method owns only the base-folding state.
    */
   private foldCd(commandNode: TSNode, base: EffectiveBase): EffectiveBase {
-    if (extractCommandName(commandNode) !== "cd") return base;
+    if (extractCommandName(commandNode, this.words) !== "cd") return base;
     const target = cdLiteralTarget(commandNode);
     if (target === null) return UNKNOWN_BASE;
     return this.deriveBaseFromCdTarget(base, target);
