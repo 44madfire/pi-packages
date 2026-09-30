@@ -158,10 +158,10 @@ export function presentInlinePermissionPrompt(
     (tui, theme, keybindings, done) => {
       // The factory runs once, as the dialog mounts, which is the moment the
       // human is being asked; a re-render does not come back through here.
-      const notification = renderPromptNotification(
-        view.promptNotifications,
-        title,
-      );
+      const notification = renderPromptNotification(view.promptNotifications, {
+        title: "pi",
+        body: title,
+      });
       if (notification) {
         tui.terminal.write(notification);
       }
