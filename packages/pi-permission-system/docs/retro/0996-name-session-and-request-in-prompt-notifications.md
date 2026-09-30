@@ -24,3 +24,22 @@ Classified as a non-breaking `feat:`, shipped independently.
 - The Tidy-First assessor corrected the design's fake-context scope: the notice is built before the mode dispatch, so `makeBaseCtx` (not only `makeTuiCtx`) and `handler-fixtures` `makeCtx` need `getSessionName`; that became step 1.
 - Em-dash risk: tests spell the title's `—` as `\u2014` so a mis-emitted glyph in `src/` fails.
 - Declined: length-capping the text (pi-ask caps at 120), and naming the shell alias's invoked tool.
+
+## Stage: Implementation — TDD (2026-09-30T05:28:58Z)
+
+### Session summary
+
+All five TDD Order steps landed as five commits: the fake-session tidying, the dialog-title hoist, the two-field renderer, the feature (describer, view `notice`, `describeSession` wiring), and the docs with the regenerated schema.
+The `pi-permission-system` suite went from 5064 to 5088 tests (+24), and check, lint, and `fallow dead-code` stayed green throughout.
+
+### Observations
+
+- Deviation: `test/authority/authorizer-selection.test.ts`, which the plan (and the Tidy-First assessor) predicted unchanged, presents a prompt through a real `LocalUserAuthorizer` in four chain-resolution cases; its fake `sessionManager` gained `getSessionName` in the `feat:` commit, noted in the commit body.
+  The assessor's "the thunk is lazy, so they never call it" held for `authorizer.test.ts` but not here.
+- Every named killing mutation went red where predicted.
+  The "append `value` to the body" mutation reddened through the body `toBe` first, so a second mutation leaking the value into the *title* was run: the per-kind sweep's `not.toContain("SECRET")` caught it independently.
+- Mutations ran through a literal-replacement script that refused to apply unless its pattern matched exactly once, and each restore was checked with `cmp` against a backup, since the step's own edits were uncommitted.
+- The em-dash landed as a literal U+2014 in `src/presentation/prompt-notification.ts`; tests spell it `\u2014`, and they pass, so the glyph is correct.
+- Unpinned by design: `selectAuthorizer` reading the session name lazily rather than at activation; the `LocalUserAuthorizer` per-prompt read is pinned, and activation re-runs each turn anyway.
+- Pre-completion reviewer: PASS.
+  It re-derived the value boundary across every `toolName`/`surface` producer and found none carrying request data; residual note: a forwarded child supplies its own `toolName`/`surface` strings, the same trust domain that already supplies `value`.
