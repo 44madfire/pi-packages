@@ -43,3 +43,45 @@ The `pi-permission-system` suite went from 5064 to 5088 tests (+24), and check, 
 - Unpinned by design: `selectAuthorizer` reading the session name lazily rather than at activation; the `LocalUserAuthorizer` per-prompt read is pinned, and activation re-runs each turn anyway.
 - Pre-completion reviewer: PASS.
   It re-derived the value boundary across every `toolName`/`surface` producer and found none carrying request data; residual note: a forwarded child supplies its own `toolName`/`surface` strings, the same trust domain that already supplies `value`.
+
+## Stage: Final Retrospective (2026-09-30T05:39:55Z)
+
+### Session summary
+
+One session on `main` ran planning, five TDD steps, the ship, and this retro.
+`pi-permission-system` 36.2.0 released with prompt notifications that name the session (`pi — <name>`, else the cwd basename) and the requested tool and agent, never the request's value; `osc9` carries the title ahead of the body.
+Issue #996 closed against the `feat:` commit; no co-shipped issues or PRs.
+
+### Observations
+
+#### What went well
+
+- Mutation harness: each killing mutation ran through a literal-replacement script that refused unless its pattern matched exactly once, and each restore was checked with `cmp` against a backup (the step's edits were uncommitted, so `git checkout` would have lost them).
+  Eleven mutations, none mis-applied.
+- The planned "append `value` to the body" mutation reddened through the body `toBe` before the sweep's `not.toContain`, so a second mutation leaking the value into the title proved the sweep discriminates alone; the step's red-count check surfaced this rather than letting a double-covered pin pass as proof.
+- The value-absence sweep is typed `Record<PromptPayloadKind, …>`, so a new ask kind is a compile error until it gets a case; the pre-completion reviewer independently re-derived every `toolName`/`surface` producer.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (user-caught) — The `osc9` gate offered "body only vs. prefix" without saying what OSC 9 is, how it relates to OSC 777, or how terminals render it.
+  The operator asked twice for context before answering; `clarification-gates` already requires defining terms of art, but a protocol name read as a config value.
+  The same gate shape bounced in #906's planning.
+  Impact: two extra gate rounds and two web searches; no rework.
+- `instruction-violation` (self-identified, via the suite) — The plan copied the Tidy-First assessor's claim that `authorizer-selection.test.ts` would stay unchanged ("the thunk is lazy") without verifying it; four of its cases present a prompt and went red in step 4.
+  The `delegation` skill already says to verify a subagent's universal claim.
+  Impact: a one-line fixture fix in the `feat:` commit, noted in its body.
+
+#### What caused friction (user side)
+
+- None; the operator's two redirecting questions were cheaper than a wrong pick and exactly where the gate was thin.
+
+### Diagnostic details
+
+- **Model-performance correlation** — The main session ran on `anthropic/claude-opus-5-5`; both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5` per their transcripts.
+  The assessor's one wrong prediction was a universal claim the planner should have verified, not a model mismatch; the reviewer's invariant re-derivation was thorough.
+- **Feedback-loop gap analysis** — Each TDD step ran its test files and `pnpm run check` before committing; the full suite, lint, and `fallow dead-code` ran at the end and again before the push.
+  No gap.
+
+### Changes made
+
+1. `.pi/skills/clarification-gates/SKILL.md` — the terms-of-art sentence names a protocol or format in an option (`osc9`, SSE) as a term of art to define: what it is and who renders it.
