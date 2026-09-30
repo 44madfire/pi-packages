@@ -90,3 +90,64 @@ The `pi-permission-system` suite went from 5045 to 5064 tests (+19), and check, 
   The operator's own WezTerm setup (pi-ask with `osc777`) is the only support observed.
 - Pre-completion reviewer: PASS.
   Its one note (whether the recipe's `@gotgenes/pi-permission-system` type import resolves) was checked afterward: the package root is `src/service.ts`, which re-exports `PermissionDecisionEvent` and `PermissionUiPromptEvent`, and the doc's existing `ui_prompt` example already uses that path.
+
+## Stage: Final Retrospective (2026-09-30T04:43:23Z)
+
+### Session summary
+
+One session on `main` ran the whole lifecycle: the PR #921 review, planning, five TDD steps, the ship, and the release of `pi-permission-system` 36.1.0 with `promptNotifications`, plus a turn configuring the operator's global config and filing follow-up #996.
+PR #921 was declined because its bell sat on the non-TUI fallback path, and #906 was reimplemented with `@jdtzmn` credited as co-author.
+The feature was verified live after a restart: two `external_directory_read` prompts rang the operator's WezTerm bell.
+
+### Observations
+
+#### What went well
+
+- The PR-review gate's "locate the real boundary" step decided the review.
+  Tracing `requestPermissionDecision`'s mode dispatch showed PR #921's BEL sat in `requestPermissionDecisionFromUi`, which the TUI never reaches, so the reported `(y)/(s)/(n)/(r)` prompt would have stayed silent while the PR's own test passed.
+- The `tui.terminal.write` seam (public in pinned pi-tui 0.79.1, called inside the `ui.custom` factory) made emission testable through a fake terminal, and placed the signal after the dialog queue with no new dependency threading.
+- The Tidy-First assessor's merge-loop typing prediction (an enum array cannot share a union-keyed write with two `string[]` keys) was confirmed by `tsc` during TDD, and the separate block landed with a comment saying why.
+- The mutation step caught a mis-specified plan mutation, as designed: the "move the write" mutation left the once-only test green, and a duplicated write killed it.
+- Before editing the operator's global config, the session caught that a pre-36.1.0 session would reject the new key and fail the global scope closed, and it sequenced the edit with a restart.
+
+#### What caused friction (agent side)
+
+- `missing-context` — The PR review's "can the defect reach us" check looked only at `@gotgenes/*` extensions, as the prompt says.
+  The operator's real mitigation was third-party: `@eko24ive/pi-ask` with `notifications.channels: ["bell", "osc777"]`, firing for `ask_user` forms only.
+  The operator surfaced it by asking why WezTerm already made sounds.
+  Impact: one redirecting round-trip; it reframed the design (pi-ask became the reference), but no rework.
+- `premature-convergence` — The planning gate's channel question offered `command` (global-only) against terminal-only without putting the `permissions:ui_prompt` / `permissions:decision` pairing in the substance, although the PR review had already found that pairing.
+  The operator answered with a question ("How do our emitted events play into this?").
+  Impact: one extra gate round, no rework; `clarification-gates`' shared-premise rule already covers it.
+- `instruction-violation` (self-identified) — A `fallow guard` call ran as `cd packages/pi-permission-system; pnpm fallow guard <file>`, which the working-directory rule forbids, and fallow failed on the root config's cross-package zones.
+  Impact: one wasted call.
+- `other` — GitHub GraphQL errors during ship.
+  `issue_close` posted the #906 comment but did not close the issue, and `gh pr comment` failed twice.
+  The REST fallback's first try chained `rm` of the body file into the same command, so its failure (`unexpected end of JSON input`) left nothing to retry with.
+  Checking comment counts before each retry avoided duplicates.
+  Impact: about six extra tool calls.
+- `other` — The first draft of the docs' channel table listed which terminals support OSC 9 and OSC 777, which was unverified.
+  It was replaced with the bytes each channel writes before commit.
+  Impact: one extra edit.
+
+#### What caused friction (user side)
+
+- The operator's question about existing WezTerm sounds was the right redirect at the right time, and cheaper than a correction.
+  Stating pi-ask's role up front was not possible, since the gap it covered was the question under review.
+
+### Diagnostic details
+
+- **Model-performance correlation** — The main session ran on `anthropic/claude-opus-5-5` throughout.
+  Both subagents ran on `anthropic/claude-sonnet-5-5`: the `tidy-first-assessor` (read-only judgment; its merge-loop prediction was correct) and the `pre-completion-reviewer` (PASS, with one import-path note that checked out).
+  Both were appropriate for their tasks.
+- **Feedback-loop gap analysis** — Each TDD step ran its test file, `pnpm run check`, and the named mutations before committing, and the full suite, lint, and `fallow dead-code` ran at the end and again before the push.
+  No gap.
+
+#### Follow-ups
+
+- Issue #996: name the session and the request (labels only) in prompt notifications; recorded out of scope for the Phase 15 roadmap.
+
+### Changes made
+
+1. No prompt, skill, or `AGENTS.md` changes.
+   Two proposals were declined by the operator: widening the "can the defect reach us" check in `.pi/prompts/pr-review.md` and `.pi/prompts/plan-issue.md` to every installed package, and a stale-session warning for new config fields in the `package-pi-permission-system` skill.
