@@ -287,6 +287,42 @@ describe("presentInlinePermissionPrompt", () => {
     });
   });
 
+  describe("terminal notification on open", () => {
+    it("writes the configured channels once, before any keystroke", () => {
+      const { view, terminalWrite } = makeFakeView(true, {
+        promptNotifications: ["bell", "osc777"],
+      });
+      void presentInlinePermissionPrompt(view, "Permission Required", ASK);
+
+      // The dialog title only: the path being decided never reaches the
+      // terminal's notification history.
+      expect(terminalWrite).toHaveBeenCalledExactlyOnceWith(
+        "\x07\x1b]777;notify;pi;Permission Required\x07",
+      );
+    });
+
+    it("does not signal again when the dialog re-renders", () => {
+      const { view, captured, terminalWrite } = makeFakeView(true, {
+        promptNotifications: ["bell"],
+      });
+      void presentInlinePermissionPrompt(view, "Permission Required", ASK);
+
+      captured.component?.handleInput("y"); // arms, and re-renders
+      captured.component?.render(80);
+
+      expect(terminalWrite).toHaveBeenCalledTimes(1);
+    });
+
+    it("writes nothing when no channel is configured", () => {
+      const { view, terminalWrite } = makeFakeView(true, {
+        promptNotifications: [],
+      });
+      void presentInlinePermissionPrompt(view, "Permission Required", ASK);
+
+      expect(terminalWrite).not.toHaveBeenCalled();
+    });
+  });
+
   describe("double-press to confirm (disabled)", () => {
     it("resolves approved on a single y", async () => {
       expect(await runPrompt(false, ["y"])).toEqual({

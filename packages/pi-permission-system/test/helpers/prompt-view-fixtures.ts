@@ -20,6 +20,7 @@ export function makePromptPreferences(
     doublePressToConfirm: true,
     budget: DEFAULT_RENDER_BUDGET,
     dialogKeys: DEFAULT_DIALOG_KEYS,
+    promptNotifications: [],
     ...overrides,
   };
 }

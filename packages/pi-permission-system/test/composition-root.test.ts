@@ -2219,7 +2219,7 @@ describe("directional external-directory relief (#806)", () => {
   });
 });
 
-describe("configured permission-dialog hotkeys reach the inline dialog", () => {
+describe("configured prompt preferences reach the inline dialog", () => {
   /**
    * A TUI ctx whose `ui.custom` captures the dialog component.
    *
@@ -2232,7 +2232,9 @@ describe("configured permission-dialog hotkeys reach the inline dialog", () => {
     render: () => string[];
     press: (data: string) => void;
     notified: string[];
+    terminalWrites: string[];
   } {
+    const terminalWrites: string[] = [];
     let component:
       | { render(width: number): string[]; handleInput(data: string): void }
       | undefined;
@@ -2253,7 +2255,10 @@ describe("configured permission-dialog hotkeys reach the inline dialog", () => {
         setToolsExpanded: (): void => {},
         custom: (
           factory: (
-            tui: { requestRender: () => void },
+            tui: {
+              requestRender: () => void;
+              terminal: { write(data: string): void };
+            },
             theme: { fg(color: string, text: string): string },
             keybindings: { matches(data: string, action: string): boolean },
             done: (decision: unknown) => void,
@@ -2261,7 +2266,14 @@ describe("configured permission-dialog hotkeys reach the inline dialog", () => {
         ): Promise<unknown> =>
           new Promise((resolve) => {
             component = factory(
-              { requestRender: (): void => {} },
+              {
+                requestRender: (): void => {},
+                terminal: {
+                  write: (data): void => {
+                    terminalWrites.push(data);
+                  },
+                },
+              },
               { fg: (_color, text) => text },
               { matches: () => false },
               resolve,
@@ -2276,6 +2288,7 @@ describe("configured permission-dialog hotkeys reach the inline dialog", () => {
         component?.handleInput(data);
       },
       notified,
+      terminalWrites,
     };
   }
 
@@ -2285,6 +2298,44 @@ describe("configured permission-dialog hotkeys reach the inline dialog", () => {
       .map((line) => /^[ \u25b6] \((\w)\) /.exec(line)?.[1])
       .filter((key) => key !== undefined);
   }
+
+  it("rings the configured channels when a prompt opens, and only then", async () => {
+    writeGlobalConfig({
+      permission: { "*": "allow", demo: "ask" },
+      promptNotifications: ["bell"],
+    });
+
+    const cwd = mkdtempSync(join(tmpdir(), "pi-perm-notify-cwd-"));
+    const pi = makeFakePi({ toolNames: ["demo", "quiet"] });
+    piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+
+    const { ctx, press, terminalWrites } = makeTuiCtx(cwd);
+    await fireSessionStart(pi, ctx);
+
+    // A call the policy allows opens no dialog, so nothing rings.
+    await pi.fire(
+      "tool_call",
+      { toolName: "quiet", toolCallId: "notify-allowed", input: {} },
+      ctx,
+    );
+    expect(terminalWrites).toEqual([]);
+
+    const decision = pi.fire(
+      "tool_call",
+      { toolName: "demo", toolCallId: "notify-ask", input: {} },
+      ctx,
+    ) as Promise<{ block?: true }>;
+    await sleep(0);
+
+    expect(terminalWrites).toEqual(["\x07"]);
+
+    press("y");
+    press("y");
+    expect((await decision).block).toBeUndefined();
+    expect(terminalWrites).toEqual(["\x07"]);
+
+    rmSync(cwd, { recursive: true, force: true });
+  });
 
   it("renders and honors the characters the config bound", async () => {
     writeGlobalConfig({
