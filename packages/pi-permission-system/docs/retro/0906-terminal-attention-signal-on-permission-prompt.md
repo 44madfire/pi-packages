@@ -47,3 +47,26 @@ If the plan drops that design (for example, only documenting the `permissions:ui
 Close PR #921 with a comment thanking @jdtzmn and explaining the TUI-path miss.
 The operator decides whether to close it now as superseded by Issue #906 or at ship with the implementing SHA.
 Reference the PR as `Refs #921`, never `Closes #921`.
+
+## Stage: Planning (2026-09-30T03:16:44Z)
+
+### Session summary
+
+Planned an opt-in `promptNotifications` field (`bell` / `osc9` / `osc777`, default off, `feat:`), written through `tui.terminal.write` inside the `presentInlinePermissionPrompt` custom factory, so it fires once when a queued ask's dialog actually opens.
+Integrations that need an external program or another tool's protocol (Herdr, `cmux notify`) get a docs recipe on the existing `permissions:ui_prompt` / `permissions:decision` pair instead of a `command` channel.
+The plan has five steps: a test-double tidying, the config field, a pure renderer, the wiring, and docs.
+
+### Observations
+
+- Operator decisions at the gate: off by default (a `["bell"]` default would be a changed default, so `feat!:`), a flat array rather than pi-ask's `{ enabled, channels }`, and no `command` channel.
+- The `command` question turned on the broadcasts: `ui_prompt` plus the same-`requestId` `decision` already give a downstream glue extension both the start and the end of a prompt, which a start-only `command` hook cannot give, and a project-scope config would otherwise be able to run a shell command on every prompt.
+- The seam is `tui.terminal.write` in the `ui.custom` factory, not `process.stdout.write`: it is public in pinned pi-tui 0.79.1, it runs exactly at mount under the dialog queue, and tests can fake it.
+  Non-TUI modes stay silent because Pi's `takeOverStdout` reroutes stdout to stderr outside interactive mode.
+- The Tidy-First assessor recommended one tidying (named options for `makeFakeView` / `makeView`, plus `terminal` on the fake `tui`), which is step 1.
+  It also flagged that `mergeUnifiedConfigs`' array loop cannot take an enum-array key beside two `string[]` keys under a union-keyed write, so the field gets its own block.
+- A mistyped channel fails the config closed like every strict field; `resolveDialogKeys`-style tolerance was considered and declined, since its IME rationale does not transfer to an opt-in bell.
+- Related but out of scope: Issue #658 and PR #693 (`herdr:blocked`, the declined outbound bridge), and Issue #936 (confirming the broadcasts as a contract).
+
+#### Deferred tidyings
+
+- `test/composition-root.test.ts` `makeTuiCtx`: its fake `tui` is typed `{ requestRender }` inline; step 4 adds `terminal` as needed, but a shared fake-TUI helper with the component test was declined as scope creep.
