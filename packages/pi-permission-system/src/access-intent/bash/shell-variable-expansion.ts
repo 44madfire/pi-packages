@@ -21,18 +21,43 @@ import { homedir } from "node:os";
 import type { TSNode } from "./parser";
 
 /**
- * The value of a plain `$NAME` / `${NAME}` reference, or `null` when the node
- * is not a plain reference or names a variable outside the resolvable set.
+ * The resolvable variables as one program sees them: which of them the program
+ * rebinds, so that a reference to a rebound one no longer reads as its startup
+ * value.
  *
- * Plainness is decided structurally, not by matching the node's text: a plain
- * reference carries exactly one `variable_name` child and nothing else but
- * delimiters. An operator form (`${HOME:-/tmp}`, `${#HOME}`, `${HOME%/*}`)
- * carries additional children and is therefore rejected without this module
- * needing to enumerate bash's expansion operators.
+ * A closed set of rebound names, never their values — tracking what a program
+ * assigns is the dataflow ADR 0009 declines.
+ */
+export class ShellVariables {
+  /** A program that rebinds none of the resolvable variables. */
+  static readonly UNREBOUND = new ShellVariables(new Set());
+
+  private constructor(private readonly rebound: ReadonlySet<string>) {}
+
+  /**
+   * The value of a plain `$NAME` / `${NAME}` reference, or `null` when the
+   * node is not a plain reference or names a variable outside the resolvable
+   * set.
+   *
+   * Plainness is decided structurally, not by matching the node's text: a
+   * plain reference carries exactly one `variable_name` child and nothing else
+   * but delimiters. An operator form (`${HOME:-/tmp}`, `${#HOME}`,
+   * `${HOME%/*}`) carries additional children and is therefore rejected without
+   * this module needing to enumerate bash's expansion operators.
+   */
+  resolveReference(node: TSNode): string | null {
+    const name = plainVariableName(node);
+    if (name === null || this.rebound.has(name)) return null;
+    return RESOLVABLE_VARIABLES.get(name)?.() ?? null;
+  }
+}
+
+/**
+ * {@link ShellVariables.resolveReference} for a program that rebinds nothing.
+ * Kept while its callers move onto a per-program {@link ShellVariables}.
  */
 export function resolvePlainVariableExpansion(node: TSNode): string | null {
-  const name = plainVariableName(node);
-  return name === null ? null : (RESOLVABLE_VARIABLES.get(name)?.() ?? null);
+  return ShellVariables.UNREBOUND.resolveReference(node);
 }
 
 /**

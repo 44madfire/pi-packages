@@ -1,7 +1,10 @@
 import { homedir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { getParser, type TSNode } from "#src/access-intent/bash/parser";
-import { resolvePlainVariableExpansion } from "#src/access-intent/bash/shell-variable-expansion";
+import {
+  resolvePlainVariableExpansion,
+  ShellVariables,
+} from "#src/access-intent/bash/shell-variable-expansion";
 import { makeTSNode } from "#test/helpers/fake-ts-node";
 
 /** `$NAME` as tree-sitter-bash builds it: a `$` delimiter plus the name. */
@@ -30,6 +33,20 @@ function findNodeOfType(node: TSNode, type: string): TSNode | null {
   }
   return null;
 }
+
+describe("ShellVariables", () => {
+  describe("a program that rebinds nothing", () => {
+    it.each([
+      ["$HOME", homedir(), simpleExpansion("HOME")],
+      ["${HOME}", homedir(), bracedExpansion("HOME")],
+      ["$PWD", ".", simpleExpansion("PWD")],
+      ["${PWD}", ".", bracedExpansion("PWD")],
+      ["$HOMEDIR", null, simpleExpansion("HOMEDIR")],
+    ])("resolves %s to %s", (_label, expected, node) => {
+      expect(ShellVariables.UNREBOUND.resolveReference(node)).toBe(expected);
+    });
+  });
+});
 
 describe("resolvePlainVariableExpansion", () => {
   describe("resolvable variables", () => {
