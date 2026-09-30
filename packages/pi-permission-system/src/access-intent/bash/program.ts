@@ -64,16 +64,17 @@ export class BashProgram {
 
     try {
       return withSalvagedRoots(tree.rootNode, parser, (salvaged) => {
+        const words = new WordReader(ShellVariables.UNREBOUND);
         const { externalAccesses, ruleCandidates } = new BashPathResolver(
           normalizer,
-          new WordReader(ShellVariables.UNREBOUND),
+          words,
           options?.workdir,
         ).resolve(tree.rootNode, salvaged);
         return new BashProgram(
           command,
           [
-            ...collectCommands(tree.rootNode),
-            ...salvaged.flatMap(collectSalvagedCommands),
+            ...collectCommands(tree.rootNode, words),
+            ...salvaged.flatMap((root) => collectSalvagedCommands(root, words)),
           ],
           externalAccesses,
           ruleCandidates,

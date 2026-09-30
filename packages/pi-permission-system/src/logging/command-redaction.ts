@@ -1,13 +1,11 @@
 import { inlineShellPayloadNode } from "#src/access-intent/bash/command-enumeration";
-import {
-  ARG_NODE_TYPES,
-  resolveNodeText,
-} from "#src/access-intent/bash/node-text";
+import { ARG_NODE_TYPES, WordReader } from "#src/access-intent/bash/node-text";
 import {
   type BashReparser,
   getWarmBashParser,
   type TSNode,
 } from "#src/access-intent/bash/parser";
+import { ShellVariables } from "#src/access-intent/bash/shell-variable-expansion";
 import { isPlainRecord } from "#src/value-guards";
 import { isSensitiveName, REDACTED_PLACEHOLDER } from "./log-redaction";
 
@@ -125,6 +123,14 @@ function collectSpansIn(
 }
 
 /**
+ * How the masker reads a word: at the startup values of `HOME` and `PWD`,
+ * whatever the command rebinds. What it masks is decided by the *name* a value
+ * is bound to, and neither spelling of either variable is a sensitive name, so
+ * reading them as rebound would change no span.
+ */
+const WORDS = new WordReader(ShellVariables.UNREBOUND);
+
+/**
  * How many payload layers to descend.
  *
  * A payload is a strict sub-span of its own command, so the recursion terminates
@@ -175,7 +181,7 @@ function collectInlineShellPayloads(
   payloads: PayloadSource[],
 ): void {
   if (node.type === "command") {
-    const payload = inlineShellPayloadNode(node);
+    const payload = inlineShellPayloadNode(node, WORDS);
     if (payload) payloads.push(payloadSourceOf(payload));
   }
   for (let i = 0; i < node.childCount; i++) {
@@ -216,7 +222,7 @@ function payloadSourceOf(node: TSNode): PayloadSource {
         start: node.startIndex + quoteAt + 1,
         end: node.endIndex - 1,
       }
-    : { kind: "stitched", text: resolveNodeText(node), ...bounds };
+    : { kind: "stitched", text: WORDS.text(node), ...bounds };
 }
 
 /**
@@ -318,7 +324,7 @@ const HEADER_FIELD = /^([A-Za-z][A-Za-z0-9_-]*)[ \t]*:[ \t]*\S/;
 
 function headerValueSpan(node: TSNode): MaskSpan | null {
   if (!ARG_NODE_TYPES.has(node.type)) return null;
-  const match = HEADER_FIELD.exec(resolveNodeText(node));
+  const match = HEADER_FIELD.exec(WORDS.text(node));
   const field = match?.[1];
   if (!field || !isSensitiveName(field) || isCamelCased(field)) return null;
   const colon = node.text.indexOf(":");
