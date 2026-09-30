@@ -11,6 +11,7 @@
 import type { PromptPreferences } from "#src/authority/permission-prompt-component";
 import { DEFAULT_DIALOG_KEYS } from "#src/config/dialog-keys";
 import { DEFAULT_RENDER_BUDGET } from "#src/presentation/dialog-renderer";
+import type { PromptNotice } from "#src/presentation/prompt-notification";
 
 /** The live prompt preferences, override-driven. */
 export function makePromptPreferences(
@@ -23,4 +24,11 @@ export function makePromptPreferences(
     promptNotifications: [],
     ...overrides,
   };
+}
+
+/** A prompt notification's text, override-driven. */
+export function makePromptNotice(
+  overrides: Partial<PromptNotice> = {},
+): PromptNotice {
+  return { title: "pi", body: "Permission Required", ...overrides };
 }

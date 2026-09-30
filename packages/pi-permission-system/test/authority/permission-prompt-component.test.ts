@@ -13,9 +13,13 @@ import {
 } from "#src/authority/permission-prompt-component";
 import { DEFAULT_DIALOG_KEYS } from "#src/config/dialog-keys";
 import { DEFAULT_RENDER_BUDGET } from "#src/presentation/dialog-renderer";
+import type { PromptNotice } from "#src/presentation/prompt-notification";
 import type { PromptPayload } from "#src/presentation/prompt-payload";
 import { makePromptPayload } from "#test/helpers/prompt-details-fixtures";
-import { makePromptPreferences } from "#test/helpers/prompt-view-fixtures";
+import {
+  makePromptNotice,
+  makePromptPreferences,
+} from "#test/helpers/prompt-view-fixtures";
 
 // ── Fake TUI view harness ────────────────────────────────────────────────────
 
@@ -51,13 +55,14 @@ const CTRL_O = "\u000f";
 /** The preferences a fake view overrides, plus the key bound to tool expansion. */
 interface FakeViewOptions extends Partial<PromptPreferences> {
   expandKey?: string;
+  notice?: PromptNotice;
 }
 
 function makeFakeView(
   doublePressToConfirm: boolean,
   options: FakeViewOptions = {},
 ) {
-  const { expandKey = CTRL_O, ...preferences } = options;
+  const { expandKey = CTRL_O, notice, ...preferences } = options;
   const terminalWrite = vi.fn<(data: string) => void>();
   const captured: {
     component?: CapturedComponent;
@@ -95,6 +100,7 @@ function makeFakeView(
       setToolsExpanded,
     },
     { doublePressToConfirm, ...preferences },
+    notice,
   );
   return { view, captured, getToolsExpanded, setToolsExpanded, terminalWrite };
 }
@@ -110,11 +116,13 @@ function makeView(
   mode: PermissionPromptView["mode"],
   ui: unknown,
   preferences: Partial<PromptPreferences> = {},
+  notice: PromptNotice = makePromptNotice(),
 ): PermissionPromptView {
   return {
     mode,
     ui: ui as PermissionPromptUi,
     ...makePromptPreferences(preferences),
+    notice,
   };
 }
 
@@ -291,13 +299,15 @@ describe("presentInlinePermissionPrompt", () => {
     it("writes the configured channels once, before any keystroke", () => {
       const { view, terminalWrite } = makeFakeView(true, {
         promptNotifications: ["bell", "osc777"],
+        notice: { title: "the notice title", body: "the notice body" },
       });
       void presentInlinePermissionPrompt(view, "Permission Required", ASK);
 
-      // The dialog title only: the path being decided never reaches the
-      // terminal's notification history.
+      // The view's notice, not the dialog title: the notice is composed from
+      // labels only, so the path being decided never reaches the terminal's
+      // notification history.
       expect(terminalWrite).toHaveBeenCalledExactlyOnceWith(
-        "\x07\x1b]777;notify;pi;Permission Required\x07",
+        "\x07\x1b]777;notify;the notice title;the notice body\x07",
       );
     });
 

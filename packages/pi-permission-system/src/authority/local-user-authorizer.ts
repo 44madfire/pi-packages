@@ -5,6 +5,10 @@ import {
   describeGrantTarget,
 } from "#src/presentation/pattern-suggest";
 import {
+  describePromptNotice,
+  type NotificationSession,
+} from "#src/presentation/prompt-notification";
+import {
   emitUiPromptEvent,
   type PermissionEventBus,
 } from "#src/service/permission-events";
@@ -37,6 +41,8 @@ export interface LocalUserAuthorizerDeps {
   getPromptPreferences: () => PromptPreferences;
   /** Injected for testability; production callers pass the real function. */
   requestPermissionDecision: typeof requestPermissionDecision;
+  /** Read when each prompt opens, so a session named mid-session is picked up. */
+  describeSession: () => NotificationSession;
 }
 
 /**
@@ -85,6 +91,11 @@ export class LocalUserAuthorizer implements TerminalAuthorizer {
         mode: this.deps.mode,
         ui: this.deps.ui,
         ...this.deps.getPromptPreferences(),
+        notice: describePromptNotice(
+          title,
+          details.payload.request,
+          this.deps.describeSession(),
+        ),
       },
       title,
       details.payload,

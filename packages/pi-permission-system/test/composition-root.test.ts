@@ -22,7 +22,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import {
   createEventBus,
@@ -2229,7 +2229,10 @@ describe("configured prompt preferences reach the inline dialog", () => {
    * which has no hotkeys at all — only `mode: "tui"` reaches the inline
    * keybind dialog, which is where a configured binding is observable.
    */
-  function makeTuiCtx(cwd: string): {
+  function makeTuiCtx(
+    cwd: string,
+    sessionName?: string,
+  ): {
     ctx: unknown;
     render: () => string[];
     press: (data: string) => void;
@@ -2242,6 +2245,7 @@ describe("configured prompt preferences reach the inline dialog", () => {
       | undefined;
     const notified: string[] = [];
     const base = makeBaseCtx(cwd, "tui-session", {
+      sessionName,
       notify: (message: string): void => {
         notified.push(message);
       },
@@ -2337,6 +2341,50 @@ describe("configured prompt preferences reach the inline dialog", () => {
     expect(terminalWrites).toEqual(["\x07"]);
 
     rmSync(cwd, { recursive: true, force: true });
+  });
+
+  describe("notification text", () => {
+    async function openPrompt(sessionName?: string) {
+      writeGlobalConfig({
+        permission: { "*": "allow", demo: "ask" },
+        promptNotifications: ["osc777"],
+      });
+      const cwd = mkdtempSync(join(tmpdir(), "pi-perm-notice-cwd-"));
+      const pi = makeFakePi({ toolNames: ["demo"] });
+      piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+      const { ctx, press, terminalWrites } = makeTuiCtx(cwd, sessionName);
+      await fireSessionStart(pi, ctx);
+
+      const decision = pi.fire(
+        "tool_call",
+        { toolName: "demo", toolCallId: "notice-ask", input: {} },
+        ctx,
+      ) as Promise<{ block?: true }>;
+      await sleep(0);
+      const writes = [...terminalWrites];
+
+      press("y");
+      press("y");
+      await decision;
+      rmSync(cwd, { recursive: true, force: true });
+      return { cwd, writes };
+    }
+
+    it("names the session and the requested tool", async () => {
+      const { writes } = await openPrompt("refactor-auth");
+
+      expect(writes).toEqual([
+        "\x1b]777;notify;pi \u2014 refactor-auth;Permission Required: demo\x07",
+      ]);
+    });
+
+    it("names the working directory for an unnamed session", async () => {
+      const { cwd, writes } = await openPrompt();
+
+      expect(writes).toEqual([
+        `\x1b]777;notify;pi \u2014 ${basename(cwd)};Permission Required: demo\x07`,
+      ]);
+    });
   });
 
   it("renders and honors the characters the config bound", async () => {
