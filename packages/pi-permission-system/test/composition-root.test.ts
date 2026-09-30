@@ -154,6 +154,7 @@ function makeBaseCtx(
     select?: CtxSelect;
     notify?: CtxNotify;
     isProjectTrusted?: boolean;
+    sessionName?: string;
   } = {},
 ): unknown {
   const trusted = options.isProjectTrusted ?? true;
@@ -165,6 +166,7 @@ function makeBaseCtx(
       getEntries: (): unknown[] => [],
       getSessionId: (): string => sessionId,
       getSessionDir: (): string => cwd,
+      getSessionName: (): string | undefined => options.sessionName,
     },
     ui: {
       notify: options.notify ?? ((): void => {}),
