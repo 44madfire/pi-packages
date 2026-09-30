@@ -208,7 +208,17 @@ The two OSC forms raise a desktop notification in terminals that implement them;
 
 Channels are written in the order listed.
 The list is empty by default, so nothing is emitted until you set it; an unknown channel name is a validation error like any other malformed field.
-The notification text is the dialog title (`Permission Required`, or `Permission Required (Subagent)` for a forwarded ask), never the command or path being decided, so nothing from the request lands in your notification history.
+The notification names the session and what is being asked, so it tells you which pane to go to.
+Its title is `pi — <session name>`, or `pi — <directory name>` for a session without a name.
+Its body is the dialog title followed by the tool (or, for an ask that is not a tool call, the gate surface) and the requesting agent when there is one:
+
+| Ask                                         | `osc777` title       | `osc777` body                                  |
+| ------------------------------------------- | -------------------- | ---------------------------------------------- |
+| local `bash` ask in session `refactor-auth` | `pi — refactor-auth` | `Permission Required: bash`                    |
+| `read` forwarded from subagent `scout`      | `pi — refactor-auth` | `Permission Required (Subagent): read (scout)` |
+
+OSC 9 has a single text field, so `osc9` writes the title ahead of the body: `pi — refactor-auth: Permission Required: bash`.
+The notification carries labels only, never the command, path, MCP target, or skill being decided, so nothing the request holds lands in your notification history.
 
 The signal fires once per prompt, when the prompt is actually shown.
 A second ask that waits behind an open dialog signals when its own turn comes, and a forwarded subagent ask signals in the parent session that shows it.
