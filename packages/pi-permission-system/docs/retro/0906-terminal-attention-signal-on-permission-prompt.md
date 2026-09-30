@@ -70,3 +70,23 @@ The plan has five steps: a test-double tidying, the config field, a pure rendere
 #### Deferred tidyings
 
 - `test/composition-root.test.ts` `makeTuiCtx`: its fake `tui` is typed `{ requestRender }` inline; step 4 adds `terminal` as needed, but a shared fake-TUI helper with the component test was declined as scope creep.
+
+## Stage: Implementation — TDD (2026-09-30T03:32:39Z)
+
+### Session summary
+
+All five TDD Order steps landed as five commits: the dialog test-double tidying, the `promptNotifications` config field, the pure `renderPromptNotification`, the wiring in the `presentInlinePermissionPrompt` factory plus the `index.ts` thunk, and the docs.
+The `pi-permission-system` suite went from 5045 to 5064 tests (+19), and check, lint, and `fallow dead-code` stayed green throughout.
+
+### Observations
+
+- Every killing mutation the plan named was applied and went red, with one planned mutation corrected.
+  The plan's step-4 mutation "move the write into `render()`" (applied as moving it into the `requestRender` closure) reddened the before-any-keystroke case and the composition case, but not the once-only case, because a moved write still happens once.
+  The once-only case is killed by a duplicated write (mount plus re-render), which was run and went red.
+- The Tidy-First assessor's merge-loop warning was confirmed by `tsc`: adding `promptNotifications` to the `["piInfrastructureReadPaths", "authorizerChain"]` loop fails with `Type 'string[]' is not assignable to type '("bell" | "osc9" | "osc777")[] & string[]'`, so the field has its own block, with a comment saying why.
+- ESLint's `@typescript-eslint/no-misused-spread` rejected `[...value]` in the control-character filter; `Array.from(value)` iterates the same code points without the flag.
+- The composition-root suite "configured permission-dialog hotkeys reach the inline dialog" was renamed to "configured prompt preferences reach the inline dialog", since `makeTuiCtx` is local to it and the notification case belongs beside the hotkey cases.
+- The docs' channel table first listed which terminals support OSC 9 and OSC 777; that went unverified, so it now names the bytes each channel writes and defers terminal support to the terminal's own docs.
+  The operator's own WezTerm setup (pi-ask with `osc777`) is the only support observed.
+- Pre-completion reviewer: PASS.
+  Its one note (whether the recipe's `@gotgenes/pi-permission-system` type import resolves) was checked afterward: the package root is `src/service.ts`, which re-exports `PermissionDecisionEvent` and `PermissionUiPromptEvent`, and the doc's existing `ui_prompt` example already uses that path.
