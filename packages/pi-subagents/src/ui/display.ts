@@ -35,7 +35,7 @@ export interface AgentDetails {
   activity?: string;
   /** Current spinner frame index (for animated running indicator). */
   spinnerFrame?: number;
-  /** Short model name if different from parent (e.g. "haiku", "sonnet"). */
+  /** The `provider/id` of the model the agent runs (e.g. "anthropic/claude-haiku-4-5"). */
   modelName?: string;
   /** Notable config tags (e.g. ["thinking: high", "inherit context"]). */
   tags?: string[];
@@ -117,6 +117,11 @@ export function formatMs(ms: number): string {
 /** A model as `provider/id`, the syntax the Agent tool's `model` argument accepts. */
 export function formatModel(model: ModelIdentity): string {
   return `${model.provider}/${model.id}`;
+}
+
+/** A model's `provider/id` label, or undefined while the model is unknown. */
+export function modelLabel(model: ModelIdentity | undefined): string | undefined {
+  return model ? formatModel(model) : undefined;
 }
 
 /** Format duration from start/completed timestamps. */

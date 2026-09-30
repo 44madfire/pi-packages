@@ -19,6 +19,7 @@ import {
   buildInvocationTags,
   getDisplayName,
   getPromptModeLabel,
+  modelLabel,
 } from "#src/ui/display";
 
 /** Model info extracted from the parent session context. */
@@ -118,13 +119,7 @@ export function resolveSpawnConfig(
   const inheritContext = resolvedConfig.inheritContext;
   const runInBackground = resolvedConfig.runInBackground;
 
-  // Compute display model name (only shown when different from parent)
-  const parentModelId = modelInfo.parentModel?.id;
-  const effectiveModelId = model?.id;
-  const modelName =
-    effectiveModelId && effectiveModelId !== parentModelId
-      ? model.name.replace(/^Claude\s+/i, "").toLowerCase()
-      : undefined;
+  const modelName = modelLabel(model);
 
   const effectiveMaxTurns = normalizeMaxTurns(
     resolvedConfig.maxTurns ?? settings.defaultMaxTurns,

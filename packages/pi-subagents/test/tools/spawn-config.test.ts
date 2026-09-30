@@ -92,6 +92,41 @@ describe("resolveSpawnConfig — model resolution", () => {
   });
 });
 
+describe("resolveSpawnConfig — model label", () => {
+  const parentModel = makeModel({ provider: "anthropic", id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5" });
+  const haiku = makeModel({ provider: "anthropic", id: "claude-haiku-4-5", name: "Claude Haiku 4.5" });
+  const registryWithHaiku = {
+    find: (provider: string, id: string) => (provider === haiku.provider && id === haiku.id ? haiku : undefined),
+    getAll: () => [haiku],
+    getAvailable: () => [haiku],
+  };
+
+  function modelNameFor(params: Record<string, unknown>, modelInfo: Parameters<typeof resolveSpawnConfig>[2]) {
+    const result = resolveSpawnConfig(
+      { subagent_type: "general-purpose", prompt: "test", description: "d", ...params },
+      testRegistry,
+      modelInfo,
+      defaultSettings,
+    );
+    if ("error" in result) throw new Error(result.error);
+    return result.presentation.detailBase.modelName;
+  }
+
+  it("labels an inherited model even though it matches the parent's", () => {
+    expect(modelNameFor({}, makeModelInfo({ parentModel }))).toBe("anthropic/claude-sonnet-5-5");
+  });
+
+  it("labels a requested model as provider/id, not its display name", () => {
+    expect(
+      modelNameFor({ model: "anthropic/claude-haiku-4-5" }, makeModelInfo({ parentModel, modelRegistry: registryWithHaiku })),
+    ).toBe("anthropic/claude-haiku-4-5");
+  });
+
+  it("leaves the label unset when no model resolved", () => {
+    expect(modelNameFor({}, makeModelInfo({ parentModel: undefined }))).toBeUndefined();
+  });
+});
+
 describe("resolveSpawnConfig — max turns normalization", () => {
   it("normalizes max_turns from params", () => {
     const result = resolveSpawnConfig(
