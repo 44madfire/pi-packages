@@ -77,15 +77,16 @@ export class LocalUserAuthorizer implements TerminalAuthorizer {
     details: PromptPermissionDetails,
   ): Promise<PermissionPromptDecision> {
     emitUiPromptEvent(this.deps.events, buildUiPrompt(details));
+    const title = details.forwarding
+      ? "Permission Required (Subagent)"
+      : "Permission Required";
     return this.deps.requestPermissionDecision(
       {
         mode: this.deps.mode,
         ui: this.deps.ui,
         ...this.deps.getPromptPreferences(),
       },
-      details.forwarding
-        ? "Permission Required (Subagent)"
-        : "Permission Required",
+      title,
       details.payload,
       buildRequestOptions(details),
     );
