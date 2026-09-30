@@ -38,6 +38,7 @@ See [migration/0644-project-trust-gating.md](migration/0644-project-trust-gating
 The `permission` object uses deep-shallow merge: string-vs-string replaces; both-object shallow-merges pattern maps; string-vs-object the override wins entirely.
 Scalar fields (`debugLog`, `permissionReviewLog`, `yoloMode`, `doublePressToConfirm`, `forwardingTimeoutMs`, `promptMaxRows`, `promptFieldMaxWidth`) use simple replacement.
 `permissionDialogKeys` replaces the whole map rather than merging entry by entry, so the map that was validated is the map that applies.
+`promptNotifications` likewise replaces the whole list, so a project `[]` turns off a global list.
 
 **Invalid higher-precedence scope fails closed.**
 If a non-global scope (project config, global agent frontmatter, or project agent frontmatter) is present but fails to load or validate, it no longer contributes an empty scope that silently inherits the lower scope's rules.
@@ -105,6 +106,7 @@ This clamp is deny-preserving and, like `yoloMode`, applied at composition; when
 | `yoloMode`                  | `false`  | Auto-approves `ask` results instead of prompting when yolo mode is enabled                                                                                                                                                                   |
 | `doublePressToConfirm`      | `true`   | Requires a confirming second press of a decision hotkey in the inline TUI dialog (see below). TUI sessions only; set to `false` for single-press.                                                                                            |
 | `permissionDialogKeys`      | —        | Remaps the inline TUI dialog's decision hotkeys (see below). One printable character per decision; omitted decisions keep `y` / `s` / `b` / `n` / `r`.                                                                                       |
+| `promptNotifications`       | `[]`     | Terminal notifications to emit when the inline TUI dialog opens: `"bell"`, `"osc9"`, `"osc777"` (see below). Empty for none.                                                                                                                 |
 | `forwardingTimeoutMs`       | `600000` | How long a subagent waits for the parent session to answer a forwarded permission request, in milliseconds. A child whose parent is not draining its inbox gives up in ~2 s regardless, whether that parent runs in this process or its own. |
 | `promptMaxRows`             | `24`     | Max rows a permission prompt renders before eliding its evidence. The request's own facts are never elided by this budget; `Ctrl+O` expands the prompt to the complete request.                                                              |
 | `promptFieldMaxWidth`       | `400`    | Max characters of any one field shown in a permission prompt. This is what bounds a single long field (a here-string command, say) that would otherwise fill the prompt through wrapping.                                                    |
@@ -183,6 +185,39 @@ While you are typing a denial reason it is not intercepted, so a rebound printab
 The reason editor is Pi's own line editor, so it behaves like the chat input: pasting works, as do cursor movement, word and line deletion, the kill ring, and undo.
 The reason is a single line — a pasted line break becomes a space, and a long reason scrolls sideways rather than growing the dialog.
 `enter` submits it, and `esc` (or `Ctrl+C`) returns to the decision list without denying.
+
+#### Terminal notifications
+
+An ask stops the agent mid-turn, so a session in a background tab or pane can sit waiting without anything telling you.
+Set `promptNotifications` to have the dialog signal the terminal as it opens:
+
+```jsonc
+{
+  "promptNotifications": ["bell", "osc777"]
+}
+```
+
+| Channel    | Writes                                           |
+| ---------- | ------------------------------------------------ |
+| `"bell"`   | BEL, the terminal bell                           |
+| `"osc9"`   | an OSC 9 desktop notification (`ESC ] 9 ;`)      |
+| `"osc777"` | an OSC 777 desktop notification (`ESC ] 777 ;`)  |
+
+The bell is the widest-supported signal: terminals and multiplexers already route it to a sound, a badge, or pane attention (tmux `monitor-bell`, for one).
+The two OSC forms raise a desktop notification in terminals that implement them; which one yours supports is in its documentation, and listing both is harmless, since a terminal ignores an OSC it does not know.
+
+Channels are written in the order listed.
+The list is empty by default, so nothing is emitted until you set it; an unknown channel name is a validation error like any other malformed field.
+The notification text is the dialog title (`Permission Required`, or `Permission Required (Subagent)` for a forwarded ask), never the command or path being decided, so nothing from the request lands in your notification history.
+
+The signal fires once per prompt, when the prompt is actually shown.
+A second ask that waits behind an open dialog signals when its own turn comes, and a forwarded subagent ask signals in the parent session that shows it.
+An ask decided without a dialog (by a rule, a session approval, or an authorizer link) emits nothing.
+Only interactive TUI sessions signal; outside interactive mode Pi routes stdout away from the terminal, so there is nothing to ring.
+
+Inside tmux, prefer `"bell"`: tmux passes a BEL through to its own bell handling, but drops OSC notifications unless passthrough is enabled.
+
+To run a program instead (Herdr, `cmux notify`, a push to your phone), write a small extension on the `permissions:ui_prompt` and `permissions:decision` broadcasts; see the [recipe](cross-extension-api.md#recipe-bridging-a-prompt-to-an-external-notifier).
 
 ### What a prompt shows
 
