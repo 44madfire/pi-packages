@@ -49,7 +49,6 @@ export interface SpawnExecution {
 
 /** Presentation: display/UI values derived from identity and execution. */
 export interface SpawnPresentation {
-  modelName: string | undefined;
   agentTags: string[];
   detailBase: Pick<AgentDetails, "displayName" | "description" | "subagentType" | "modelName" | "tags">;
 }
@@ -132,7 +131,6 @@ export function resolveSpawnConfig(
   );
 
   const agentInvocation: AgentInvocation = {
-    modelName,
     thinking,
     maxTurns: normalizeMaxTurns(resolvedConfig.maxTurns),
     inheritContext,
@@ -167,7 +165,7 @@ export function resolveSpawnConfig(
       runInBackground,
       agentInvocation,
     },
-    presentation: { modelName, agentTags, detailBase },
+    presentation: { agentTags, detailBase },
   };
 }
 

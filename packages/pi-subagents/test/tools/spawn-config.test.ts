@@ -79,8 +79,6 @@ describe("resolveSpawnConfig — model resolution", () => {
     );
     if ("error" in result) return;
     expect(result.execution.model).toBe(parentModel);
-    // modelName is undefined when same as parent
-    expect(result.presentation.modelName).toBeUndefined();
   });
 
   it("returns error when user-specified model cannot be resolved", () => {
@@ -150,7 +148,6 @@ describe("resolveSpawnConfig — invocation fields", () => {
     );
     if ("error" in result) return;
     expect(result.execution.agentInvocation).toEqual({
-      modelName: undefined,
       thinking: "high",
       maxTurns: undefined,
       inheritContext: false,
