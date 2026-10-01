@@ -150,6 +150,14 @@ describe("BashProgram", () => {
           "HOME=/etc; cat ~/shadow",
           "a tilde, which bash 3.2 expands from HOME",
         ],
+        [
+          'read HOME; cat "$HOME/shadow"',
+          "read, which binds the name it is given",
+        ],
+        [
+          'source f; cat "$HOME/shadow"',
+          "source, which runs code the walk never sees",
+        ],
       ])(
         "no longer projects %s under its startup value (%s)",
         async (command) => {

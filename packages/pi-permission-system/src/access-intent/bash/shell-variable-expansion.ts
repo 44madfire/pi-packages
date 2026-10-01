@@ -108,11 +108,54 @@ function collectRebound(node: TSNode, rebound: Set<string>): void {
   if (node.type === "variable_name" && RESOLVABLE_VARIABLES.has(node.text)) {
     rebound.add(node.text);
   }
+  if (NAME_ARGUMENT_TYPES.has(node.type)) {
+    const name = node.text.replace(QUOTING, "");
+    if (RESOLVABLE_VARIABLES.has(name)) rebound.add(name);
+  }
+  if (node.type === "command" && runsUnseenCode(node)) {
+    for (const name of RESOLVABLE_VARIABLES.keys()) rebound.add(name);
+  }
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
     if (child) collectRebound(child, rebound);
   }
 }
+
+/**
+ * Argument nodes that can spell a name a builtin binds: `read HOME`,
+ * `printf -v HOME`, a nameref's target in `declare -n r=HOME`. Any argument
+ * spelling a resolvable name counts, whichever command receives it, so the rule
+ * needs no table of name-binding builtins.
+ */
+const NAME_ARGUMENT_TYPES: ReadonlySet<string> = new Set([
+  "word",
+  "string",
+  "raw_string",
+  "concatenation",
+]);
+
+/** Quote and escape characters, which the shell removes before a builtin sees the name. */
+const QUOTING = /["'\\]/g;
+
+/**
+ * Whether a command runs code the walk never parses, which may rebind
+ * anything: `eval`'s joined arguments, or a file `source`/`.` reads.
+ */
+function runsUnseenCode(command: TSNode): boolean {
+  for (let i = 0; i < command.childCount; i++) {
+    const child = command.child(i);
+    if (child?.type === "command_name") {
+      return UNSEEN_CODE_COMMANDS.has(child.text);
+    }
+  }
+  return false;
+}
+
+const UNSEEN_CODE_COMMANDS: ReadonlySet<string> = new Set([
+  "eval",
+  "source",
+  ".",
+]);
 
 /** The node types a variable reference parses as. */
 const REFERENCE_TYPES: ReadonlySet<string> = new Set([

@@ -178,12 +178,32 @@ describe("ShellVariables.scan", () => {
     });
   });
 
+  describe("a builtin that binds a name it is given as a word rebinds it", () => {
+    it.each([
+      ["read HOME", ["HOME"]],
+      ["printf -v PWD x", ["PWD"]],
+      ["declare -n r=HOME; r=/etc", ["HOME"]],
+      ['read "HOME"', ["HOME"]],
+    ])("%s rebinds %j", async (command, expected) => {
+      expect(await reboundIn(command)).toEqual(expected);
+    });
+  });
+
+  describe("a command that runs code it cannot see rebinds both", () => {
+    it.each(["eval x", "source f", ". f"])("%s", async (command) => {
+      expect(await reboundIn(command)).toEqual(["HOME", "PWD"]);
+    });
+  });
+
   describe("a program that only reads them rebinds nothing", () => {
     it.each([
       'cat "$HOME/x" $PWD',
       "echo ${HOME} ${PWD}",
       'env -i HOME="$HOME" cmd',
       "HOMEDIR=/etc MY_PWD=/x cmd",
+      "echo HOMEDIR",
+      "find . -name x",
+      "echo eval source",
     ])("%s", async (command) => {
       expect(await reboundIn(command)).toEqual([]);
     });
