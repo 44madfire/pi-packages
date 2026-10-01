@@ -64,3 +64,16 @@ The pi-permission-system suite went from 5088 to 5174 tests.
   - The operator chose to narrow the argument rule to name-binding builtins and cover all four misses, in `fix(pi-permission-system): a quoted export, let, trap, or quoted eval counts as reassigning $HOME`.
 - Pre-completion review round 2 (delta): WARN, ready for `/ship`.
   The remaining spellings were named as ADR 0009 residuals rather than covered: attached `printf -vHOME`, `read $'HOME'`, `coproc HOME`, `exec {HOME}>f`, a keyword-prefixed `time eval`, and the `printf -- -v HOME` over-mark.
+
+## Stage: Sync (worktree) (2026-10-01T05:07:42Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass from the worktree root.
+The plan's marker is `**Release:** ship independently`, and the only deferral is the `token-collection.ts` relay tidying recorded under `#### Deferred tidyings` in the planning entry.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-995--/2026-09-30T05-43-11-655Z_01a0f0d6-9c27-76d7-b66e-5290a90d0164.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The pre-completion reviewer's final verdict was WARN with nothing blocking; the residual spellings it listed are in ADR 0009.
