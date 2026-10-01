@@ -42,3 +42,16 @@ The pi-subagents suite went from 1876 to 1889 tests.
 - The streaming test uses `objectContaining` on `onUpdate`'s details, with a comment explaining why: the details also carry a spinner frame and a wall-clock duration.
 - Pre-completion reviewer: PASS.
   It noted that it did not load the `testing` skill, so the `test/` mock-convention spot-check was not done.
+
+## Stage: Sync (worktree) (2026-10-01T04:05:44Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` both passed on the branch before the rebase.
+The plan's marker is `**Release:** ship independently`; `/ship 755` should close both #755 and #998.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-755--/2026-09-30T19-04-04-691Z_01a0f3b3-d752-70b3-863e-d02012a364de.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- No deferred work or follow-up issues; the `feat:` commits carry the `Co-authored-by: beilo` trailer.
