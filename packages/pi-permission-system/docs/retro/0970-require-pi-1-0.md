@@ -30,7 +30,7 @@ The plan is a two-commit `/build-plan`: a `feat(pi-permission-system)!:` depende
 
 ### Session summary
 
-Both plan steps landed: `a1339ec1` raises the peer floors and devDependency pins to 1.0.0 (with the `esbuild: false` decision and the release-age entries pnpm wrote), and `a33aaf60` adds the README `## Upgrading` entry.
+Both plan steps landed: the `feat(pi-permission-system)!: require Pi 1.0.0 or later` commit raises the peer floors and devDependency pins to 1.0.0 (with the `esbuild: false` decision and the release-age entries pnpm wrote), and the `docs(pi-permission-system): note the Pi 1.0.0 requirement under Upgrading` commit adds the README `## Upgrading` entry.
 The install reproduced the spike exactly, and `check`, the full suite (175 files, 5174 tests), `verify:public-types`, root lint, and `fallow dead-code` all passed.
 
 ### Observations
@@ -40,3 +40,17 @@ The install reproduced the spike exactly, and `check`, the full suite (175 files
 - The full suite ran clean on the first try this time; the planning spike's load flake did not recur.
 - Pre-completion reviewer: PASS.
   It reminded that the release marker is `mid-batch — defer`, to be dispatched together with #999.
+
+## Stage: Sync (worktree) (2026-10-01T22:51:27Z)
+
+### Session summary
+
+Pre-push checks passed (`pnpm run lint`, `pnpm fallow dead-code`).
+The plan's marker is `**Release:** mid-batch — defer` (batch "pi-1.0 prompt options", #999 the tail), so `/ship` should ask and then not name `pi-permission-system` in the dispatch; #1009 (pi-subagents) releases ahead of #999.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-970--/2026-10-01T21-44-34-076Z_01a0f96d-221b-7287-a7e3-33f7662c6884.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- Closing #970 does not release it; the `feat!:` commit waits on `main` until a dispatch names the package.
+- The #999 plan's "header layout is gone" prerequisite is false (deletion moved to #999); see the planning entry.
