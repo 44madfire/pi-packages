@@ -1295,6 +1295,10 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   It is [#992]'s class (a word only the shell decides, read as known) in the variable vocabulary rather than the guards, and [#992]'s rule inherits the fix through `ArgWord.computed`.
 - [#996] — filed by the #906 ship session; out of scope for the roadmap.
   It changes the text of [#906]'s prompt notifications (the session name, tool, and agent), a presentation addition sharing no mechanism with this phase's bash token-role work.
+- [#1001] — filed by the Pi 0.99.2 upstream-impact assessment; out of scope for the roadmap.
+  Pi's native `mcp__<server>__<tool>` tools reach only the generic extension surface, the same MCP-routing class as [#946], and touch no token role or declared effect.
+- [#1002] — filed by the Pi 0.99.2 upstream-impact assessment; out of scope for the roadmap.
+  A fully denied direct MCP tool stays declared for the first prompt because `builtin:mcp` registers it after the exposure pass; the gate still denies it, and nothing in it touches this phase's bash token-role work.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1849,5 +1853,7 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#992]: https://github.com/gotgenes/pi-packages/issues/992
 [#995]: https://github.com/gotgenes/pi-packages/issues/995
 [#996]: https://github.com/gotgenes/pi-packages/issues/996
+[#1001]: https://github.com/gotgenes/pi-packages/issues/1001
+[#1002]: https://github.com/gotgenes/pi-packages/issues/1002
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
