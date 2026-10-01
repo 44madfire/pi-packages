@@ -64,7 +64,9 @@ export class BashProgram {
 
     try {
       return withSalvagedRoots(tree.rootNode, parser, (salvaged) => {
-        const words = new WordReader(ShellVariables.UNREBOUND);
+        const words = new WordReader(
+          ShellVariables.scan([tree.rootNode, ...salvaged]),
+        );
         const { externalAccesses, ruleCandidates } = new BashPathResolver(
           normalizer,
           words,

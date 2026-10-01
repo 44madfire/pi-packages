@@ -143,3 +143,94 @@ describe("ShellVariables.resolveReference", () => {
     });
   });
 });
+
+describe("ShellVariables.scan", () => {
+  /** Which of HOME and PWD `command` rebinds, read through a plain reference. */
+  async function reboundIn(command: string): Promise<string[]> {
+    const parser = await getParser();
+    const tree = parser.parse(command);
+    if (!tree) throw new Error("parser.parse returned null");
+    try {
+      const variables = ShellVariables.scan([tree.rootNode]);
+      return ["HOME", "PWD"].filter(
+        (name) => variables.resolveReference(simpleExpansion(name)) === null,
+      );
+    } finally {
+      tree.delete();
+    }
+  }
+
+  describe("a variable_name outside a plain reference rebinds it", () => {
+    it.each([
+      ["HOME=/etc", ["HOME"]],
+      ["HOME+=/x", ["HOME"]],
+      ["HOME=/etc cat x", ["HOME"]],
+      ["export HOME=/etc", ["HOME"]],
+      ["local HOME", ["HOME"]],
+      ["readonly PWD=/etc", ["PWD"]],
+      ["for HOME in /etc; do :; done", ["HOME"]],
+      ["unset HOME", ["HOME"]],
+      ["(( HOME = 1 ))", ["HOME"]],
+      ["echo ${HOME:=/etc}", ["HOME"]],
+      ["f() { PWD=/; }; HOME=/etc", ["HOME", "PWD"]],
+    ])("%s rebinds %j", async (command, expected) => {
+      expect(await reboundIn(command)).toEqual(expected);
+    });
+  });
+
+  describe("a program that only reads them rebinds nothing", () => {
+    it.each([
+      'cat "$HOME/x" $PWD',
+      "echo ${HOME} ${PWD}",
+      'env -i HOME="$HOME" cmd',
+      "HOMEDIR=/etc MY_PWD=/x cmd",
+    ])("%s", async (command) => {
+      expect(await reboundIn(command)).toEqual([]);
+    });
+  });
+
+  describe("a path token spelled from a rebound HOME", () => {
+    async function spellsReboundHome(
+      command: string,
+      token: string,
+    ): Promise<boolean> {
+      const parser = await getParser();
+      const tree = parser.parse(command);
+      if (!tree) throw new Error("parser.parse returned null");
+      try {
+        return ShellVariables.scan([tree.rootNode]).spellsReboundHome(token);
+      } finally {
+        tree.delete();
+      }
+    }
+
+    it.each(["$HOME", "$HOME/x", "${HOME}", "${HOME}/x", "~", "~/x"])(
+      "%s is, once HOME is rebound",
+      async (token) => {
+        expect(await spellsReboundHome("HOME=/etc", token)).toBe(true);
+        expect(await spellsReboundHome("PWD=/etc", token)).toBe(false);
+      },
+    );
+
+    it.each(["$HOMEDIR/x", "~user/x", "/etc/x", "x/$HOME"])(
+      "%s is not, even once HOME is rebound",
+      async (token) => {
+        expect(await spellsReboundHome("HOME=/etc", token)).toBe(false);
+      },
+    );
+  });
+
+  it("reads every root it is given", async () => {
+    const parser = await getParser();
+    const first = parser.parse("cat x");
+    const second = parser.parse("HOME=/etc");
+    if (!first || !second) throw new Error("parser.parse returned null");
+    try {
+      const variables = ShellVariables.scan([first.rootNode, second.rootNode]);
+      expect(variables.resolveReference(simpleExpansion("HOME"))).toBeNull();
+    } finally {
+      first.delete();
+      second.delete();
+    }
+  });
+});

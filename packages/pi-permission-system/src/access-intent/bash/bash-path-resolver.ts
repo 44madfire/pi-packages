@@ -151,6 +151,10 @@ export class BashPathResolver {
    * could then allow this access. #393's unknown base declines the claim
    * instead, keeping an absolute token literal-only and unconditionally
    * external while a relative one is not projected at all.
+   *
+   * A token spelled from a `HOME` the program rebinds leaves both slices before
+   * projection: path normalization would otherwise expand its `~`/`$HOME` prefix
+   * to the startup home, naming a directory the shell never touches.
    */
   resolve(
     rootNode: TSNode,
@@ -160,10 +164,13 @@ export class BashPathResolver {
       this.workdir === undefined
         ? CWD_BASE
         : this.deriveBaseFromCdTarget(CWD_BASE, this.workdir);
-    const candidates = this.collectPathCandidates(rootNode, initialBase);
+    const collected = this.collectPathCandidates(rootNode, initialBase);
     for (const salvaged of salvagedRoots) {
-      this.walkForCandidates(salvaged, UNKNOWN_BASE, candidates);
+      this.walkForCandidates(salvaged, UNKNOWN_BASE, collected);
     }
+    const candidates = collected.filter(
+      ({ token }) => !this.words.spellsReboundHome(token),
+    );
     return {
       externalAccesses: this.withWorkdirExternal(
         this.projectExternalPaths(candidates),

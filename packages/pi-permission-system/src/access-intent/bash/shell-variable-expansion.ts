@@ -17,6 +17,7 @@
  * See `docs/decisions/0009-bash-path-projection-completeness-contract.md`.
  */
 import { homedir } from "node:os";
+import { hasHomePrefix } from "#src/path/expand-home";
 
 import type { TSNode } from "./parser";
 
@@ -31,6 +32,26 @@ import type { TSNode } from "./parser";
 export class ShellVariables {
   /** A program that rebinds none of the resolvable variables. */
   static readonly UNREBOUND = new ShellVariables(new Set());
+
+  /**
+   * The resolvable variables `roots` rebind: the primary parse and every
+   * salvaged region, since an assignment in one governs a reference in another.
+   *
+   * A resolvable name rebinds when a `variable_name` carries it anywhere but as
+   * a plain reference's name: an assignment (a prefix one too), a declaration, a
+   * `for` variable, `unset`, an arithmetic assignment, `${HOME:=x}`. Position is
+   * ignored, because a loop or a function body can run a later assignment
+   * first; a prefix assignment and an operator read (`${HOME:-x}`) count
+   * although neither rebinds the current shell, which costs only the
+   * projection of a program already spelling the name oddly.
+   */
+  static scan(roots: readonly TSNode[]): ShellVariables {
+    const rebound = new Set<string>();
+    for (const root of roots) collectRebound(root, rebound);
+    return rebound.size === 0
+      ? ShellVariables.UNREBOUND
+      : new ShellVariables(rebound);
+  }
 
   private constructor(private readonly rebound: ReadonlySet<string>) {}
 
@@ -50,6 +71,18 @@ export class ShellVariables {
     if (name === null || this.rebound.has(name)) return null;
     return RESOLVABLE_VARIABLES.get(name)?.() ?? null;
   }
+
+  /**
+   * Whether a collected path token is spelled from a `HOME` this program
+   * rebinds (`$HOME/x`, `${HOME}`, `~/x`).
+   *
+   * Such a token names no path the projection can know, yet path normalization
+   * expands its prefix to the startup home exactly as it does for a config
+   * pattern, so it must leave the path surfaces before it reaches them.
+   */
+  spellsReboundHome(token: string): boolean {
+    return this.rebound.has("HOME") && hasHomePrefix(token);
+  }
 }
 
 /**
@@ -65,6 +98,26 @@ export class ShellVariables {
 const RESOLVABLE_VARIABLES: ReadonlyMap<string, () => string> = new Map([
   ["HOME", homedir],
   ["PWD", () => "."],
+]);
+
+/** Record each resolvable name a `variable_name` under `node` binds. */
+function collectRebound(node: TSNode, rebound: Set<string>): void {
+  if (REFERENCE_TYPES.has(node.type) && plainVariableName(node) !== null) {
+    return;
+  }
+  if (node.type === "variable_name" && RESOLVABLE_VARIABLES.has(node.text)) {
+    rebound.add(node.text);
+  }
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (child) collectRebound(child, rebound);
+  }
+}
+
+/** The node types a variable reference parses as. */
+const REFERENCE_TYPES: ReadonlySet<string> = new Set([
+  "simple_expansion",
+  "expansion",
 ]);
 
 /** Node types that delimit an expansion without altering what it evaluates to. */

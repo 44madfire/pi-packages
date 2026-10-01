@@ -29,7 +29,9 @@ export function parseBashCommandsSync(command: string): BashCommand[] | null {
   if (!tree) return [];
   try {
     return withSalvagedRoots(tree.rootNode, parser, (salvaged) => {
-      const words = new WordReader(ShellVariables.UNREBOUND);
+      const words = new WordReader(
+        ShellVariables.scan([tree.rootNode, ...salvaged]),
+      );
       return [
         ...collectCommands(tree.rootNode, words),
         ...salvaged.flatMap((root) => collectSalvagedCommands(root, words)),

@@ -83,6 +83,11 @@ export class WordReader {
   isComputed(node: TSNode): boolean {
     return computedPart(node, this.variables);
   }
+
+  /** Whether a collected token is spelled from a rebound `HOME` ({@link ShellVariables.spellsReboundHome}). */
+  spellsReboundHome(token: string): boolean {
+    return this.variables.spellsReboundHome(token);
+  }
 }
 
 /**
