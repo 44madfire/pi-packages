@@ -32,3 +32,35 @@ The plan has 9 steps: 3 preparatory refactors, 1 test migration, 4 fixes (mechan
 - `packages/pi-permission-system/src/access-intent/bash/token-collection.ts`: its free functions only relay the `WordReader` (5 functions pass it through with no read of their own, per the Tidy-First assessor).
   Turning them into methods on a collector object that holds the reader would remove the relay, but it restructures a 1006-line file and was rejected as scope creep for this issue.
   The operator asked that the next `/plan-improvements pi-permission-system` consider it.
+
+## Stage: Implementation — TDD (2026-10-01T05:01:30Z)
+
+### Session summary
+
+All 9 plan steps landed, plus one fix and two docs commits that answered the pre-completion review.
+`ShellVariables.scan` decides once per program which of `HOME`/`PWD` it rebinds, and a `WordReader` over it reaches every word read in the path walk and the command enumeration.
+The pi-permission-system suite went from 5088 to 5174 tests.
+
+### Observations
+
+- Step 1 deviation: `WordReader` moved to step 2, because `fallow` would flag it unused until the resolver consumed it.
+- Step 3 deviation: the log redactor keeps one module-level startup-value reader instead of scanning its own parse; it masks by names, and no spelling of `HOME`/`PWD` is sensitive.
+- Step 5 design gap (operator chose option A): the plan assumed a rebound reference's fallback text drops out at the shape classifiers.
+  It does not, because `normalizePathPolicyLiteral` → `expandHomePath` re-expands a leading `~`/`$HOME`/`${HOME}` on the `path` surface and in the existence probe.
+  The failing test showed `HOME=-delete; find /etc "$HOME"` still projecting `/Users/chris`.
+  The resolver now drops a token spelled from a rebound `HOME` before projection (`ShellVariables.spellsReboundHome`, with `hasHomePrefix` added to `expand-home.ts` so the prefix recognition is not re-derived).
+  That filter also covered the rebound `~`, so step 7 carried only the word half.
+- Mid-step question from the operator: why does `find` withdraw its read claim when a path cannot change read/write?
+  The answer was that the word may not be a path at all (`HOME=-delete; find "$HOME"` hands `find` the option `-delete`), and that withdrawal means unproven, not a write.
+  Lead with the option case when explaining a guard withdrawal.
+- Step 8: `command-effects.ts` reads a non-computed word's *value*, not `mayLeadWithDash`, so an unrebound tilde word is marked computed when the inherited home begins with `-`, and only then, which keeps `sed -n p ~/x` a proven read.
+- `cat $HOME` projects nothing even with nothing rebound (a pre-existing quirk); one planned test row built on it was vacuous and was replaced.
+- Measurement for the `Landed:` note: 0 of 10,226 distinct logged commands change projection, command units, or effects (a differential run of HEAD against the plan commit through the real `BashProgram.parse`).
+  The log is live (this session's own commands land in it), so compare by command key, not line count; one `/tmp` probe result flipped between two runs at HEAD and is filesystem noise.
+- Pre-completion review round 1: WARN.
+  - The plan's step 6 rule (any argument spelled `HOME` rebinds) over-marked: `grep HOME ~/.bashrc` lost its projection.
+    Planning had measured that over-marking drops projections and still accepted it for this rule; that was the planning error.
+  - Four misses were unnamed: `let`, quoted `"eval"`/`e\val`, `trap`, and quoted `export "HOME=…"`.
+  - The operator chose to narrow the argument rule to name-binding builtins and cover all four misses, in `fix(pi-permission-system): a quoted export, let, trap, or quoted eval counts as reassigning $HOME`.
+- Pre-completion review round 2 (delta): WARN, ready for `/ship`.
+  The remaining spellings were named as ADR 0009 residuals rather than covered: attached `printf -vHOME`, `read $'HOME'`, `coproc HOME`, `exec {HOME}>f`, a keyword-prefixed `time eval`, and the `printf -- -v HOME` over-mark.
