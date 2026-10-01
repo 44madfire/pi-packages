@@ -24,7 +24,9 @@ A leading `~` follows a rebound `HOME` too: bash 3.2, which Pi runs as `/bin/bas
 Unrebound, a `~` leads with whatever the inherited `HOME` does, which `os.homedir()` returns verbatim.
 
 The scan holds which names are rebound, never their values: tracking what a program assigns is the same-program dataflow this ADR declines below.
-A name the program builds at run time is a residual: `declare "$n=/etc"`, `read "$n"`, `declare -n r=$n`, and a name-binding or code-running builtin reached through a wrapper (`builtin eval`, `command export`).
+A name the program builds at run time is a residual: `declare "$n=/etc"`, `read "$n"`, `declare -n r=$n`, and a name-binding or code-running builtin reached through a wrapper or keyword (`builtin eval`, `command export`, `time eval x`).
+So are the spellings that bind a name outside an argument the scan reads as one: an attached `printf -vHOME`, an ANSI-C `read $'HOME'`, `coproc HOME { …; }`, and `exec {HOME}>f`.
+In the other direction, `printf -- -v HOME` counts as a rebinding although `--` ends its options, which only drops that program's `~` projection.
 Measured over 10,226 distinct commands of a real review log, none changes its projection, command units, or effects; the shapes above that do change are absent from that log.
 
 ### Amendment, 2026-09-27 — the rest of a heredoc's line is projected where its `< in` spelling is
