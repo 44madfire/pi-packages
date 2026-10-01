@@ -39,7 +39,10 @@ export class ShellVariables {
    *
    * A resolvable name rebinds when a `variable_name` carries it anywhere but as
    * a plain reference's name: an assignment (a prefix one too), a declaration, a
-   * `for` variable, `unset`, an arithmetic assignment, `${HOME:=x}`. Position is
+   * `for` variable, `unset`, an arithmetic assignment, `${HOME:=x}`. It also
+   * rebinds when a name-binding builtin is handed it as an argument (`read`,
+   * `printf -v`, `let`, a quoted `export "HOME=…"`), and both rebind under a
+   * command running code the walk never parses (`eval`, `source`, `.`, `trap`). Position is
    * ignored, because a loop or a function body can run a later assignment
    * first; a prefix assignment and an operator read (`${HOME:-x}`) count
    * although neither rebinds the current shell, which costs only the
@@ -47,7 +50,7 @@ export class ShellVariables {
    */
   static scan(roots: readonly TSNode[]): ShellVariables {
     const rebound = new Set<string>();
-    for (const root of roots) collectRebound(root, rebound);
+    for (const root of roots) collectRebound(root, rebound, false);
     return rebound.size === 0
       ? ShellVariables.UNREBOUND
       : new ShellVariables(rebound);
@@ -121,32 +124,76 @@ const RESOLVABLE_VARIABLES: ReadonlyMap<string, () => string> = new Map([
   ["PWD", () => "."],
 ]);
 
-/** Record each resolvable name a `variable_name` under `node` binds. */
-function collectRebound(node: TSNode, rebound: Set<string>): void {
+/**
+ * Record each resolvable name `node` binds.
+ *
+ * `bindsNames` holds beneath a builtin that binds the names it is handed
+ * (`read HOME`, `export "HOME=/etc"`, `declare -n r=HOME`), and only there does
+ * an argument spelling a name count: `grep HOME ~/.bashrc` binds nothing, and
+ * reading it as a rebinding would drop the `~/.bashrc` it does read.
+ */
+function collectRebound(
+  node: TSNode,
+  rebound: Set<string>,
+  inheritedBindsNames: boolean,
+): void {
   if (REFERENCE_TYPES.has(node.type) && plainVariableName(node) !== null) {
     return;
   }
+  const bindsNames = bindsNamesBeneath(node, inheritedBindsNames);
   if (node.type === "variable_name" && RESOLVABLE_VARIABLES.has(node.text)) {
     rebound.add(node.text);
   }
-  if (NAME_ARGUMENT_TYPES.has(node.type)) {
-    const name = node.text.replace(QUOTING, "");
-    if (RESOLVABLE_VARIABLES.has(name)) rebound.add(name);
+  if (bindsNames && NAME_ARGUMENT_TYPES.has(node.type)) {
+    const name = NAMED_ARGUMENT.exec(node.text.replace(QUOTING, ""))?.[1];
+    if (name) rebound.add(name);
   }
-  if (node.type === "command" && runsUnseenCode(node)) {
+  if (node.type === "command" && UNSEEN_CODE_COMMANDS.has(commandName(node))) {
     for (const name of RESOLVABLE_VARIABLES.keys()) rebound.add(name);
   }
   for (let i = 0; i < node.childCount; i++) {
     const child = node.child(i);
-    if (child) collectRebound(child, rebound);
+    if (child) collectRebound(child, rebound, bindsNames);
   }
 }
 
 /**
- * Argument nodes that can spell a name a builtin binds: `read HOME`,
- * `printf -v HOME`, a nameref's target in `declare -n r=HOME`. Any argument
- * spelling a resolvable name counts, whichever command receives it, so the rule
- * needs no table of name-binding builtins.
+ * Whether the arguments beneath `node` are names its command binds. A command
+ * decides for itself; a `declare`-family or `unset` statement always binds;
+ * anything else inherits.
+ */
+function bindsNamesBeneath(node: TSNode, inherited: boolean): boolean {
+  if (node.type === "declaration_command" || node.type === "unset_command") {
+    return true;
+  }
+  if (node.type !== "command") return inherited;
+  const name = commandName(node);
+  if (name === "printf") return hasArgument(node, "-v");
+  return NAME_BINDING_COMMANDS.has(name);
+}
+
+/**
+ * Builtins that bind a name passed as an argument. `declare` and its family
+ * parse as a `declaration_command` when spelled plainly and as a `command`
+ * when quoted, so they are listed here too; `printf` binds only under `-v`.
+ */
+const NAME_BINDING_COMMANDS: ReadonlySet<string> = new Set([
+  "read",
+  "mapfile",
+  "readarray",
+  "getopts",
+  "let",
+  "unset",
+  "declare",
+  "typeset",
+  "local",
+  "export",
+  "readonly",
+]);
+
+/**
+ * Argument nodes that can spell a name a builtin binds, whole or as the head
+ * of an assignment (`HOME=…`, `HOME+=…`, `HOME[0]=…`, `let HOME++`).
  */
 const NAME_ARGUMENT_TYPES: ReadonlySet<string> = new Set([
   "word",
@@ -155,27 +202,43 @@ const NAME_ARGUMENT_TYPES: ReadonlySet<string> = new Set([
   "concatenation",
 ]);
 
+/** A resolvable name leading an argument, not followed by more of an identifier. */
+const NAMED_ARGUMENT = new RegExp(
+  `^(${[...RESOLVABLE_VARIABLES.keys()].join("|")})(?![A-Za-z0-9_])`,
+);
+
 /** Quote and escape characters, which the shell removes before a builtin sees the name. */
 const QUOTING = /["'\\]/g;
 
-/**
- * Whether a command runs code the walk never parses, which may rebind
- * anything: `eval`'s joined arguments, or a file `source`/`.` reads.
- */
-function runsUnseenCode(command: TSNode): boolean {
+/** A command's name as the shell reads it, quotes and escapes removed. */
+function commandName(command: TSNode): string {
   for (let i = 0; i < command.childCount; i++) {
     const child = command.child(i);
-    if (child?.type === "command_name") {
-      return UNSEEN_CODE_COMMANDS.has(child.text);
+    if (child?.type === "command_name") return child.text.replace(QUOTING, "");
+  }
+  return "";
+}
+
+/** Whether a command carries `flag` as one of its own arguments. */
+function hasArgument(command: TSNode, flag: string): boolean {
+  for (let i = 0; i < command.childCount; i++) {
+    const child = command.child(i);
+    if (child && child.type !== "command_name" && child.text === flag) {
+      return true;
     }
   }
   return false;
 }
 
+/**
+ * Commands that run code the walk never parses, which may rebind anything:
+ * `eval`'s joined arguments, a file `source`/`.` reads, and a `trap` action.
+ */
 const UNSEEN_CODE_COMMANDS: ReadonlySet<string> = new Set([
   "eval",
   "source",
   ".",
+  "trap",
 ]);
 
 /** The node types a variable reference parses as. */

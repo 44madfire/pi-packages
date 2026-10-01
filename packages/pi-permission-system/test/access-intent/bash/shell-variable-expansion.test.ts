@@ -184,13 +184,28 @@ describe("ShellVariables.scan", () => {
       ["printf -v PWD x", ["PWD"]],
       ["declare -n r=HOME; r=/etc", ["HOME"]],
       ['read "HOME"', ["HOME"]],
+      ["read -r HOME", ["HOME"]],
+      ["mapfile HOME", ["HOME"]],
+      ["getopts ab HOME", ["HOME"]],
+      ['export "HOME=/etc"', ["HOME"]],
+      ["declare 'HOME=/etc'", ["HOME"]],
+      ["let HOME=1", ["HOME"]],
+      ["let 'PWD=1'", ["PWD"]],
+      ["let HOME++", ["HOME"]],
     ])("%s rebinds %j", async (command, expected) => {
       expect(await reboundIn(command)).toEqual(expected);
     });
   });
 
   describe("a command that runs code it cannot see rebinds both", () => {
-    it.each(["eval x", "source f", ". f"])("%s", async (command) => {
+    it.each([
+      "eval x",
+      "source f",
+      ". f",
+      '"eval" x',
+      "e\\val x",
+      "trap 'HOME=/etc' DEBUG",
+    ])("%s", async (command) => {
       expect(await reboundIn(command)).toEqual(["HOME", "PWD"]);
     });
   });
@@ -202,6 +217,10 @@ describe("ShellVariables.scan", () => {
       'env -i HOME="$HOME" cmd',
       "HOMEDIR=/etc MY_PWD=/x cmd",
       "echo HOMEDIR",
+      "echo HOME",
+      "grep HOME ~/.bashrc",
+      "printf HOME",
+      "git log -- PWD",
       "find . -name x",
       "echo eval source",
     ])("%s", async (command) => {

@@ -218,6 +218,7 @@ describe("BashProgram", () => {
           ['cat "$HOME/shadow"', join(homedir(), "shadow")],
           ['env -i HOME="$HOME" cat "$HOME/shadow"', join(homedir(), "shadow")],
           ['cat "$PWD/../shadow"', "/projects/shadow"],
+          ["grep HOME ~/.bashrc", join(homedir(), ".bashrc")],
         ])("still projects %s", async (command, expected) => {
           expect((await externalsOf(command)).map(({ path }) => path)).toEqual([
             expected,
