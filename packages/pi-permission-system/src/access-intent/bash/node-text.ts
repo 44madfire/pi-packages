@@ -69,6 +69,16 @@ export class WordReader {
     }
     const computed =
       this.isComputed(node) || !isSpelledExactly(node, this.variables);
+    if (tilde) {
+      // The spelling `~` is not what the program receives; it is exact enough
+      // to prove with only while the home it stands for cannot be an option.
+      return {
+        value,
+        computed: computed || tilde.leadsWithDash,
+        mayLeadWithDash:
+          tilde.leadsWithDash || (computed && maySplitIntoWords(node, false)),
+      };
+    }
     return {
       value,
       computed,

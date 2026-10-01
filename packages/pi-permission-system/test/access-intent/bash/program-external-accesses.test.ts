@@ -198,6 +198,21 @@ describe("BashProgram", () => {
         );
       });
 
+      describe("an inherited HOME that begins with a dash", () => {
+        beforeEach(() => {
+          vi.stubEnv("HOME", "-delete");
+        });
+        afterEach(() => {
+          vi.unstubAllEnvs();
+        });
+
+        it("withdraws find's read claim for a tilde", async () => {
+          expect(
+            (await externalsOf("find /etc ~")).map(({ effect }) => effect),
+          ).toEqual([{ effect: "unproven", source: "retracted" }]);
+        });
+      });
+
       describe("a program that leaves both alone", () => {
         it.each([
           ['cat "$HOME/shadow"', join(homedir(), "shadow")],

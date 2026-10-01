@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SKIP_SUBTREE_TYPES,
   WordReader,
@@ -317,6 +317,28 @@ describe("WordReader.argWord", () => {
         });
       },
     );
+
+    describe("with an inherited HOME that begins with a dash", () => {
+      beforeEach(() => {
+        vi.stubEnv("HOME", "-h");
+      });
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it.each([
+        ["a bare tilde", "~"],
+        ["a tilde path", "~/x"],
+        ["a glob under a tilde path", "~/*.ts"],
+      ])(
+        "reads %s as computed and maybe an option (%s)",
+        async (_label, argument) => {
+          await expect(argWordAfter("PWD=/x", argument)).resolves.toMatchObject(
+            { computed: true, mayLeadWithDash: true },
+          );
+        },
+      );
+    });
 
     it("leaves a tilde path exact when only PWD is reassigned", async () => {
       await expect(argWordAfter("PWD=-x", "~/x")).resolves.toEqual({

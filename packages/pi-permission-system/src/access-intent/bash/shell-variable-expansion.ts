@@ -90,12 +90,14 @@ export class ShellVariables {
    * database instead), or `undefined` when it does not.
    *
    * Unknown once the program rebinds `HOME`: bash 3.2, which Pi runs as
-   * `/bin/bash` on macOS, expands it from the reassigned value.
+   * `/bin/bash` on macOS, expands it from the reassigned value. Otherwise it is
+   * the inherited `HOME`, which `homedir()` returns verbatim, so the word leads
+   * with whatever that does.
    */
   readTilde(leadingText: string): TildeReading | undefined {
     if (leadingText !== "~" && !leadingText.startsWith("~/")) return undefined;
     if (this.rebound.has("HOME")) return { known: false };
-    return { known: true, leadsWithDash: false };
+    return { known: true, leadsWithDash: homedir().startsWith("-") };
   }
 }
 
