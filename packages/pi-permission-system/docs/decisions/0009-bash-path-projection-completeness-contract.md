@@ -16,15 +16,16 @@ It is the framing for [#645], which closes two gaps the contract names as in-sco
 
 The `HOME`/`PWD` exception below resolved a plain reference to its startup value whatever the program assigned first, so `HOME=/etc; cat "$HOME/shadow"` projected `~/shadow` and `HOME=-delete; find "$HOME"` proved `find` a read ([#995]).
 The exception now holds only while the program leaves the name alone.
-One scan over the parse roots, the salvaged regions included, decides which of the two names the program rebinds: a `variable_name` carrying one anywhere but as a plain reference's name (an assignment, a prefix assignment, a declaration, a `for` variable, `unset`, an arithmetic assignment, `${HOME:=x}`), an argument spelling one (`read HOME`, `printf -v HOME`, `declare -n r=HOME`), or a command running code the walk never parses (`eval`, `source`, `.`).
+One scan over the parse roots, the salvaged regions included, decides which of the two names the program rebinds: a `variable_name` carrying one anywhere but as a plain reference's name (an assignment, a prefix assignment, a declaration, a `for` variable, `unset`, an arithmetic assignment, `${HOME:=x}`), an argument a name-binding builtin is handed (`read HOME`, `printf -v HOME`, `let HOME=1`, `export "HOME=/etc"`, `declare -n r=HOME`), or a command running code the walk never parses (`eval`, `source`, `.`, `trap`), its name read after quote removal so `"eval"` counts.
+An argument to any other command binds nothing: `grep HOME ~/.bashrc` still projects `~/.bashrc`.
 Position is ignored, because a loop or a function body can run a later assignment first.
 A rebound reference is computed, so it withdraws a guarded word's claim like any other, and a token spelled from a rebound `HOME` (`$HOME/x`, `~/x`) leaves both path surfaces before projection, since path normalization would otherwise expand its prefix to the startup home.
 A leading `~` follows a rebound `HOME` too: bash 3.2, which Pi runs as `/bin/bash` on macOS, expands it from the reassigned value.
 Unrebound, a `~` leads with whatever the inherited `HOME` does, which `os.homedir()` returns verbatim.
 
 The scan holds which names are rebound, never their values: tracking what a program assigns is the same-program dataflow this ADR declines below.
-A name the program builds at run time is a residual: `declare "$n=/etc"`, `read "$n"`, `declare -n r=$n`, and `eval` or `source` reached through a wrapper (`builtin eval`).
-Measured over 10,226 distinct commands of a real review log, no projection, command unit, or effect changes.
+A name the program builds at run time is a residual: `declare "$n=/etc"`, `read "$n"`, `declare -n r=$n`, and a name-binding or code-running builtin reached through a wrapper (`builtin eval`, `command export`).
+Measured over 10,226 distinct commands of a real review log, none changes its projection, command units, or effects; the shapes above that do change are absent from that log.
 
 ### Amendment, 2026-09-27 — the rest of a heredoc's line is projected where its `< in` spelling is
 
