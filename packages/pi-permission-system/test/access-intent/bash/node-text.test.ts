@@ -274,6 +274,59 @@ describe("WordReader.argWord", () => {
     });
   });
 
+  describe("a leading tilde, read in a program that may reassign HOME", () => {
+    /** Parse `<program>; echo <argument>` and read that last argument. */
+    async function argWordAfter(program: string, argument: string) {
+      const parser = await getParser();
+      const tree = parser.parse(`${program}; echo ${argument}`);
+      if (!tree) throw new Error("parse returned null");
+      try {
+        const root = tree.rootNode;
+        const node = root.child(root.childCount - 1)?.child(1);
+        if (!node) throw new Error(`no argument node in: echo ${argument}`);
+        return new WordReader(ShellVariables.scan([root])).argWord(node);
+      } finally {
+        tree.delete();
+      }
+    }
+
+    it.each([
+      ["a bare tilde", "~"],
+      ["a tilde path", "~/x"],
+      ["a tilde path concatenated with a quoted part", '~/x"y"'],
+    ])(
+      "marks %s computed and maybe an option once HOME is reassigned (%s)",
+      async (_label, argument) => {
+        await expect(argWordAfter("HOME=-x", argument)).resolves.toMatchObject({
+          computed: true,
+          mayLeadWithDash: true,
+        });
+      },
+    );
+
+    it.each([
+      ["a tilde after a literal, which bash leaves alone", "a~/x"],
+      ["a quoted tilde", '"~/x"'],
+      ["a named user's tilde, which reads no HOME", "~root/x"],
+    ])(
+      "leaves %s exact once HOME is reassigned (%s)",
+      async (_label, argument) => {
+        await expect(argWordAfter("HOME=-x", argument)).resolves.toMatchObject({
+          computed: false,
+          mayLeadWithDash: false,
+        });
+      },
+    );
+
+    it("leaves a tilde path exact when only PWD is reassigned", async () => {
+      await expect(argWordAfter("PWD=-x", "~/x")).resolves.toEqual({
+        value: "~/x",
+        computed: false,
+        mayLeadWithDash: false,
+      });
+    });
+  });
+
   describe("whether a computed word may lead with a dash", () => {
     /** The two facts a guard reads, without the unresolved source spelling. */
     async function shapeOf(argument: string) {

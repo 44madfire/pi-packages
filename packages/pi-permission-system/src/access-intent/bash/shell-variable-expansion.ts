@@ -83,7 +83,26 @@ export class ShellVariables {
   spellsReboundHome(token: string): boolean {
     return this.rebound.has("HOME") && hasHomePrefix(token);
   }
+
+  /**
+   * How a word's leading unquoted text expands when it opens with a tilde
+   * prefix that reads `HOME` (`~` or `~/…`; `~user` reads the password
+   * database instead), or `undefined` when it does not.
+   *
+   * Unknown once the program rebinds `HOME`: bash 3.2, which Pi runs as
+   * `/bin/bash` on macOS, expands it from the reassigned value.
+   */
+  readTilde(leadingText: string): TildeReading | undefined {
+    if (leadingText !== "~" && !leadingText.startsWith("~/")) return undefined;
+    if (this.rebound.has("HOME")) return { known: false };
+    return { known: true, leadsWithDash: false };
+  }
 }
+
+/** What a leading tilde prefix expands to, as far as the program shows. */
+export type TildeReading =
+  | { readonly known: false }
+  | { readonly known: true; readonly leadsWithDash: boolean };
 
 /**
  * How each resolvable variable is spelled as a path.

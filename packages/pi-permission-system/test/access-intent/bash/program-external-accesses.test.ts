@@ -192,6 +192,12 @@ describe("BashProgram", () => {
         );
       });
 
+      it("withdraws find's read claim for a tilde once HOME is reassigned", async () => {
+        expect(await externalsOf("HOME=-delete; find /etc ~")).toEqual(
+          await externalsOf('find /etc "$X"'),
+        );
+      });
+
       describe("a program that leaves both alone", () => {
         it.each([
           ['cat "$HOME/shadow"', join(homedir(), "shadow")],
@@ -200,6 +206,15 @@ describe("BashProgram", () => {
         ])("still projects %s", async (command, expected) => {
           expect((await externalsOf(command)).map(({ path }) => path)).toEqual([
             expected,
+          ]);
+        });
+
+        it("still proves sed's read of a tilde path", async () => {
+          expect(await externalsOf("sed -n p ~/x")).toEqual([
+            {
+              path: join(homedir(), "x"),
+              effect: { effect: "read", source: "core" },
+            },
           ]);
         });
 

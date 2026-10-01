@@ -63,6 +63,10 @@ export class WordReader {
   /** Read an argument node into the word the program receives. */
   argWord(node: TSNode): ArgWord {
     const value = this.text(node);
+    const tilde = this.variables.readTilde(leadingUnquotedText(node));
+    if (tilde?.known === false) {
+      return { value, computed: true, mayLeadWithDash: true };
+    }
     const computed =
       this.isComputed(node) || !isSpelledExactly(node, this.variables);
     return {
@@ -88,6 +92,18 @@ export class WordReader {
   spellsReboundHome(token: string): boolean {
     return this.variables.spellsReboundHome(token);
   }
+}
+
+/**
+ * The unquoted literal an argument opens with, where bash expands a tilde
+ * prefix: the word itself, or a concatenation's first part when that is a
+ * word. A tilde after any other part, or inside quotes, stays literal.
+ */
+function leadingUnquotedText(node: TSNode): string {
+  if (node.type === "word") return node.text;
+  if (node.type !== "concatenation") return "";
+  const first = node.child(0);
+  return first?.type === "word" ? first.text : "";
 }
 
 /**
