@@ -323,7 +323,7 @@ The classifiers, the probe, the option-value and statement-operand walkers, and 
 
 A predicate whose `false` lets a bash word skip a guard ("cannot lead with `-`", "is one word") is derived from bash's expansion rules, not the parse tree's node shapes: a quoted `"$@"`, an indirect `"${!a}"`, and a nameref (`declare -n`) each split with nothing in their node to show it, and `~` follows the inherited `HOME`, or on bash 3.2 (Pi's macOS `/bin/bash`) one the command reassigns.
 
-When a plan or test asserts a specific bash repro string, trace the token through the classifier first — an issue's headline repro can describe a symptom whose literal input never reaches the gate being changed.
+When a plan or test asserts a specific bash repro string, trace the token through the classifier and path normalization first — an issue's headline repro can describe a symptom whose literal input never reaches the gate being changed, and normalization re-expands a leading `~`/`$HOME` the classifier left literal.
 
 [#261]: https://github.com/gotgenes/pi-packages/issues/261
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
