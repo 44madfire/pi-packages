@@ -155,6 +155,12 @@ Third-party packages are maintained by their authors; review one before granting
 
 ## Upgrading
 
+### The major after 36.x — requires Pi 1.0.0
+
+The extension now requires `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` 1.0.0 or later.
+Upgrade Pi to 1.0.0 before upgrading this package; on an older Pi, stay on the 36.x line.
+No configuration change is needed.
+
 ### 22.0.0 — project config requires project trust
 
 Project-scoped configuration (the project `config.json` and project-agent frontmatter — both permission policy and runtime knobs such as `yoloMode`) is now loaded only when Pi reports the project as trusted.
