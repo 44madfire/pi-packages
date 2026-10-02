@@ -6,6 +6,8 @@ import {
   type ShellInvocation,
 } from "#src/access-intent/tool-kind";
 import {
+  type SessionApprovalSuggestion,
+  suggestExactSessionPattern,
   suggestPathSessionPattern,
   suggestSessionPattern,
 } from "#src/presentation/pattern-suggest";
@@ -57,6 +59,45 @@ function deriveSuggestionValue(
 }
 
 /**
+ * The surface a tool call is gated on.
+ *
+ * A shell invocation (native `bash` or an aliased shell tool) is gated on the
+ * `bash` surface, and a Pi MCP tool on the `mcp` surface — their session rule,
+ * decision value, and suggestion are shaped by that surface — while the
+ * invoked tool name is preserved in the prompt and review log so a user sees
+ * which tool actually ran (#574).
+ */
+function gateSurfaceOf(
+  toolName: string,
+  shell: ShellInvocation | null | undefined,
+): string {
+  if (shell) return "bash";
+  if (classifyToolKind(toolName) === "mcp-tool") return "mcp";
+  return toolName;
+}
+
+/**
+ * The session approval for a gate whose value is not a path.
+ *
+ * A Pi MCP tool is approved by its own full name, which is one of its `mcp`
+ * candidates: exactly the tool asked about, never the wider server prefix the
+ * proxy target heuristic would suggest.
+ */
+function suggestValueSessionPattern(
+  toolName: string,
+  gateSurface: string,
+  check: PermissionCheckResult,
+): SessionApprovalSuggestion {
+  if (classifyToolKind(toolName) === "mcp-tool") {
+    return suggestExactSessionPattern(gateSurface, toolName.trim());
+  }
+  return suggestSessionPattern(
+    gateSurface,
+    deriveSuggestionValue(gateSurface, check),
+  );
+}
+
+/**
  * Build a pure descriptor for the normal tool permission gate.
  *
  * Takes a pre-computed PermissionCheckResult (from checkPermission) and
@@ -69,11 +110,7 @@ export function describeToolGate(
   pathAccess?: ToolPathAccess,
   shell?: ShellInvocation | null,
 ): GateDescriptor {
-  // A shell invocation (native `bash` or an aliased shell tool) is gated on the
-  // `bash` surface — its session rule, decision value, and suggestion are
-  // bash-shaped — while the invoked tool name is preserved in the prompt and
-  // review log so a user sees which tool actually ran (#574).
-  const gateSurface = shell ? "bash" : tcc.toolName;
+  const gateSurface = gateSurfaceOf(tcc.toolName, shell);
 
   const permissionLogContext = formatter.getPermissionLogContext(
     check,
@@ -84,10 +121,7 @@ export function describeToolGate(
   // Compute session approval suggestion for the "for this session" option.
   const suggestion = pathAccess
     ? suggestPathSessionPattern(gateSurface, pathAccess.approvalPattern)
-    : suggestSessionPattern(
-        gateSurface,
-        deriveSuggestionValue(gateSurface, check),
-      );
+    : suggestValueSessionPattern(tcc.toolName, gateSurface, check);
 
   const payload = buildToolAskPayload({
     check,

@@ -3821,3 +3821,66 @@ describe("mcp surface — last-match-wins across candidates", () => {
     });
   });
 });
+
+describe("Pi MCP tools (mcp__<server>__<tool>) resolve on the mcp surface", () => {
+  const toolName = "mcp__danger_srv__wipe";
+  const wipe = (manager: PermissionManager): PermissionCheckResult =>
+    checkTool(manager, toolName, { target: "prod" });
+
+  function resolveWith(
+    permission: Record<string, unknown>,
+    servers: readonly string[] = ["danger-srv"],
+  ): PermissionCheckResult {
+    const { manager, cleanup } = createManagerWithConfig(permission, servers);
+    try {
+      return wipe(manager);
+    } finally {
+      cleanup();
+    }
+  }
+
+  it.each([
+    ["the configured spelling", { "danger-srv": "deny" }, "danger-srv"],
+    ["Pi's spelling", { danger_srv: "deny" }, "danger_srv"],
+    [
+      "a server-qualified tool",
+      { "danger-srv:wipe": "deny" },
+      "danger-srv:wipe",
+    ],
+    [
+      "the full Pi name",
+      { "mcp__danger_srv__*": "deny" },
+      "mcp__danger_srv__wipe",
+    ],
+  ])("denies on an mcp rule naming %s", (_label, rules, target) => {
+    const result = resolveWith({
+      "*": "allow",
+      mcp: { "*": "allow", ...rules },
+    });
+    expect(result.state).toBe("deny");
+    expect(result.source).toBe("mcp");
+    expect(result.target).toBe(target);
+    expect(result.toolName).toBe(toolName);
+  });
+
+  it("applies an mcp catch-all over the universal fallback", () => {
+    const result = resolveWith({ "*": "ask", mcp: "allow" });
+    expect(result.state).toBe("allow");
+    expect(result.source).toBe("mcp");
+  });
+
+  it("falls back to the universal default when no mcp rule matches", () => {
+    const result = resolveWith({ "*": "ask" });
+    expect(result.state).toBe("ask");
+    expect(result.source).toBe("default");
+    expect(result.target).toBe("danger-srv_wipe");
+  });
+
+  it("derives Pi's spelling for a server no mcp.json names", () => {
+    const result = resolveWith(
+      { "*": "allow", mcp: { danger_srv: "deny" } },
+      [],
+    );
+    expect(result.state).toBe("deny");
+  });
+});

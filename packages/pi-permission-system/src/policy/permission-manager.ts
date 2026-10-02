@@ -424,7 +424,7 @@ function derivePolicyLoaderOptions(
  *
  * - session          → "session" (always, all surfaces)
  * - mcp + default    → "default"
- * - mcp + other      → "mcp"
+ * - mcp + other      → "mcp" (the proxy and Pi MCP tools alike)
  * - special          → "special" (always)
  * - skill            → "skill" (always)
  * - bash             → "bash" (always)
@@ -441,6 +441,7 @@ function deriveSource(
 
   switch (classifyToolKind(toolName)) {
     case "mcp":
+    case "mcp-tool":
       return rule.layer === "default" ? "default" : "mcp";
     case "skill":
       return "skill";
@@ -449,7 +450,6 @@ function deriveSource(
     case "path":
       // Built-in path-bearing tools (read/write/edit/grep/find/ls).
       return "tool";
-    case "mcp-tool":
     case "extension":
       // Extension tools distinguish a synthesized-default match from a rule.
       return rule.layer === "default" ? "default" : "tool";

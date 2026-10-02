@@ -254,6 +254,41 @@ describe("normalizeInput — MCP surface", () => {
   });
 });
 
+describe("normalizeInput — a Pi MCP tool (mcp__<server>__<tool>)", () => {
+  it("resolves on the mcp surface under the Pi-name candidates, then 'mcp'", () => {
+    expect(
+      normalizeInput("mcp__danger_srv__wipe", { target: "prod" }, [
+        "danger-srv",
+      ]),
+    ).toEqual({
+      surface: "mcp",
+      values: [
+        "danger-srv_wipe",
+        "danger-srv:wipe",
+        "danger-srv",
+        "danger_srv_wipe",
+        "danger_srv:wipe",
+        "danger_srv",
+        "wipe",
+        "mcp__danger_srv__wipe",
+        "mcp_call",
+        "mcp",
+      ],
+      resultExtras: { target: "danger-srv_wipe" },
+    });
+  });
+
+  it("ignores the tool's input, which is the MCP arguments", () => {
+    expect(
+      normalizeInput(
+        "mcp__srv__x",
+        { tool: "other:thing", server: "other" },
+        [],
+      ).values,
+    ).toEqual(["srv_x", "srv:x", "srv", "x", "mcp__srv__x", "mcp_call", "mcp"]);
+  });
+});
+
 describe("buildAccessIntentForSurface", () => {
   const normalizer = new PathNormalizer(posixPathFlavor, "/test/project");
 

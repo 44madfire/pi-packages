@@ -133,12 +133,25 @@ interface McpKindFields {
 }
 
 /**
- * True when a resolved check concerns an MCP call — either the invoked tool is
- * `mcp`, or the winning rule matched on the `mcp` surface (`source`). The
- * `source` disjunct is why this cannot reduce to `classifyToolKind(toolName)`:
- * `deriveSource` can set `source` to `mcp` on a result whose `toolName` is a
- * server-qualified string.
+ * True when a resolved check concerns an MCP call — the invoked tool is the
+ * `mcp` proxy or a Pi MCP tool, or the winning rule matched on the `mcp`
+ * surface (`source`). The `source` disjunct is why this cannot reduce to
+ * `classifyToolKind(toolName)`: `deriveSource` can set `source` to `mcp` on a
+ * result whose `toolName` is a server-qualified string.
  */
 export function isMcpCheck(check: McpKindFields): boolean {
-  return check.source === "mcp" || classifyToolKind(check.toolName) === "mcp";
+  if (check.source === "mcp") return true;
+  const kind = classifyToolKind(check.toolName);
+  return kind === "mcp" || kind === "mcp-tool";
+}
+
+/**
+ * True when a check concerns an MCP call whose tool input is a request *about*
+ * the call (the proxy's `{ tool, server, args }`) rather than the MCP
+ * arguments themselves. Such input is not previewed — the target already
+ * names the call — while a Pi MCP tool's arguments are shown like any other
+ * tool's input.
+ */
+export function isProxyMcpCheck(check: McpKindFields): boolean {
+  return isMcpCheck(check) && classifyToolKind(check.toolName) !== "mcp-tool";
 }

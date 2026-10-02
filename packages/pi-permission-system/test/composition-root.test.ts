@@ -2571,3 +2571,73 @@ describe("configured prompt preferences reach the inline dialog", () => {
     });
   });
 });
+
+describe("Pi's built-in MCP tools are gated on the mcp surface", () => {
+  const wipe = "mcp__danger_srv__wipe";
+  const other = "mcp__danger_srv__list";
+
+  function writeGlobalMcpConfig(servers: Record<string, unknown>): void {
+    writeFileSync(
+      join(agentDir, "mcp.json"),
+      JSON.stringify({ mcpServers: servers }),
+      "utf8",
+    );
+  }
+
+  async function callTool(
+    pi: ReturnType<typeof makeFakePi>,
+    ctx: unknown,
+    toolName: string,
+  ): Promise<{ block?: true; reason?: string } | undefined> {
+    return (await pi.fire(
+      "tool_call",
+      { toolName, toolCallId: `${toolName}-call`, input: { target: "prod" } },
+      ctx,
+    )) as { block?: true; reason?: string } | undefined;
+  }
+
+  it("denies a call when an mcp rule denies its server by its mcp.json name", async () => {
+    writeGlobalConfig({
+      permission: { "*": "allow", mcp: { "*": "allow", "danger-srv": "deny" } },
+    });
+    writeGlobalMcpConfig({ "danger-srv": { command: "danger" } });
+    const cwd = mkdtempSync(join(tmpdir(), "pi-perm-mcp-tool-cwd-"));
+    const pi = makeFakePi({ toolNames: [wipe] });
+    piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+    const ctx = makeChildCtx(cwd, "mcp-tool-deny");
+    await fireSessionStart(pi, ctx);
+
+    const result = await callTool(pi, ctx, wipe);
+    expect(result?.block).toBe(true);
+
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  it("approves exactly the asked tool for the session", async () => {
+    writeGlobalConfig({ permission: { "*": "allow", mcp: { "*": "ask" } } });
+    writeGlobalMcpConfig({ "danger-srv": { command: "danger" } });
+    const cwd = mkdtempSync(join(tmpdir(), "pi-perm-mcp-tool-cwd-"));
+    const pi = makeFakePi({ toolNames: [wipe, other] });
+    piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+    const prompted: string[] = [];
+    const ctx = makeBaseCtx(cwd, "mcp-tool-session", {
+      select: async (
+        title: string,
+        options: string[],
+      ): Promise<string | undefined> => {
+        prompted.push(title);
+        return options[1];
+      },
+    });
+    await fireSessionStart(pi, ctx);
+
+    expect((await callTool(pi, ctx, wipe))?.block).toBeUndefined();
+    expect((await callTool(pi, ctx, wipe))?.block).toBeUndefined();
+    expect(prompted).toHaveLength(1);
+
+    await callTool(pi, ctx, other);
+    expect(prompted).toHaveLength(2);
+
+    rmSync(cwd, { recursive: true, force: true });
+  });
+});

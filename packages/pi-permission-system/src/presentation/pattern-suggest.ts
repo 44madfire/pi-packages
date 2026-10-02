@@ -233,9 +233,16 @@ export function suggestPathSessionPattern(
   surface: string,
   approvalPattern: string,
 ): SessionApprovalSuggestion {
-  return {
-    surface,
-    pattern: approvalPattern,
-    label: buildLabel(approvalPattern, surface),
-  };
+  return suggestExactSessionPattern(surface, approvalPattern);
+}
+
+/**
+ * Build the suggestion for a pattern the caller already holds verbatim, such
+ * as a Pi MCP tool's full name on the `mcp` surface: no wildcard is derived.
+ */
+export function suggestExactSessionPattern(
+  surface: string,
+  pattern: string,
+): SessionApprovalSuggestion {
+  return { surface, pattern, label: buildLabel(pattern, surface) };
 }

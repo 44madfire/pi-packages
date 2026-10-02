@@ -2,7 +2,10 @@ import { stripBashCommentLines } from "#src/access-intent/bash/bash-arity";
 import type { PathNormalizer } from "#src/path/path-normalizer";
 import { getNonEmptyString, toRecord } from "#src/value-guards";
 import type { AccessIntent, ResolvedAccessIntent } from "./access-intent";
-import { createMcpPermissionTargets } from "./mcp-targets";
+import {
+  createMcpPermissionTargets,
+  createPiMcpToolTargets,
+} from "./mcp-targets";
 import { PATH_SURFACES, surfaceFamilyOf } from "./path-surfaces";
 import { classifyToolKind } from "./tool-kind";
 
@@ -134,8 +137,8 @@ export interface NormalizedInput {
  *
  * @param toolName - Normalized (trimmed) tool name from the tool-call event.
  * @param input    - Raw input payload from the tool-call event.
- * @param configuredMcpServerNames - Ordered list of MCP server names from the
- *   global MCP config, used to derive server-qualified MCP targets.
+ * @param configuredMcpServerNames - Ordered list of MCP server names from
+ *   Pi's `mcp.json` files, used to derive server-qualified MCP targets.
  */
 export function normalizeInput(
   toolName: string,
@@ -172,25 +175,22 @@ export function normalizeInput(
     }
 
     // --- MCP ---
-    case "mcp": {
-      const mcpTargets = [
-        ...createMcpPermissionTargets(input, configuredMcpServerNames),
-        "mcp",
-      ];
-      const fallbackTarget = mcpTargets[0] ?? "mcp";
-      return {
-        surface: "mcp",
-        values: mcpTargets,
-        resultExtras: { target: fallbackTarget },
-      };
-    }
+    case "mcp":
+      return normalizeMcpTargets(
+        createMcpPermissionTargets(input, configuredMcpServerNames),
+      );
+
+    // A Pi MCP tool's identity is its name; its input is the MCP arguments.
+    case "mcp-tool":
+      return normalizeMcpTargets(
+        createPiMcpToolTargets(toolName, configuredMcpServerNames),
+      );
 
     // --- All other surfaces (path-bearing tools and extension tools) ---
     // Path-bearing tools with a present path never reach here — the gate emits
     // an access-path intent (#502). Missing-path and extension-tool cases both
     // collapse to the surface catch-all.
     case "path":
-    case "mcp-tool":
     case "extension":
       return {
         surface: toolName,
@@ -198,4 +198,18 @@ export function normalizeInput(
         resultExtras: {},
       };
   }
+}
+
+/**
+ * The `mcp` surface's normalized form: the derived candidates, then the
+ * surface-wide `mcp` name, reported under the most specific candidate until a
+ * rule match names the one it matched.
+ */
+function normalizeMcpTargets(targets: readonly string[]): NormalizedInput {
+  const values = [...targets, "mcp"];
+  return {
+    surface: "mcp",
+    values,
+    resultExtras: { target: values[0] },
+  };
 }
