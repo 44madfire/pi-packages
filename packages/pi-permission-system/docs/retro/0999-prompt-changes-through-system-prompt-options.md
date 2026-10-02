@@ -61,3 +61,17 @@ The pi-permission-system suite went from 5174 to 5139 tests (about 1600 lines of
   This session runs the published handler, so the check needs a fresh Pi session; do it before or at `/ship`.
 - Not changed: `packages/pi-subagents/docs/decisions/0008-inherited-region-is-shared-parts.md` item 2 still says pi-permission-system implements tail-placed tool prose in ADR 0014.
   pi-subagents ADR 0011 already records the transition, so it is a cross-package boy-scout edit, not this issue's.
+
+## Stage: Sync (worktree) (2026-10-02T04:51:45Z)
+
+### Session summary
+
+Pre-push checks passed (`pnpm run lint`, `pnpm fallow dead-code`).
+The plan's marker is `**Release:** ship now — batch "pi-1.0 prompt options" tail`, so `/ship` should name pi-permission-system in the dispatch: #970's unreleased `feat!:` floor raise rides the same major, and #1009 already shipped as pi-subagents 21.9.1.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-999--/2026-10-01T21-08-38-613Z_01a0f94c-3e55-7379-a632-628d5e4fcf4a.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The plan's end-to-end check (fresh Pi session, one `codemode` MCP server, count `<mcp_servers>` in the first request) has not run; do it before or at `/ship`.
+- The accepted pre-completion WARN is the relaxation-turn gap in skill path-match entries, recorded in the TDD stage note.
