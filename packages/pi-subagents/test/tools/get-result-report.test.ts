@@ -238,4 +238,32 @@ describe("formatAgentReport", () => {
 		const text = formatAgentReport(makeReport({ transcriptPath: undefined }));
 		expect(text).not.toContain("Full transcript available at:");
 	});
+
+	describe("an agent resumed while the call waited", () => {
+		it("closes the outcome by saying the agent is running again, before the transcript pointer", () => {
+			const text = formatAgentReport(
+				makeReport({ resumedWhileWaiting: true, transcriptPath: "/tasks/agent.jsonl" }),
+			);
+			expect(text).toBe(
+				"Agent: agent-1\n" +
+					"Type: General | Status: completed | Tool uses: 3 | Duration: 12.3s\n" +
+					"Description: Investigate the bug\n\n" +
+					"All done.\n\n" +
+					"This agent was resumed before this wait returned and is running again \u2014 " +
+					"call get_subagent_result for that run's outcome.\n\n" +
+					"Full transcript available at: /tasks/agent.jsonl",
+			);
+		});
+
+		it("adds nothing for an agent that was not resumed", () => {
+			const text = formatAgentReport(makeReport({ transcriptPath: "/tasks/agent.jsonl" }));
+			expect(text).toBe(
+				"Agent: agent-1\n" +
+					"Type: General | Status: completed | Tool uses: 3 | Duration: 12.3s\n" +
+					"Description: Investigate the bug\n\n" +
+					"All done.\n\n" +
+					"Full transcript available at: /tasks/agent.jsonl",
+			);
+		});
+	});
 });

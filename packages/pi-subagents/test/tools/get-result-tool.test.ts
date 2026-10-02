@@ -153,6 +153,86 @@ describe("GetResultTool — carrier claim", () => {
 	});
 });
 
+describe("GetResultTool — a wait a resume superseded", () => {
+	/**
+	 * An agent whose first run asks a question and ends with `first result`, and
+	 * a consumer that resumes it the moment that run settles, before the waiter's
+	 * continuation runs, as a subagents:completed handler can.
+	 */
+	function supersededAgent() {
+		const sessionStub = createSubagentSessionStub();
+		let ask: ((question: string) => void) | undefined;
+		sessionStub.runTurnLoop.mockImplementation(() => {
+			ask?.("Which config?");
+			return Promise.resolve({ responseText: "first result", aborted: false, steered: false });
+		});
+		const resumed = Promise.withResolvers<string>();
+		sessionStub.resumeTurnLoop.mockReturnValue(resumed.promise);
+		const record = createTestSubagent({
+			status: "running",
+			completedAt: undefined,
+			execution: makeStubExecution({
+				createSubagentSession: async (params) => {
+					ask = params.askParent;
+					return toSubagentSession(sessionStub);
+				},
+				observer: {
+					onRunFinished: (agent) => {
+						agent.claim();
+						void agent.resume("The project one.");
+					},
+				},
+			}),
+		});
+		record.start();
+		return { record, finishResume: () => resumed.resolve("second result") };
+	}
+
+	it("reports the run it waited for, and that the agent is running again", async () => {
+		const { record, finishResume } = supersededAgent();
+
+		const result = await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
+
+		const text = result.content[0].text;
+		// Duration and the agent id vary per run, so the stable lines are checked.
+		expect(text).toContain("Status: completed |");
+		expect(text).toContain("\n\nfirst result\n\n");
+		expect(text).toContain("This agent was resumed before this wait returned and is running again");
+		finishResume();
+		await record.promise;
+	});
+
+	it("drops the question the resume is already answering", async () => {
+		const { record, finishResume } = supersededAgent();
+
+		const result = await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
+
+		expect(result.content[0].text).not.toContain("Which config?");
+		finishResume();
+		await record.promise;
+	});
+
+	it("leaves the resumed run's outcome uncollected", async () => {
+		const { record, finishResume } = supersededAgent();
+
+		await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
+
+		expect(record.consumed).toBe(false);
+		finishResume();
+		await record.promise;
+	});
+
+	it("summarises the run it waited for in the TUI details", async () => {
+		const { record, finishResume } = supersededAgent();
+
+		const result = await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
+
+		expect([result.details?.status, result.details?.preview]).toEqual(["completed", "first result"]);
+		finishResume();
+		await record.promise;
+	});
+});
+
 describe("GetResultTool", () => {
 	it("returns tool definition with correct name", () => {
 		const tool = new GetResultTool(makeManager(), testRegistry);
