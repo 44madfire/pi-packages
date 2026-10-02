@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.9.4](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.3...pi-subagents-v21.9.4) (2026-10-02)
+
+
+### Bug Fixes
+
+* **pi-subagents:** keep a resume's claim when a get_subagent_result wait wakes after it starts ([dae195a](https://github.com/gotgenes/pi-packages/commit/dae195a022a44dbbe3e0b4a93525500809b3a2a4)), closes [#1015](https://github.com/gotgenes/pi-packages/issues/1015)
+* **pi-subagents:** report the run a get_subagent_result wait waited for when a resume starts first ([b10dccd](https://github.com/gotgenes/pi-packages/commit/b10dccd5d00c1d6aa13d1b2980844112aba8d962)), closes [#1015](https://github.com/gotgenes/pi-packages/issues/1015)
+
 ## [21.9.3](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.2...pi-subagents-v21.9.3) (2026-10-02)
 
 
