@@ -57,3 +57,16 @@ The pi-subagents suite went from 1898 to 1915 tests (+17).
   It noted one pre-existing race, which this change does not make worse.
   A `get_subagent_result(wait: true)` waiter that wakes after a resume has begun calls `release()` unconditionally and could clear a foreground resume's claim.
   That needs two concurrent parent tool calls on one agent; I have not filed it.
+
+## Stage: Sync (worktree) (2026-10-02T19:47:14Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` both pass on the worktree.
+The plan's marker is `**Release:** ship independently`; the follow-ups #1012 and #1013 are filed and #988 is folded in, so `/ship` should close #987 and #988.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-987--/2026-10-02T19-06-50-447Z_01a0fe03-16ce-75b8-8d8f-38b9b63ed1e4.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The pre-completion reviewer's unfiled observation (a `get_subagent_result` waiter waking after a resume began can clear a foreground resume's claim) is worth a look at the final retro.
