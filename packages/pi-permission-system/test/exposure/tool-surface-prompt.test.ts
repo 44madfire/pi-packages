@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   renderToolSurface,
+  renderToolSurfaceSections,
   type ToolSurfaceInputs,
 } from "#src/exposure/tool-surface-prompt";
 
@@ -162,6 +163,40 @@ function projectContextSection(instructions: readonly string[]): string[] {
     "</project_context>",
   ];
 }
+
+describe("renderToolSurfaceSections", () => {
+  it("states the allowed tools and their rules as untagged section contents", () => {
+    expect(
+      renderToolSurfaceSections(
+        inputs({
+          allowedTools: ["read", "edit"],
+          guidelinesByTool: new Map([["read", ["Read before editing"]]]),
+        }),
+      ),
+    ).toEqual({
+      tools: [
+        "- read: Read file contents",
+        "- edit: Make precise file edits with exact text replacement",
+      ].join("\n"),
+      rules: [
+        "- Read before editing",
+        "- Be concise in your responses",
+        "- Show file paths clearly when working with files",
+      ].join("\n"),
+    });
+  });
+
+  it("omits the tools section when no allowed tool has a snippet", () => {
+    expect(
+      renderToolSurfaceSections(inputs({ allowedTools: ["undescribed"] })),
+    ).toEqual({
+      rules: [
+        "- Be concise in your responses",
+        "- Show file paths clearly when working with files",
+      ].join("\n"),
+    });
+  });
+});
 
 describe("renderToolSurface", () => {
   describe("removing what Pi wrote", () => {

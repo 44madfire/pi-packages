@@ -123,6 +123,34 @@ const UNIVERSAL_GUIDELINES: readonly string[] = [
 ];
 
 /**
+ * This session's tool surface as the contents of Pi's `tools` and `rules`
+ * prompt sections, untagged: Pi wraps each `sections` entry in its own tags.
+ */
+export interface ToolSurfaceSections {
+  /** `- name: snippet` lines; absent when no allowed tool has a snippet. */
+  readonly tools?: string;
+  /** `- rule` lines, in `buildSystemPrompt`'s order. */
+  readonly rules: string;
+}
+
+/**
+ * Render this session's tool surface as section contents, for a node that
+ * states it through `systemPromptOptions.sections`.
+ *
+ * The `tools` section is omitted when no allowed tool has a snippet, as Pi
+ * lists a tool only when it has one.
+ */
+export function renderToolSurfaceSections(
+  inputs: ToolSurfaceInputs,
+): ToolSurfaceSections {
+  const bullets = toolSurfaceBullets(inputs);
+  const rules = bullets.rules.join("\n");
+  return bullets.tools.length > 0
+    ? { tools: bullets.tools.join("\n"), rules }
+    : { rules };
+}
+
+/**
  * Relocate the tool surface: drop the sections Pi wrote, append this session's.
  *
  * The result always carries a tool-surface block, so a child whose inherited
