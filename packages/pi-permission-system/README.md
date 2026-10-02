@@ -75,6 +75,7 @@ See [docs/configuration.md](docs/configuration.md#inline-permission-dialog-tui) 
 The `path` surface is a cross-cutting gate that applies to **all** file access — Pi tools, bash commands, MCP calls, and extension tools alike.
 Extension and MCP tools that operate on paths (via `input.path`, MCP's `input.arguments.path`, or a registered access extractor) are gated by default, so a `path` deny cannot be overridden by a per-tool allow — making it the right place to protect sensitive files like `.env` or `~/.ssh/*` from every tool at once.
 A `path` pattern matches both the path as the agent references it and its canonical (symlink-resolved) form, so a deny still fires when a symlink aliases a sensitive target.
+For Pi's built-in file tools, "the path as the agent references it" is the file the tool actually opens: Pi's resolver decodes a `file://` URL, turns Unicode spaces into spaces, and for `read` falls back to macOS's curly-quote and screenshot spellings, so a deny on the file on disk fires however the path was spelled.
 
 For per-tool path patterns (`read`, `write`, `edit`, `find`, `grep`, `ls`), patterns are matched against the file path from `input.path`.
 This lets you express rules like "allow reads but deny `.env` files" at the individual tool level.

@@ -687,6 +687,12 @@ If it denies, the command is blocked without reaching subsequent gates — no wa
 
 Path patterns match both the path **as the agent references it** and its canonical (symlink-resolved) form, so a deny on a sensitive spelling cannot be evaded through a symlink alias (see Symlinked paths below).
 
+For Pi's built-in file tools (`read`, `write`, `edit`, `ls`, `find`, `grep`), the path the agent references is the file the tool opens, not the literal argument.
+Pi resolves that argument itself before touching the disk: it decodes a `file://` URL, turns Unicode spaces into ordinary spaces, translates a Git Bash, Cygwin, or WSL drive path (`/c/…`, `/cygdrive/c/…`, `/mnt/c/…`) on Windows, and for `read` alone falls back to the macOS screenshot (`\u202FPM`), NFD, and curly-quote (`’`) spellings of a name that does not exist.
+The gates match the file that resolution names, so a deny keyed on the file on disk fires however it was spelled, and an ask shows the file under "resolves to" when the spelling was rewritten.
+Pi does not expand `$HOME` or strip quotes from a tool's path, so neither do these gates: `read $HOME/.ssh/config` names `<cwd>/$HOME/.ssh/config`, the file the tool would open.
+Extension and MCP tool paths keep their literal spelling.
+
 For bash commands, the extension extracts path-candidate tokens from the command (dot-files like `.env`, relative paths like `src/foo.ts`, and absolute paths) and evaluates each against the path rules.
 The most restrictive result across all tokens determines the outcome.
 When the current working directory is known, relative bash tokens are matched with cwd-normalized policy values, resolved against the effective directory after literal `cd` commands; a token after a non-literal `cd` (e.g. `cd "$DIR"`) stays conservative and matches only its literal form.
@@ -825,7 +831,7 @@ The governing record is [ADR 0009](https://github.com/gotgenes/pi-packages/blob/
 
 #### Symlinked paths
 
-A `path`, `external_directory`, or per-tool file-pattern rule (`read`/`write`/`edit`/`grep`/`find`/`ls`) matches the path **as the agent references it** and the OS-resolved (symlink-followed) path.
+A `path`, `external_directory`, or per-tool file-pattern rule (`read`/`write`/`edit`/`grep`/`find`/`ls`) matches the path **as the agent references it** (for a built-in file tool, the file Pi opens) and the OS-resolved (symlink-followed) path.
 This matters on macOS, where `/tmp` is a symlink to `/private/tmp`: a rule keyed on `/tmp/*` allows access via `/tmp` even though the access resolves to `/private/tmp`, and a rule keyed on `/private/tmp/*` works too.
 
 ```jsonc
