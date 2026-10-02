@@ -111,7 +111,7 @@ When the issue proposes a new aggregate, report, or roll-up for human/agent cons
 Classify whether the change is breaking — independently of whether it is ambiguous.
 A change is breaking if it alters the observable behavior, output shape, or default of existing code or config on upgrade without a user edit.
 A bug fix that changes a default value is breaking, even when the old behavior was wrong.
-If breaking, state it in Goals and use `feat!:`/`fix!:` with a `BREAKING CHANGE:` footer.
+If breaking, state it in Goals and use `fix(<pkg>)!:`/`feat(<pkg>)!:` (the `!` after the scope) with a `BREAKING CHANGE:` footer.
 When the change alters a documented contract (an event's timing guarantee, a default, an output shape), state the classification in the gate's substance message even when an ADR already settled it.
 A settled call and an unasked one look identical to the operator.
 
@@ -235,6 +235,7 @@ Then an H1 title (e.g., `# <short descriptive title>`) — required by markdownl
   Name the constituency each invariant serves and confirm it still holds for them — an invariant can be dead for one consumer and load-bearing for another, and a design that improves the loudest one regresses the original.
 - **TDD Order** — numbered red→green→verify→commit cycles.
   Each item names the test surface, what's covered, and the suggested commit message (`test:`, `feat:`, `feat!:`, `fix:`, `docs:`).
+  Open each test file a step names — one that mocks the layer under change pins nothing about it.
   A suggested `feat:`/`fix:` subject names the observable outcome, not the seam it edits — it ships to the changelog verbatim.
   Type each step by what a user can observe once it lands (see the `git-workflow` skill): a step that adds a module no consumer references yet is `refactor:`, not `feat:`, so `cliff.toml` skips it and the change reaches the changelog once, on the step that wires it up.
   Each item that adds tests also names its **killing mutation**: the one-line change to the code under test that must turn the step's new tests red.

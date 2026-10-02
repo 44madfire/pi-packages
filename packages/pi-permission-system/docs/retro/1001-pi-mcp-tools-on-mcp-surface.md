@@ -75,3 +75,48 @@ No follow-ups beyond #1014, already filed and dispositioned.
 ### Observations
 
 The session covered planning, TDD, and the pre-completion review in one process; the reviewer's round-1 FAIL (a moved `mcp__` key dropping a deny on a non-Pi tool) is the main thing for the retro to look at.
+
+## Stage: Final Retrospective (2026-10-02T20:55:08Z)
+
+### Session summary
+
+The peer worktree planned, implemented, and synced #1001; the root fast-forward-merged it, CI passed, #1001 closed, and `pi-permission-system-v38.0.0` released.
+The ship itself had no friction: `merge-base --is-ancestor` predicted the fast-forward, lint and `fallow dead-code` passed on the merged tree, and every close-comment SHA was resolved before publishing.
+The issue was out of scope for Phase 15, so it closes no roadmap step.
+
+### Observations
+
+#### What went well
+
+- The planning spike against `createManagerWithConfig` measured the forwarded-`mcp` bypass (`danger: deny` resolving `allow` through `mcp_status`) instead of arguing it, and the plan folded the fix in with an explicit operator flag.
+- The pre-completion reviewer's round-1 FAIL caught a real regression the suite was green on: moving every top-level `mcp__` key dropped a deny on a non-Pi tool named `mcp__foo`.
+  The fixup was autosquashed into the relocation commit and a delta review passed, so the defect never reached `main`.
+- Every TDD step ran its killing mutations through a saved green copy and a `cmp` restore, and one surviving mutation (first-vs-longest server) was caught and the test rewritten.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` — the plan wrote step 5's header as `fix!(pi-permission-system):`, which the commit grammar rejects; the `git-workflow` skill forbids it, but planning never loaded that skill.
+  Self-identified at TDD commit time.
+  Impact: none here; `0452-bash-gate-fail-closed-hardening.md` carries the same spelling, so it recurs, and `plan-issue.md` itself writes the unscoped `feat!:`/`fix!:` form that invites it.
+- `missing-context` — the plan named `before-agent-start.test.ts` and `forwarded-request-server.test.ts` as test sites; both mock the layer under change.
+  `plan-issue.md` already says to open each named test, but only inside the **Invariants at risk** bullet, not the **TDD Order** bullet where these were named (the #806 retro added the clause there).
+  Impact: a mid-TDD redirect to `permission-manager-unified.test.ts`, no rework.
+- `premature-convergence` — the relocation design assumed every top-level `mcp__` key names a Pi MCP tool; `plan-issue.md`'s rule to enumerate a mechanism's inputs rather than assume an input shape is absent already covers this.
+  Impact: one fixup commit, one docs commit, a second review round.
+- `other` — the TDD stage note's em-dash arrived as a form feed; the documented `@MD@` placeholder substitution repaired it in one call.
+
+#### What caused friction (user side)
+
+- The operator's context arrived across three planning rounds: whether the gap was long-standing, whether to drop proxy support, and a belief that Pi's MCP was provisional that the Earendil post did not support.
+  Each round was productive, but stating the phase intent (take over the MCP surface after a narrow fix) and the provisional premise up front would have collapsed two of them.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5` (judgment-heavy design, appropriate); sync ran on `claude-sonnet-5-5` (mechanical, appropriate).
+  All three subagents (the `tidy-first-assessor` and two `pre-completion-reviewer` rounds) ran on `claude-sonnet-5-5`, and the reviewer still caught the round-1 defect.
+- **Feedback-loop gap analysis** — no gap: each TDD step ran targeted `vitest` files and `check` before its commit, and the full suite plus `lint` ran before each `fix:` commit.
+
+### Changes made
+
+1. `.pi/prompts/plan-issue.md`: the breaking-change instruction now spells the scoped header `fix(<pkg>)!:`/`feat(<pkg>)!:`, with the `!` after the scope.
+2. `.pi/prompts/plan-issue.md`: the **TDD Order** bullet now says to open each test file a step names, since one that mocks the layer under change pins nothing about it.
