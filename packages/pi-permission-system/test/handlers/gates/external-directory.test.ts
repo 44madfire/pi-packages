@@ -434,3 +434,49 @@ describe("describeExternalDirectoryGate — extension and MCP tools (#352)", () 
     ).toEqual(["c:\\other\\data\\*"]);
   });
 });
+
+describe("describeExternalDirectoryGate — infrastructure bypass under a rule", () => {
+  const SKILL = "/test/agent/git/x/SKILL.md";
+  const INFRA = ["/test/agent/git"];
+
+  function gateUnder(check: Parameters<typeof makeCheckResult>[0]) {
+    return gateUnderTest(
+      makeTcc({ toolName: "read", input: { path: SKILL } }),
+      INFRA,
+      undefined,
+      makeResolver(
+        makeCheckResult({ toolName: "external_directory_read", ...check }),
+      ),
+    );
+  }
+
+  it("yields to a deny whose pattern names the path", () => {
+    const result = gateUnder({ state: "deny", matchedPattern: SKILL });
+    expect(isGateDescriptor(result)).toBe(true);
+    expect((result as GateDescriptor).preCheck?.state).toBe("deny");
+  });
+
+  it('keeps the bypass under a catch-all "*" deny', () => {
+    const result = gateUnder({ state: "deny", matchedPattern: "*" });
+    expect(isGateBypass(result)).toBe(true);
+    expect((result as GateBypass).decidedBy).toEqual({
+      kind: "infrastructure_read",
+    });
+  });
+
+  it('keeps the bypass under a catch-all written "**"', () => {
+    // `**` compiles identically to `*`, so it is the same catch-all.
+    const result = gateUnder({ state: "deny", matchedPattern: "**" });
+    expect(isGateBypass(result)).toBe(true);
+  });
+
+  it("keeps the bypass under the universal fallback deny", () => {
+    const result = gateUnder({ state: "deny", matchedPattern: undefined });
+    expect(isGateBypass(result)).toBe(true);
+  });
+
+  it("keeps the bypass under a targeted ask", () => {
+    const result = gateUnder({ state: "ask", matchedPattern: SKILL });
+    expect(isGateBypass(result)).toBe(true);
+  });
+});

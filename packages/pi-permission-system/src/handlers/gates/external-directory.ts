@@ -6,6 +6,7 @@ import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import { buildExternalDirectoryAskPayload } from "#src/presentation/path-ask-payload";
 import { SessionApproval } from "#src/session/session-approval";
 import type { ToolAccessExtractorLookup } from "#src/tool-input/tool-access-extractor-registry";
+import type { PermissionCheckResult } from "#src/types";
 import type { GateResult } from "./descriptor";
 import { resolveExternalDirectoryPolicy } from "./external-directory-policy";
 import {
@@ -20,7 +21,8 @@ import type { ToolCallContext } from "./types";
  *
  * Returns `null` when the gate does not apply (no CWD, tool is not
  * path-bearing, or path is inside the working directory).
- * Returns a `GateBypass` for Pi infrastructure reads.
+ * Returns a `GateBypass` for Pi infrastructure reads, unless a deny rule
+ * naming the path outranks it.
  * Returns a `GateDescriptor` for external paths needing a permission check.
  */
 export function describeExternalDirectoryGate(
@@ -65,7 +67,10 @@ export function describeExternalDirectoryGate(
   );
 
   // ── Pi infrastructure read bypass ──────────────────────────────────────
-  if (normalizer.isInfrastructureRead(tcc.toolName, accessPath, infraScope)) {
+  if (
+    normalizer.isInfrastructureRead(tcc.toolName, accessPath, infraScope) &&
+    !isTargetedDeny(preCheck)
+  ) {
     return {
       action: "allow",
       // Containment allowed this, not a rule the operator wrote.
@@ -122,3 +127,21 @@ export function describeExternalDirectoryGate(
     },
   };
 }
+
+/**
+ * True for a deny from a rule naming this path: not the family's catch-all
+ * (`"*"`, or `"**"`, which compiles identically), and not the universal
+ * fallback (no matched pattern). Only such a deny
+ * outranks the Pi infrastructure read bypass, so a deny-by-default policy keeps
+ * its skill and package reads.
+ */
+function isTargetedDeny(check: PermissionCheckResult): boolean {
+  return (
+    check.state === "deny" &&
+    check.matchedPattern !== undefined &&
+    !CATCH_ALL_PATTERN.test(check.matchedPattern)
+  );
+}
+
+/** A pattern of wildcards alone, which matches every path. */
+const CATCH_ALL_PATTERN = /^\*+$/;

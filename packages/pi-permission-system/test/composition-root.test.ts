@@ -17,6 +17,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -2639,5 +2640,55 @@ describe("Pi's built-in MCP tools are gated on the mcp surface", () => {
     expect(prompted).toHaveLength(2);
 
     rmSync(cwd, { recursive: true, force: true });
+  });
+});
+
+describe("Pi infrastructure reads", () => {
+  // The infrastructure list is not canonicalized (#1018), while the gate checks
+  // the canonical path, so a tmpdir behind a symlink (macOS `/var`) would never
+  // match: run against the real path.
+  beforeEach(() => {
+    agentDir = realpathSync(agentDir);
+    vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
+  });
+
+  async function readOutcome(
+    permission: Record<string, unknown>,
+    target: string,
+  ): Promise<{ block?: true; reason?: string } | undefined> {
+    const cwd = mkdtempSync(join(tmpdir(), "pi-perm-infra-cwd-"));
+    writeGlobalConfig({ permission });
+    const pi = makeFakePi({ events: createEventBus() });
+    piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+    const ctx = makeChildCtx(cwd, `infra-${basename(target)}`);
+    await fireSessionStart(pi, ctx);
+    const result = (await pi.fire(
+      "tool_call",
+      { name: "read", input: { path: target }, toolCallId: "tc-infra" },
+      ctx,
+    )) as { block?: true; reason?: string } | undefined;
+    rmSync(cwd, { recursive: true, force: true });
+    return result;
+  }
+
+  describe("under a targeted external_directory deny", () => {
+    it("blocks a read the bypass would otherwise allow", async () => {
+      const skill = join(agentDir, "git", "x", "SKILL.md");
+      const result = await readOutcome(
+        { "*": "allow", external_directory_read: { [skill]: "deny" } },
+        skill,
+      );
+      expect(result?.block).toBe(true);
+      expect(result?.reason).toContain("external_directory_read");
+    });
+
+    it("keeps the bypass under a catch-all deny", async () => {
+      const skill = join(agentDir, "git", "x", "SKILL.md");
+      const result = await readOutcome(
+        { "*": "allow", external_directory: { "*": "deny" } },
+        skill,
+      );
+      expect(result?.block).toBeUndefined();
+    });
   });
 });
