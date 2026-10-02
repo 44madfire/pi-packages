@@ -30,7 +30,7 @@ import {
   isSurfaceFullyDenied,
   rewriteAsksToYolo,
 } from "./rule";
-import { mergeScopesWithOrigins } from "./scope-merge";
+import { type MergedScopes, mergeScopesWithOrigins } from "./scope-merge";
 import {
   composeRuleset,
   synthesizeBaseline,
@@ -201,21 +201,7 @@ export class PermissionManager implements ScopedPermissionManager {
     const universalFallbackOrigin: RuleOrigin =
       origins.get("*")?.get("*") ?? "builtin";
 
-    // Build config rules from everything except the universal "*" key.
-    const permissionWithoutUniversal: FlatPermissionConfig = Object.fromEntries(
-      Object.entries(mergedPermission).filter(([k]) => k !== "*"),
-    );
-
-    // Normalize to config rules, tagged with "config" layer and their origin.
-    const configRules: Ruleset = normalizeFlatConfig(
-      permissionWithoutUniversal,
-    ).map(
-      (r): Rule => ({
-        ...r,
-        layer: "config",
-        origin: origins.get(r.surface)?.get(r.pattern) ?? "builtin",
-      }),
-    );
+    const configRules = buildConfigRules(mergedPermission, origins);
 
     const composedRules = composeRuleset(
       synthesizeDefaults(universalFallback, universalFallbackOrigin),
@@ -387,6 +373,27 @@ function buildCheckResult(
     origin: rule.origin,
     ...extras,
   };
+}
+
+/**
+ * Build the config-layer rules from the merged permission object: every key
+ * except the universal `"*"` (which feeds `synthesizeDefaults` only), each
+ * rule tagged with the `config` layer and the scope that contributed it.
+ */
+function buildConfigRules(
+  mergedPermission: FlatPermissionConfig,
+  origins: MergedScopes["origins"],
+): Ruleset {
+  const permissionWithoutUniversal: FlatPermissionConfig = Object.fromEntries(
+    Object.entries(mergedPermission).filter(([k]) => k !== "*"),
+  );
+  return normalizeFlatConfig(permissionWithoutUniversal).map(
+    (r): Rule => ({
+      ...r,
+      layer: "config",
+      origin: origins.get(r.surface)?.get(r.pattern) ?? "builtin",
+    }),
+  );
 }
 
 /**
