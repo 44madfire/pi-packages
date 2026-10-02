@@ -42,3 +42,16 @@ Every named killing mutation went red: `"accent"` → `"dim"` failed the vitest 
   The only finding was that it did not capture `fallow decision-surface` output.
   Re-run here: it surfaced 3 `public-api-contract` decisions, for `display.ts`, `renderer.ts`, and `get-result-renderer.ts`.
   All their consumers are inside the package and compile under `tsc`, and none of the three modules is in a public entry.
+
+## Stage: Sync (worktree) (2026-10-02T17:26:53Z)
+
+### Session summary
+
+Pre-push checks passed on the branch: `pnpm run lint` and `pnpm fallow dead-code` both exit 0.
+The plan's `**Release:**` marker is `ship independently`, and no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1008--/2026-10-02T15-50-13-386Z_01a0fd4f-1489-7268-840e-fa28aa367ee3.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The one plan deviation (the `get-result-renderer.ts` `subLine` parameter) is recorded in the TDD stage note and the `refactor:` commit body.
