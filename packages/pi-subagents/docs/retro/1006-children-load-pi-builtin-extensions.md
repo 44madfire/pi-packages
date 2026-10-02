@@ -28,3 +28,31 @@ Filed #1017 for the pre-0.86 prompt-renderer arms the new floor makes dead.
 - The tidy-first assessor recommended the `SubagentSessionDeps` resolver (`listParentToolNames`) over threading the parent's tools through `AssemblerContext`, plus two prep steps: the #1004 type fix and a deps-helper default.
   Both prep steps are in the TDD Order.
 - No open improvement phase, so `roadmap-fit` exited at step 1 for #1017.
+
+## Stage: Implementation — TDD (2026-10-02T23:37:37Z)
+
+### Session summary
+
+Implemented all eight plan steps in seven commits:
+
+- the Pi 1.0.0 floor (breaking)
+- the name-to-built-in table, then children loading the built-ins their `tools:` names
+- `mcp__` pattern expansion, then its wiring through `listParentToolNames`
+- the docs
+
+The pi-subagents suite went from 1937 to 1962 tests (+25).
+
+### Observations
+
+- **Deviation:** plan step 1 (the #1004 `ExecuteCtx` cast) could not land ahead of the bump, because at 0.84.4 the cast is redundant and `no-unnecessary-type-assertion` rejects it.
+  It was folded into the `feat(pi-subagents)!: require Pi 1.0.0 or later` commit, along with one more cast in `subagent-session.ts` that lint flagged as unnecessary under 1.0.0 types.
+  A planning-time check of "type-checks on both SDKs" should also run lint on both.
+- Every planned killing mutation went red as predicted.
+  The first attempt at step 3's mutations was confounded: the `cp` green-copy ran in the same tool batch as the mutating `Edit`, captured the mutation, and "restored" a mutated file.
+  It was caught because a restored file still failed; the rule in `/tdd-plan` (run the `cp` in its own call) is the right one.
+- The `debugNote` for an unmatched pattern has no test; `unmatchedPatterns` itself is covered in `mcp-tool-patterns.test.ts`.
+- Pre-completion reviewer: WARN, then PASS on the delta.
+  The WARN raised three doc nits, all fixed in `docs(pi-subagents): correct the peer scope and MCP details the review flagged`:
+  - `comparison-with-upstream.md` still listed the old peer scope
+  - MCP starts only *enabled* servers
+  - the MCP hash suffix also applies on name collisions
