@@ -21,7 +21,8 @@ import { classifyToolKind } from "./tool-kind";
  * For a path-shaped surface (`path`, `external_directory`, or a path-bearing
  * tool) carrying a non-empty value, it builds an `AccessPath` and emits an
  * `access-path` intent, so the resolver matches the lexical aliases ∪ canonical
- * (symlink-resolved) set — at parity with the gates (#486, #502). An `mcp`
+ * (symlink-resolved) set — at parity with the gates (#486, #502); a built-in
+ * tool surface resolves the value to the file that tool would open. An `mcp`
  * query carrying a value evaluates that value as-is: an MCP target is already
  * a candidate name, and rebuilding proxy input from it would derive only the
  * status probe `mcp_status`. Every other surface, and any value-less
@@ -39,7 +40,7 @@ export function buildAccessIntentForSurface(
     return {
       kind: "access-path",
       surface,
-      path: normalizer.forPath(pathValue),
+      path: normalizer.forToolPath(surface, pathValue),
       agentName,
     };
   }

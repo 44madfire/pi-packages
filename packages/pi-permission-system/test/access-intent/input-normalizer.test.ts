@@ -12,10 +12,14 @@ vi.mock("node:os", () => ({
 const realpathSync = vi.hoisted(() =>
   vi.fn<(path: string) => string>((p) => p),
 );
-vi.mock("node:fs", () => ({
-  realpathSync,
-  default: { realpathSync },
-}));
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    realpathSync,
+    default: { ...actual, realpathSync },
+  };
+});
 
 import {
   buildAccessIntentForSurface,
@@ -336,6 +340,30 @@ describe("buildAccessIntentForSurface", () => {
       expect(intent.surface).toBe("read");
       expect(intent.path.value()).toBe("/test/project/.env");
     }
+  });
+
+  it("resolves a built-in tool surface's value to the file the tool opens", () => {
+    const intent = buildAccessIntentForSurface(
+      "read",
+      "file:///test/project/.env",
+      normalizer,
+      undefined,
+    );
+    expect(intent.kind === "access-path" && intent.path.value()).toBe(
+      "/test/project/.env",
+    );
+  });
+
+  it("keeps the path surface's value as typed", () => {
+    const intent = buildAccessIntentForSurface(
+      "path",
+      "file:///test/project/.env",
+      normalizer,
+      undefined,
+    );
+    expect(intent.kind === "access-path" && intent.path.value()).toBe(
+      "/test/project/file:/test/project/.env",
+    );
   });
 
   it("emits a tool intent for a non-path surface (bash)", () => {
