@@ -1839,7 +1839,7 @@ describe("tool-surface prose under a custom system prompt", () => {
   // always a custom one, still states its own tools.
   const custom = "You are my personal coding assistant.";
 
-  function customPromptEvent(cwd: string): unknown {
+  function customPromptEvent(cwd: string) {
     return {
       systemPrompt: custom,
       systemPromptOptions: makePromptOptions({
@@ -1857,13 +1857,11 @@ describe("tool-surface prose under a custom system prompt", () => {
     const ctx = makeBaseCtx(cwd, "custom-root-session");
     await fireSessionStart(pi, ctx);
 
-    const result = await pi.fire(
-      "before_agent_start",
-      customPromptEvent(cwd),
-      ctx,
-    );
+    const event = customPromptEvent(cwd);
+    const result = await pi.fire("before_agent_start", event, ctx);
 
     expect(result).toEqual({});
+    expect(event.systemPromptOptions.sections).toEqual({});
 
     await pi.fire("session_shutdown");
     rmSync(cwd, { recursive: true, force: true });
@@ -1891,13 +1889,13 @@ describe("tool-surface prose under a custom system prompt", () => {
     const childCtx = makeChildCtx(childCwd, childSessionId);
     await fireSessionStart(childPi, childCtx);
 
-    const result = (await childPi.fire(
-      "before_agent_start",
-      customPromptEvent(childCwd),
-      childCtx,
-    )) as { systemPrompt?: string };
+    const event = customPromptEvent(childCwd);
+    const result = await childPi.fire("before_agent_start", event, childCtx);
 
-    expect(result.systemPrompt).toContain("- read: Read file contents");
+    expect(result).toEqual({});
+    expect(event.systemPromptOptions.sections.tools).toBe(
+      "- read: Read file contents",
+    );
 
     await childPi.fire("session_shutdown");
     await parentPi.fire("session_shutdown");
