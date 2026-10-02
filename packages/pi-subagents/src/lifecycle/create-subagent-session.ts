@@ -15,6 +15,7 @@
 import type { Model } from "@earendil-works/pi-ai";
 import {
   type AgentSession,
+  type InlineExtension,
   type SettingsManager,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -23,6 +24,7 @@ import type { ChildLifecyclePublisher } from "#src/lifecycle/child-lifecycle";
 import type { ParentSnapshot } from "#src/lifecycle/parent-snapshot";
 import { SubagentSession } from "#src/lifecycle/subagent-session";
 import { AskParentTool, type QuestionRecorder } from "#src/session/ask-parent-tool";
+import { builtinExtensionsFor } from "#src/session/builtin-extensions";
 import type { EnvInfo } from "#src/session/env";
 import type { ModelRegistry } from "#src/session/model-resolver";
 import { NotifyParentTool, type UpdateAnnouncer } from "#src/session/notify-parent-tool";
@@ -70,6 +72,8 @@ export interface ResourceLoaderOptions {
   systemPromptOverride?: () => string;
   /** Override the append system prompt. Receives the current base value; return the replacement. */
   appendSystemPromptOverride?: (base: string[]) => string[];
+  /** Extensions supplied as code; `builtin` entries are Pi's built-ins, resolved as `builtin:<name>`. */
+  extensionFactories?: InlineExtension[];
 }
 
 /** Options passed to SessionFactoryIO.createSession. */
@@ -234,7 +238,8 @@ export async function createSubagentSession(
   const loaderSettings = deps.io.createLoaderSettingsManager(sessionSettings);
 
   // Children inherit the parent's skills and every extension the composition
-  // root did not exclude (#696).
+  // root did not exclude (#696), plus the Pi built-ins their tools call for —
+  // Pi supplies those to its own CLI session only.
   //
   // Suppress AGENTS.md/CLAUDE.md and APPEND_SYSTEM.md - upstream's
   // buildSystemPrompt() re-appends both AFTER systemPromptOverride, which
@@ -250,6 +255,7 @@ export async function createSubagentSession(
     noContextFiles: true,
     systemPromptOverride: () => cfg.systemPrompt,
     appendSystemPromptOverride: () => [],
+    extensionFactories: builtinExtensionsFor(cfg.toolNames),
   });
   await loader.reload();
 

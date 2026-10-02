@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreateSessionOptions } from "#src/lifecycle/create-subagent-session";
+import type {
+  CreateSessionOptions,
+  ResourceLoaderOptions,
+} from "#src/lifecycle/create-subagent-session";
 import { createSubagentSession } from "#src/lifecycle/create-subagent-session";
 import { SubagentSession } from "#src/lifecycle/subagent-session";
 import { STUB_CTX, STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
@@ -460,5 +463,38 @@ describe("createSubagentSession — prompt inheritance", () => {
     );
 
     expect(inheritedArgument()?.strategy).toBe("portable");
+  });
+});
+
+describe("createSubagentSession — Pi built-in extensions", () => {
+  /** The names of the built-ins the child's resource loader was handed. */
+  function loadedBuiltinNames(): string[] | undefined {
+    const opts = io.createResourceLoader.mock.calls[0]?.[0] as ResourceLoaderOptions | undefined;
+    return opts?.extensionFactories?.map((extension) =>
+      typeof extension === "function" ? "<factory>" : extension.name,
+    );
+  }
+
+  it("hands the loader the built-ins the agent's tools call for", async () => {
+    arrangeFactory();
+
+    await createSubagentSession(
+      { snapshot: STUB_SNAPSHOT, type: "Explore" },
+      createSubagentSessionDeps({
+        io,
+        exec,
+        registry: createAgentLookup({ toolNames: ["read", "codemode", "mcp__github__get_issue"] }),
+      }),
+    );
+
+    expect(loadedBuiltinNames()).toEqual(["codemode", "mcp"]);
+  });
+
+  it("hands the loader no built-ins when the agent's tools call for none", async () => {
+    arrangeFactory();
+
+    await createSubagentSession({ snapshot: STUB_SNAPSHOT, type: "Explore" }, defaultDeps());
+
+    expect(loadedBuiltinNames()).toEqual([]);
   });
 });
