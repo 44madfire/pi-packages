@@ -1312,6 +1312,8 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   It is the MCP permission model itself (one call identity, Pi's built-in MCP first, the proxy as a registered reader) and the leading candidate for the phase after this one, gathering [#946], [#952]'s MCP half, [#1002], and [#1001]'s residuals; none of it shares this phase's bash token-role spine.
 - [#1016] — filed by [#997]'s planning; out of scope for the roadmap.
   A case- or Unicode-normalization variant the filesystem opens as the same file misses a `path` deny on every surface, a canonicalization defect that shares no mechanism with this phase's bash token-role work.
+- [#1018] — filed by [#955]'s planning; out of scope for the roadmap.
+  The infrastructure read list is compared un-canonicalized against a canonical boundary value, so a symlinked `agentDir` loses the bypass (fails closed); a path-canonicalization defect sharing no token-role or effect mechanism with this phase.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1871,5 +1873,6 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1014]: https://github.com/gotgenes/pi-packages/issues/1014
 [#997]: https://github.com/gotgenes/pi-packages/issues/997
 [#1016]: https://github.com/gotgenes/pi-packages/issues/1016
+[#1018]: https://github.com/gotgenes/pi-packages/issues/1018
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
