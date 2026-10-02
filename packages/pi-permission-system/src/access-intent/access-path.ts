@@ -129,7 +129,10 @@ export class AccessPath {
    * quote strip, `$HOME`), since Pi's resolver applies none. `matchValues()`
    * is the target, its cwd-relative alias, and the tool's relative spelling,
    * plus the canonical form — the same array {@link forPath} builds for a
-   * spelling the tool does not rewrite.
+   * relative or already-normalized spelling the tool does not rewrite. An
+   * absolute spelling with `..` or doubled separators keeps no as-typed alias:
+   * `/tmp/../etc/passwd` matches as `/etc/passwd`, the file opened, so a rule
+   * on `/tmp/*` no longer covers it.
    */
   static forNativeTarget(
     native: NativeToolTarget,

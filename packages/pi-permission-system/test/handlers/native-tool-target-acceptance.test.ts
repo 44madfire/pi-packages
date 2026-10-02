@@ -136,6 +136,28 @@ describe("a path rule applies to the file a built-in tool opens", () => {
       },
     );
 
+    it("judges a `..` escape as the file it opens, not its as-typed parent", () => {
+      const file = onDisk("secret.txt");
+      const resolver = makeResolver({
+        permission: {
+          "*": "allow",
+          path: { "*": "allow", [file]: "deny", [`${cwd}/public/*`]: "allow" },
+        },
+      });
+      const dotDotSpelling = `${cwd}/public/../secret.txt`;
+
+      const result = describePathGate(
+        readCall(dotDotSpelling),
+        resolver,
+        normalizer,
+      ) as GateDescriptor;
+
+      expect(result.preCheck?.state).toBe("deny");
+      expect(
+        normalizer.forToolPath("read", dotDotSpelling).matchValues(),
+      ).not.toContain(dotDotSpelling);
+    });
+
     it("discloses the file a fallback opens in the ask", () => {
       const file = onDisk("d\u2019x.txt");
       const resolver = makeResolver({

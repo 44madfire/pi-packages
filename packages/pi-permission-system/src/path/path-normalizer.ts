@@ -191,8 +191,8 @@ export class PathNormalizer {
    * {@link AccessPath.boundaryValue}), against the baked cwd.
    *
    * It does not re-derive the canonical form — the caller passes a value the
-   * {@link AccessPath} already canonicalized, so a device's preserved `/dev/null` reaches the pure check's
-   * `isSafeSystemPath` exclusion intact.
+   * {@link AccessPath} already canonicalized, so a device's preserved
+   * `/dev/null` reaches the pure check's `isSafeSystemPath` exclusion intact.
    */
   isBoundaryOutsideWorkingDirectory(canonicalPath: string): boolean {
     return isPathOutsideWorkingDirectory(
