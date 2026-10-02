@@ -61,3 +61,17 @@ The `pi-permission-system` suite went from 5139 to 5204 tests (+65).
   Fixed by copying instead of moving, and only for keys that can name a Pi MCP tool; folded into the relocation commit via autosquash.
   Its WARN (top-level wildcards like `*__wipe` no longer reach Pi tools) is documented in the migration guide.
 - Pre-completion reviewer round 2 (delta): PASS.
+
+## Stage: Sync (worktree) (2026-10-02T20:44:04Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass on the branch.
+The plan's marker is `**Release:** ship independently`; the `fix(pi-permission-system)!:` commit carries a `BREAKING CHANGE:` footer, so the release is a major for `pi-permission-system`.
+No follow-ups beyond #1014, already filed and dispositioned.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1001--/2026-10-02T15-49-50-697Z_01a0fd4e-bbe8-719a-a63e-afd41fe71bca.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The session covered planning, TDD, and the pre-completion review in one process; the reviewer's round-1 FAIL (a moved `mcp__` key dropping a deny on a non-Pi tool) is the main thing for the retro to look at.
