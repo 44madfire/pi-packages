@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.9.2](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.1...pi-subagents-v21.9.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **pi-subagents:** render notify_parent updates with the subagent renderer instead of Pi's fallback box ([#1008](https://github.com/gotgenes/pi-packages/issues/1008)) ([35ac9e7](https://github.com/gotgenes/pi-packages/commit/35ac9e7f9d2b535609f7f403be75edec78ecd6d5)), closes [#1008](https://github.com/gotgenes/pi-packages/issues/1008)
+
 ## [21.9.1](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.0...pi-subagents-v21.9.1) (2026-10-02)
 
 
