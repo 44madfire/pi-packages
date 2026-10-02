@@ -263,10 +263,14 @@ export class PermissionManager implements ScopedPermissionManager {
    */
   getToolPermission(toolName: string, agentName?: string): PermissionState {
     const { composedRules } = this.resolvePermissions(agentName);
-    // Every surface (special, bash, mcp, skill, path-bearing, and extension
-    // tools) resolves its tool-level state identically: evaluate the surface
-    // name against the "*" catch-all value. There is no per-kind branch.
-    return evaluate(toolName.trim(), "*", composedRules, this.flavor).action;
+    const name = toolName.trim();
+    if (classifyToolKind(name) === "mcp-tool") {
+      return this.resolvePiMcpTool(name, composedRules);
+    }
+    // Every other surface (special, bash, mcp, skill, path-bearing, and
+    // extension tools) resolves its tool-level state identically: evaluate the
+    // surface name against the "*" catch-all value.
+    return evaluate(name, "*", composedRules, this.flavor).action;
   }
 
   /**
@@ -284,7 +288,30 @@ export class PermissionManager implements ScopedPermissionManager {
    */
   isToolFullyDenied(toolName: string, agentName?: string): boolean {
     const { composedRules } = this.resolvePermissions(agentName);
-    return isSurfaceFullyDenied(toolName.trim(), composedRules, this.flavor);
+    const name = toolName.trim();
+    if (classifyToolKind(name) === "mcp-tool") {
+      return this.resolvePiMcpTool(name, composedRules) === "deny";
+    }
+    return isSurfaceFullyDenied(name, composedRules, this.flavor);
+  }
+
+  /**
+   * The action a Pi MCP tool resolves to on the `mcp` surface.
+   *
+   * Its candidates come from its name alone, never its input, so this one
+   * answer is both its tool-level state and whether it is fully denied.
+   */
+  private resolvePiMcpTool(
+    toolName: string,
+    composedRules: Ruleset,
+  ): PermissionState {
+    const { surface, values } = normalizeInput(
+      toolName,
+      undefined,
+      this.loader.getConfiguredMcpServerNames(),
+    );
+    return evaluateAnyValue(surface, values, composedRules, this.flavor).rule
+      .action;
   }
 
   /**

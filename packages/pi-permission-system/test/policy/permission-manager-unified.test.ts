@@ -3965,3 +3965,44 @@ describe("a top-level mcp__ key keeps applying to the Pi MCP tool it names", () 
     });
   });
 });
+
+describe("tool exposure for a Pi MCP tool follows its mcp rules", () => {
+  function withManager<T>(
+    permission: Record<string, unknown>,
+    use: (manager: PermissionManager) => T,
+  ): T {
+    const { manager, cleanup } = createManagerWithConfig(permission, [
+      "danger-srv",
+    ]);
+    try {
+      return use(manager);
+    } finally {
+      cleanup();
+    }
+  }
+
+  it("withholds a tool whose server an mcp rule denies, and only that server's", () => {
+    withManager({ "*": "allow", mcp: { "danger-srv": "deny" } }, (manager) => {
+      expect(manager.isToolFullyDenied("mcp__danger_srv__wipe")).toBe(true);
+      expect(manager.getToolPermission("mcp__danger_srv__wipe")).toBe("deny");
+      expect(manager.isToolFullyDenied("mcp__other__x")).toBe(false);
+      expect(manager.getToolPermission("mcp__other__x")).toBe("allow");
+    });
+  });
+
+  it("withholds a tool a relocated top-level key denies", () => {
+    withManager({ "*": "allow", "mcp__danger_srv__*": "deny" }, (manager) => {
+      expect(manager.isToolFullyDenied("mcp__danger_srv__wipe")).toBe(true);
+    });
+  });
+
+  it("keeps a tool an exception after an mcp deny catch-all allows", () => {
+    withManager(
+      { "*": "allow", mcp: { "*": "deny", "danger-srv": "allow" } },
+      (manager) => {
+        expect(manager.isToolFullyDenied("mcp__danger_srv__wipe")).toBe(false);
+        expect(manager.isToolFullyDenied("mcp__other__x")).toBe(true);
+      },
+    );
+  });
+});
