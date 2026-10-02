@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { type BackgroundParams, spawnBackground } from "#src/tools/background-spawner";
+import { type BackgroundParams, renderBackgroundLaunch, spawnBackground } from "#src/tools/background-spawner";
 import { createToolDeps } from "#test/helpers/make-deps";
 import { createResolvedSpawnConfig } from "#test/helpers/make-spawn-config";
 import { createTestSubagent } from "#test/helpers/make-subagent";
@@ -25,6 +25,66 @@ function makeParams(overrides: Partial<BackgroundParams> = {}): BackgroundParams
     ...overrides,
   };
 }
+
+describe("renderBackgroundLaunch", () => {
+  const detailBase = {
+    displayName: "Explore",
+    description: "answer",
+    subagentType: "Explore",
+    modelName: undefined,
+    tags: undefined,
+  };
+
+  it("renders a resumed launch with its output file", () => {
+    const result = renderBackgroundLaunch({
+      headline: "Agent resumed in background.",
+      id: "agent-7",
+      displayName: "Explore",
+      description: "answer",
+      detailBase,
+      outputFile: "/sessions/agent-7.jsonl",
+    });
+
+    expect(result.content[0].text).toBe(
+      "Agent resumed in background.\n" +
+        "Agent ID: agent-7\n" +
+        "Type: Explore\n" +
+        "Description: answer\n" +
+        "Output file: /sessions/agent-7.jsonl\n" +
+        "\nYou will be notified when this agent completes.\n" +
+        "Use get_subagent_result to retrieve full results, or steer_subagent to send it messages.\n" +
+        "Do not duplicate this agent's work.",
+    );
+    expect(result.details).toEqual({
+      ...detailBase,
+      toolUses: 0,
+      tokens: "",
+      durationMs: 0,
+      status: "background",
+      agentId: "agent-7",
+    });
+  });
+
+  it("omits the notes, output file, and queue position it was not given", () => {
+    const result = renderBackgroundLaunch({
+      headline: "Agent resumed in background.",
+      id: "agent-7",
+      displayName: "Explore",
+      description: "answer",
+      detailBase,
+    });
+
+    expect(result.content[0].text).toBe(
+      "Agent resumed in background.\n" +
+        "Agent ID: agent-7\n" +
+        "Type: Explore\n" +
+        "Description: answer\n" +
+        "\nYou will be notified when this agent completes.\n" +
+        "Use get_subagent_result to retrieve full results, or steer_subagent to send it messages.\n" +
+        "Do not duplicate this agent's work.",
+    );
+  });
+});
 
 describe("spawnBackground", () => {
   /**
