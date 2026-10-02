@@ -3,6 +3,7 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import type { AgentConfigLookup } from "#src/config/agent-types";
+import type { SettledOutcome } from "#src/lifecycle/subagent-state";
 import {
 	type GetResultDetails,
 	PREVIEW_CHARS,
@@ -65,34 +66,36 @@ export class GetResultTool {
 		}
 
 		const verbose = params.verbose === true;
+		const outcome = liveOutcome(record);
 		return textResult<GetResultDetails>(
-			formatAgentReport(this.buildReport(record, verbose)),
-			this.buildGetResultDetails(record, verbose),
+			formatAgentReport(this.buildReport(record, outcome, verbose)),
+			this.buildGetResultDetails(record, outcome, verbose),
 		);
 	}
 
-	private buildReport(record: Subagent, verbose?: boolean): AgentReport {
+	/** The report: outcome fields from `outcome`, everything else from the live record. */
+	private buildReport(record: Subagent, outcome: SettledOutcome, verbose?: boolean): AgentReport {
 		return {
 			id: record.id,
 			displayName: getDisplayName(record.type, this.registry),
-			status: record.status,
+			status: outcome.status,
 			toolUses: record.toolUses,
 			tokens: formatLifetimeTokens(record),
 			contextPercent: record.getContextPercent(),
 			compactionCount: record.compactionCount,
-			duration: formatDuration(record.startedAt, record.completedAt),
+			duration: formatDuration(outcome.startedAt, outcome.completedAt),
 			description: record.description,
-			result: record.result,
-			error: record.error,
+			result: outcome.result,
+			error: outcome.error,
 			stoppedWhileQueued: record.stoppedWhileQueued,
 			conversation: verbose ? record.getConversation() : undefined,
 			// Transcript pointer: lets the parent read the full session from disk,
 			// and covers verbose after the live session was released (no conversation).
 			transcriptPath: record.outputFile,
-			runUpdates: record.runUpdates,
-			pendingQuestion: record.pendingQuestion,
+			runUpdates: outcome.runUpdates,
+			pendingQuestion: outcome.pendingQuestion,
 			resumeRefusal: record.resumeRefusal,
-			workspaceNotice: record.workspaceNotice,
+			workspaceNotice: outcome.workspaceNotice,
 			model: modelLabel(record.model),
 		};
 	}
@@ -103,19 +106,19 @@ export class GetResultTool {
 	 * Named in full because `helpers.ts` exports a module-level `buildDetails`
 	 * producing the structurally different `AgentDetails`.
 	 */
-	private buildGetResultDetails(record: Subagent, verbose: boolean): GetResultDetails {
+	private buildGetResultDetails(record: Subagent, outcome: SettledOutcome, verbose: boolean): GetResultDetails {
 		return {
 			agentId: record.id,
 			displayName: getDisplayName(record.type, this.registry),
-			status: record.status,
+			status: outcome.status,
 			description: record.description,
 			toolUses: record.toolUses,
 			tokens: formatLifetimeTokens(record),
 			contextPercent: record.getContextPercent(),
 			compactionCount: record.compactionCount,
-			duration: formatDuration(record.startedAt, record.completedAt),
-			preview: buildPreview(record.result),
-			error: record.error,
+			duration: formatDuration(outcome.startedAt, outcome.completedAt),
+			preview: buildPreview(outcome.result),
+			error: outcome.error,
 			verbose,
 			transcriptPath: record.outputFile,
 			modelName: modelLabel(record.model),
@@ -184,6 +187,20 @@ export class GetResultTool {
 			) => this.execute(toolCallId, params, signal, onUpdate, ctx),
 		});
 	}
+}
+
+/** The live record's current outcome fields. */
+function liveOutcome(record: Subagent): SettledOutcome {
+	return {
+		status: record.status,
+		result: record.result,
+		error: record.error,
+		startedAt: record.startedAt,
+		completedAt: record.completedAt,
+		pendingQuestion: record.pendingQuestion,
+		workspaceNotice: record.workspaceNotice,
+		runUpdates: record.runUpdates,
+	};
 }
 
 /** The first non-empty line of a result body, clipped to the preview budget. */

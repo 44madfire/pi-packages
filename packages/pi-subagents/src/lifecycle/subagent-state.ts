@@ -30,6 +30,19 @@ export type SubagentStatus =
 	| "stopped"
 	| "error";
 
+/** What a settled run ended with: the fields an outcome carrier renders. */
+export interface SettledOutcome {
+	status: SubagentStatus;
+	result: string | undefined;
+	error: string | undefined;
+	startedAt: number;
+	completedAt: number | undefined;
+	pendingQuestion: string | undefined;
+	workspaceNotice: string | undefined;
+	/** The updates no announcement delivered; what the carrier still owes. */
+	runUpdates: readonly string[];
+}
+
 // ---- Status classification predicates ----
 // The single decision point for the re-derived status groupings. Instance
 // methods on SubagentState delegate here; DTO consumers holding a bare
