@@ -1460,16 +1460,16 @@ describe("Subagent.scheduleVia() — eager promise capture", () => {
 });
 
 describe("Subagent.waitUntilSettled()", () => {
-	it("resolves immediately for an agent that has no run handle", async () => {
+	it("resolves immediately, unsettled, for an agent that has no run handle", async () => {
 		const agent = makeSubagent({ status: "queued" });
-		await expect(agent.waitUntilSettled(new AbortController().signal)).resolves.toBeUndefined();
+		await expect(agent.waitUntilSettled(new AbortController().signal)).resolves.toEqual({ kind: "unsettled" });
 	});
 
 	it("resolves immediately for an agent that already left the active set", async () => {
 		const agent = makeSubagent({ status: "completed", result: "done", startedAt: 1, completedAt: 2 });
 		agent.start();
 		await agent.promise;
-		await expect(agent.waitUntilSettled(new AbortController().signal)).resolves.toBeUndefined();
+		await expect(agent.waitUntilSettled(new AbortController().signal)).resolves.toEqual({ kind: "settled" });
 	});
 
 	it("spans the queue slot and the run that follows it", async () => {
@@ -1482,8 +1482,8 @@ describe("Subagent.waitUntilSettled()", () => {
 
 		const wait = agent.waitUntilSettled(new AbortController().signal);
 		openSlot();
-		await wait;
 
+		await expect(wait).resolves.toEqual({ kind: "settled" });
 		expect(agent.status).toBe("completed");
 	});
 
@@ -1498,7 +1498,7 @@ describe("Subagent.waitUntilSettled()", () => {
 
 		const wait = agent.waitUntilSettled(controller.signal);
 		controller.abort();
-		await wait;
+		await expect(wait).resolves.toEqual({ kind: "unsettled" });
 
 		// Interrupting the query must not cancel the work: the agent is still
 		// queued and still runs once its slot opens.
@@ -1512,9 +1512,33 @@ describe("Subagent.waitUntilSettled()", () => {
 		const agent = makeSubagent({ status: "queued" });
 		agent.scheduleVia(() => new Promise<never>(() => {}));
 
-		await agent.waitUntilSettled(AbortSignal.abort());
+		await expect(agent.waitUntilSettled(AbortSignal.abort())).resolves.toEqual({ kind: "unsettled" });
 
 		expect(agent.status).toBe("queued");
+	});
+
+	it("reports the waited run's outcome when a resume replaced it before the wait returned", async () => {
+		const stub = createSubagentSessionStub();
+		stub.runTurnLoop.mockResolvedValue({ responseText: "first result", aborted: false, steered: false });
+		const resumed = Promise.withResolvers<string>();
+		stub.resumeTurnLoop.mockReturnValue(resumed.promise);
+		const agent = makeSubagent({
+			status: "running",
+			execution: makeStubExecution({
+				createSubagentSession: async () => toSubagentSession(stub),
+				// Resumes the moment the run settles, before the waiter continues.
+				observer: { onRunFinished: (a) => { void a.resume("continue"); } },
+			}),
+		});
+		agent.start();
+
+		const wait = await agent.waitUntilSettled(new AbortController().signal);
+
+		expect(wait.kind).toBe("superseded");
+		expect(wait.kind === "superseded" ? [wait.outcome.status, wait.outcome.result] : undefined)
+			.toEqual(["completed", "first result"]);
+		resumed.resolve("second");
+		await agent.promise;
 	});
 });
 

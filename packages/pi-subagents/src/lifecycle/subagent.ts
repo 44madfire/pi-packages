@@ -13,7 +13,7 @@ import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent
 import type { ParentSnapshot } from "#src/lifecycle/parent-snapshot";
 import { RunListeners } from "#src/lifecycle/run-listeners";
 import type { SubagentSession, TurnLoopResult } from "#src/lifecycle/subagent-session";
-import { type CarrierClaim, SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
+import { type CarrierClaim, type SettledOutcome, SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { WorkspaceBracket } from "#src/lifecycle/workspace-bracket";
@@ -77,6 +77,17 @@ export type SteerOutcome =
 	| { kind: "delivered" }
 	| { kind: "buffered" }
 	| { kind: "rejected"; status: SubagentStatus };
+
+/**
+ * What happened to the run a `waitUntilSettled` call waited on: it settled and
+ * is still the current run; it has not settled (the wait was interrupted, or
+ * there was no run to wait on); or a resume replaced it after it settled,
+ * carrying what it ended with.
+ */
+export type WaitOutcome =
+	| { kind: "settled" }
+	| { kind: "unsettled" }
+	| { kind: "superseded"; outcome: SettledOutcome };
 
 /**
  * The execution machinery a Subagent needs to run. A single mandatory
@@ -473,11 +484,19 @@ export class Subagent {
 	 * When `signal` fires the wait ends early and the agent keeps running: this
 	 * is a query, so interrupting it must not cancel the work. Cancelling the
 	 * work on a parent interrupt is InterruptHandler's separate decision.
+	 *
+	 * Reports what happened to the run the wait began on. A resume can start
+	 * between that run settling and the waiter continuing (a consumer resuming
+	 * from the completion event does), so a record that reads active afterwards
+	 * is not necessarily the run that was waited on.
 	 */
-	async waitUntilSettled(signal: AbortSignal): Promise<void> {
-		const run = this._promise;
-		if (!run || !this.isActive()) return;
-		await settleOrAbort(run, signal);
+	async waitUntilSettled(signal: AbortSignal): Promise<WaitOutcome> {
+		const waitedRun = this.state.run;
+		const handle = this._promise;
+		if (handle && this.isActive()) await settleOrAbort(handle, signal);
+		const superseded = this.state.run === waitedRun ? undefined : this.state.supersededOutcome(waitedRun);
+		if (superseded) return { kind: "superseded", outcome: superseded };
+		return this.isActive() ? { kind: "unsettled" } : { kind: "settled" };
 	}
 
 	/**
