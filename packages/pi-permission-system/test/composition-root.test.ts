@@ -56,6 +56,7 @@ import {
   type PermissionsReadyEvent,
 } from "#src/service/permission-events";
 import { publishServingHeartbeat } from "#test/helpers/forwarding-fixtures";
+import { makePromptOptions } from "#test/helpers/handler-fixtures";
 import { makeFakePi } from "#test/helpers/make-fake-pi";
 
 const SUBAGENT_REGISTRY_KEY = Symbol.for(
@@ -532,7 +533,10 @@ describe("interactive serving eligibility", () => {
     vi.stubEnv("PI_SUBAGENT_PARENT_SESSION", markerValue);
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
 
@@ -1229,12 +1233,18 @@ describe("ready emitted after service publication", () => {
 
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
 
@@ -1263,7 +1273,10 @@ describe("ready emitted after service publication", () => {
     await fireSessionStart(pi, ctx);
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
     expect(emissions).toBe(2);
@@ -1273,12 +1286,18 @@ describe("ready emitted after service publication", () => {
     await fireSessionStart(pi, ctx);
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
     await pi.fire(
       "before_agent_start",
-      { systemPrompt: "", systemPromptOptions: { cwd: "/test" } },
+      {
+        systemPrompt: "",
+        systemPromptOptions: makePromptOptions({ cwd: "/test" }),
+      },
       ctx,
     );
     expect(emissions).toBe(4);
@@ -1823,12 +1842,11 @@ describe("tool-surface prose under a custom system prompt", () => {
   function customPromptEvent(cwd: string): unknown {
     return {
       systemPrompt: custom,
-      systemPromptOptions: {
+      systemPromptOptions: makePromptOptions({
         cwd,
         customPrompt: custom,
         toolSnippets: { read: "Read file contents" },
-        promptGuidelines: [],
-      },
+      }),
     };
   }
 
@@ -2507,12 +2525,12 @@ describe("configured prompt preferences reach the inline dialog", () => {
       await fireSessionStart(pi, ctx);
       await pi.fire(
         "before_agent_start",
-        { systemPrompt: "", systemPromptOptions: { cwd } },
+        { systemPrompt: "", systemPromptOptions: makePromptOptions({ cwd }) },
         ctx,
       );
       await pi.fire(
         "before_agent_start",
-        { systemPrompt: "", systemPromptOptions: { cwd } },
+        { systemPrompt: "", systemPromptOptions: makePromptOptions({ cwd }) },
         ctx,
       );
 
@@ -2541,7 +2559,7 @@ describe("configured prompt preferences reach the inline dialog", () => {
       writeGlobalConfig({ permission: { "*": "allow" } });
       await pi.fire(
         "before_agent_start",
-        { systemPrompt: "", systemPromptOptions: { cwd } },
+        { systemPrompt: "", systemPromptOptions: makePromptOptions({ cwd }) },
         ctx,
       );
 

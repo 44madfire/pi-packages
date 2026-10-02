@@ -1,4 +1,4 @@
-import type { BuildSystemPromptOptions } from "@earendil-works/pi-coding-agent";
+import type { NormalizedBuildSystemPromptOptions } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
 import type { ToolRegistry } from "#src/exposure/tool-registry";
 import {
@@ -10,6 +10,7 @@ import { SessionTurnPrep } from "#src/handlers/session-turn-prep";
 import {
   makeCheckResult,
   makeCtx,
+  makePromptOptions,
   makeStatefulToolRegistry,
   makeToolRegistry,
 } from "#test/helpers/handler-fixtures";
@@ -30,18 +31,14 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
+/** A fresh event per call, so a handler's option mutations never carry over. */
 function makeEvent(
   systemPrompt = "You are an assistant.",
-  systemPromptOptions: Partial<BuildSystemPromptOptions> = {},
+  systemPromptOptions: Partial<NormalizedBuildSystemPromptOptions> = {},
 ) {
   return {
     systemPrompt,
-    systemPromptOptions: {
-      cwd: "/test/project",
-      toolSnippets: {},
-      promptGuidelines: [],
-      ...systemPromptOptions,
-    },
+    systemPromptOptions: makePromptOptions(systemPromptOptions),
   };
 }
 
