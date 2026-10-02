@@ -73,4 +73,58 @@ Close [#846] at `/ship`, as resolved by this change.
 - Decide at `/ship` whether to leave a comment on issue #1000 pointing at the load-order caveat (an earlier forcing handler, such as pi-ask 1.2.0, still drops the section).
 - The plan's end-to-end check (Pi 1.0.0, one configured server) ran during the TDD stage and passed.
 
+## Stage: Final Retrospective (2026-10-02T06:01:22Z)
+
+### Session summary
+
+The root session fast-forward-merged the branch, pushed it, and confirmed CI passed on `f7499134`.
+It closed #1000 and [#846], then released `pi-nocd` 2.0.0 on its own; `pi-subagents` gained only a test and had nothing to release.
+The issue went from planning to release with no rework commits, and every stage gate (lint, `fallow`, CI, release) passed on its first run.
+
+### Observations
+
+#### What went well
+
+- The reproduction probe built in planning (`/tmp/nocd-e2e/probe.ts`, a `before_provider_request` hook that dumps the provider payload from a fresh `pi -p`) did three jobs.
+  It reproduced the defect, priced the pi-ask load-order caveat, and served as the TDD stage's end-to-end check unchanged.
+  That closed the gap #999 left, where the end-to-end check was skipped and this defect surfaced only afterwards.
+- Raising the peer floor did more than remove a version check: it deleted `ensureWorkingDirectoryPrompt`, `findOurBlock`, and the three string-path safeguards, and it resolved [#846] as a side effect.
+  The operator, not the agent, put that option on the table.
+- Every killing mutation in the TDD stage reddened exactly the number of tests the plan predicted (1, 2, 1, 1, and the pi-subagents pin).
+  Because the plan named its mutations, verifying the pins took one edit and one run per mutation.
+
+#### What caused friction (agent side)
+
+- `premature-convergence` — The first planning `ask_user` gate listed the design as "settled (not asked)": keep the string path and keep the `>=0.75.0` floor.
+  Its two questions both assumed that premise.
+  The operator answered with a question about raising the floor, which is the option `clarification-gates` § *The option space* says to offer ("name it and offer the option that removes it").
+  The skill had been loaded one turn before the gate.
+  User-caught.
+  Impact: two extra explanation turns (the forced-prompt case split, then a pi-subagents walkthrough after "the latter" was ambiguous) before the operator chose; no plan rework.
+- `instruction-violation` — In `/ship` I passed `ci_watch` a hand-retyped run ID (`36971037060`) instead of the one `ci_find` returned (`36971047060`).
+  Self-identified on the immediate 404.
+  Impact: one failed tool call; no rework.
+- `instruction-violation` — In the sync stage, a literal `\u2014` escape and a `[#1000]` self-link went into the retro note.
+  Self-identified before commit; `pi-autoformat` had already decoded the escape.
+  Impact: one `perl` fix, folded into the same commit.
+
+#### What caused friction (user side)
+
+- The operator settled the design's main fork (raise the floor and drop the string path) through two follow-up questions rather than through the gate's options.
+  If the operator had stated their floor preference, or noted that ADR 0015 had already accepted the forced-prompt loss, when invoking `/plan-issue`, the first gate could have been one question.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Planning and TDD ran on `claude-opus-5-5`, and sync ran on `claude-sonnet-5-5`.
+  Both subagents ran on `claude-sonnet-5-5`, attributed from their own transcripts: the `tidy-first-assessor` (it correctly recommended no preparatory commits) and the `pre-completion-reviewer`.
+  The reviewer re-derived the #640 invariant across the `full`, `portable`, and nested shapes, and it found the theoretical `unanchored` path.
+  No mismatches.
+- **Feedback-loop gap analysis** — The TDD stage ran the target test file after each Red and Green step, plus each mutation, and ran `check` after the floor bump.
+  Full gates ran at the baseline and at the end, and `/ship` re-ran lint and `fallow` on the merged tree.
+  No gap.
+
+### Changes made
+
+None; the operator confirmed that no rule changes were needed (see the proposals considered in the session).
+
 [#846]: https://github.com/gotgenes/pi-packages/issues/846
