@@ -54,6 +54,6 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.75.0"
+    "@earendil-works/pi-coding-agent": ">=1.0.0"
   }
 }
