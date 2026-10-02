@@ -1073,3 +1073,84 @@ describe("SettingsManager", () => {
     });
   });
 });
+
+describe("modelAliases", () => {
+  it("loads aliases from global file (lowercased, trimmed)", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { Fast: " anthropic/claude-opus-4-6 ", max: "openai/gpt-4o" } });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({
+        modelAliases: { fast: "anthropic/claude-opus-4-6", max: "openai/gpt-4o" },
+      });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("project aliases win on conflicts (shallow merge)", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b", max: "c/d" } });
+      dirs.writeProject({ modelAliases: { max: "e/f" } });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({
+        modelAliases: { max: "e/f" },
+      });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("drops non-string values and bad keys, absent when none survive", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { ok: "a/b", bad: 42, "": "x/y", "has space": "x/y" } });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({
+        modelAliases: { ok: "a/b" },
+      });
+      dirs.writeGlobal({ modelAliases: { bad: 42 } });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({});
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("round-trips aliases through snapshot/saveSettings", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      mgr.load();
+      expect(mgr.modelAliases).toEqual({ fast: "a/b" });
+      expect(mgr.resolveAlias("FAST")).toBe("a/b");
+      const snap = mgr.snapshot();
+      expect(snap.modelAliases).toEqual({ fast: "a/b" });
+      expect(saveSettings(snap, dirs.projectDir)).toBe(true);
+      expect(loadSettings(dirs.globalDir, dirs.projectDir).modelAliases).toEqual({ fast: "a/b" });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("clearing the key from disk clears the value", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      mgr.load();
+      expect(mgr.modelAliases).toEqual({ fast: "a/b" });
+      dirs.writeGlobal({});
+      mgr.load();
+      expect(mgr.modelAliases).toEqual({});
+    } finally {
+      dirs.dispose();
+    }
+  });
+});

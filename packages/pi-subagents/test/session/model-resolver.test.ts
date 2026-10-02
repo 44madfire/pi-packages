@@ -290,3 +290,45 @@ describe("resolveInvocationModel", () => {
     });
   });
 });
+
+describe("modelAliases", () => {
+  const aliases = {
+    fast: "anthropic/claude-haiku-4-5-20251001",
+    max: "anthropic/claude-opus-4-6",
+  };
+
+  it("expands an alias before exact lookup (case-insensitive)", () => {
+    expect(resolveModel("fast", makeRegistry(), aliases)).toEqual(MODELS[2]);
+    expect(resolveModel("FAST", makeRegistry(), aliases)).toEqual(MODELS[2]);
+    expect(resolveModel("max", makeRegistry(), aliases)).toEqual(MODELS[0]);
+  });
+
+  it("follows chained aliases", () => {
+    const chained = { a: "b", b: "anthropic/claude-opus-4-6" };
+    expect(resolveModel("a", makeRegistry(), chained)).toEqual(MODELS[0]);
+  });
+
+  it("reports a cycle instead of hanging", () => {
+    const cyclic = { a: "b", b: "a" };
+    const result = resolveModel("a", makeRegistry(), cyclic);
+    expect(typeof result === "string" && result.includes("cycle")).toBe(true);
+  });
+
+  it("names the alias in the not-found error", () => {
+    const result = resolveModel("fast", makeRegistry(MODELS, []), aliases);
+    expect(typeof result === "string" && result.includes('alias "fast"')).toBe(true);
+  });
+
+  it("resolveInvocationModel threads aliases through", () => {
+    const parent = MODELS[3];
+    const ok = resolveInvocationModel(parent, "max", true, makeRegistry(), aliases);
+    expect(ok).toEqual({ model: MODELS[0] });
+    const miss = resolveInvocationModel(parent, "nope", true, makeRegistry(), aliases);
+    expect(miss.model).toBeUndefined();
+    expect(miss.error).toContain("nope");
+  });
+
+  it("behaves as before when no aliases passed", () => {
+    expect(resolveModel("haiku", makeRegistry())).toEqual(MODELS[2]);
+  });
+});

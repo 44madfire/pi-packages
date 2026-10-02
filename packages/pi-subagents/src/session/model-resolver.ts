@@ -43,41 +43,75 @@ export function resolveInvocationModel(
   modelInput: string | undefined,
   modelFromParams: boolean,
   registry: ModelRegistry | undefined,
+  aliases?: Readonly<Record<string, string>>,
 ): ModelResolution {
   if (!modelInput) return { model: parentModel };
   if (!registry) return { error: "No model registry available." };
-  const resolved = resolveModel(modelInput, registry);
+  const resolved = resolveModel(modelInput, registry, aliases);
   if (typeof resolved !== "string") return { model: resolved };
   if (modelFromParams) return { error: resolved };
   return { model: parentModel };
 }
 
 /**
+ * Expand a named alias (case-insensitive) to its target string.
+ * Follows chains up to 5 hops with cycle detection; returns the original
+ * input when it names no alias, and null on a detected alias cycle.
+ */
+export function expandModelAlias(
+  input: string,
+  aliases?: Readonly<Record<string, string>>,
+): string | null {
+  if (!aliases) return input;
+  let current = input.trim();
+  const seen = new Set<string>();
+  for (let i = 0; i < 5; i++) {
+    const target = aliases[current.toLowerCase()];
+    if (target === undefined) return current;
+    if (seen.has(current.toLowerCase())) return null;
+    seen.add(current.toLowerCase());
+    current = target.trim();
+    if (current.length === 0) return null;
+  }
+  return null;
+}
+
+/**
  * Resolve a model string to a Model instance.
- * Tries exact match first ("provider/modelId"), then fuzzy match against all available models.
+ * Tries alias expansion first, then exact match ("provider/modelId"),
+ * then fuzzy match against all available models.
  * Returns the Model on success, or an error message string on failure.
  */
 export function resolveModel(
   input: string,
   registry: ModelRegistry,
+  aliases?: Readonly<Record<string, string>>,
 ): Model<any> | string {
+  const expanded = expandModelAlias(input, aliases);
+  if (expanded === null) {
+    return `Model alias cycle detected for "${input}". Check modelAliases in subagents.json.`;
+  }
+  const effective = expanded;
+  const aliasNote = effective.toLowerCase() !== input.trim().toLowerCase()
+    ? ` (alias "${input.trim()}" → "${effective}")`
+    : "";
   // Available models (those with auth configured)
   const all = registry.getAvailable?.() ?? registry.getAll();
   const availableSet = new Set(all.map(m => `${m.provider}/${m.id}`.toLowerCase()));
 
   // 1. Exact match: "provider/modelId" — only if available (has auth)
-  const slashIdx = input.indexOf("/");
+  const slashIdx = effective.indexOf("/");
   if (slashIdx !== -1) {
-    const provider = input.slice(0, slashIdx);
-    const modelId = input.slice(slashIdx + 1);
-    if (availableSet.has(input.toLowerCase())) {
+    const provider = effective.slice(0, slashIdx);
+    const modelId = effective.slice(slashIdx + 1);
+    if (availableSet.has(effective.toLowerCase())) {
       const found = registry.find(provider, modelId);
       if (found) return found;
     }
   }
 
   // 2. Fuzzy match against available models
-  const bestMatch = findBestFuzzyMatch(all, input.toLowerCase());
+  const bestMatch = findBestFuzzyMatch(all, effective.toLowerCase());
   if (bestMatch) {
     const found = registry.find(bestMatch.provider, bestMatch.id);
     if (found) return found;
@@ -88,7 +122,7 @@ export function resolveModel(
     .map(m => `  ${m.provider}/${m.id}`)
     .sort()
     .join("\n");
-  return `Model not found: "${input}".\n\nAvailable models:\n${modelList}`;
+  return `Model not found: "${input}"${aliasNote}.\n\nAvailable models:\n${modelList}`;
 }
 
 /**

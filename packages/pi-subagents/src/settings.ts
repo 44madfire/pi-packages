@@ -44,6 +44,15 @@ export interface SubagentsSettings {
    * between transports (ADR 0009).
    */
   promptInheritance?: Record<string, PromptInheritance>;
+  /**
+   * Named model aliases, e.g. `{ fast: "provider/model-id:thinking" }.
+   * An agent's `model:` frontmatter or a `subagent(model=...)` param naming
+   * an alias resolves to its target before exact/fuzzy registry lookup.
+   * Keys are matched case-insensitively; values are resolved as model
+   * strings (exact `provider/model-id` with optional `:thinking` suffix,
+   * or fuzzy names). Hand-edited only; no `/subagents:settings` affordance.
+   */
+  modelAliases?: Record<string, string>;
 }
 
 /**
@@ -67,6 +76,8 @@ export interface SettingsSnapshot {
   excludedExtensionPackages?: string[];
   /** Present only when non-empty, and round-tripped for the same reason. */
   promptInheritance?: Record<string, PromptInheritance>;
+  /** Present only when non-empty, and round-tripped for the same reason. */
+  modelAliases?: Record<string, string>;
 }
 
 
@@ -94,6 +105,7 @@ export class SettingsManager {
   private _midRunUpdates: boolean = DEFAULT_MID_RUN_UPDATES;
   private _excludedExtensionPackages: string[] = [];
   private _promptInheritance: Record<string, PromptInheritance> = {};
+  private _modelAliases: Record<string, string> = {};
 
   private readonly emit: SettingsEmit;
   private readonly cwd: string;
@@ -171,6 +183,21 @@ export class SettingsManager {
     return this._excludedExtensionPackages;
   }
 
+  // ── modelAliases: hand-edited only; no /subagents:settings affordance ──
+
+  /** Named model aliases (lowercased keys). Empty when none configured. */
+  get modelAliases(): Readonly<Record<string, string>> {
+    return this._modelAliases;
+  }
+
+  /**
+   * Expand one alias level (case-insensitive). Returns the target string,
+   * or undefined when `input` names no alias.
+   */
+  resolveAlias(input: string): string | undefined {
+    return this._modelAliases[input.toLowerCase().trim()];
+  }
+
   // ── promptInheritance: hand-edited only; no /subagents:settings affordance ──
 
   /**
@@ -206,6 +233,7 @@ export class SettingsManager {
     // Assigned unconditionally: removing the key from disk must clear the value.
     this._excludedExtensionPackages = [...(settings.excludedExtensionPackages ?? [])];
     this._promptInheritance = { ...settings.promptInheritance };
+    this._modelAliases = { ...(settings.modelAliases ?? {}) };
     this.emit("subagents:settings_loaded", { settings });
     return settings;
   }
@@ -229,6 +257,9 @@ export class SettingsManager {
     }
     if (Object.keys(this._promptInheritance).length > 0) {
       snapshot.promptInheritance = { ...this._promptInheritance };
+    }
+    if (Object.keys(this._modelAliases).length > 0) {
+      snapshot.modelAliases = { ...this._modelAliases };
     }
     return snapshot;
   }
@@ -379,7 +410,32 @@ function sanitize(raw: unknown): SubagentsSettings {
   if (promptInheritance) {
     out.promptInheritance = promptInheritance;
   }
+  const modelAliases = sanitizeModelAliases(r.modelAliases);
+  if (modelAliases) {
+    out.modelAliases = modelAliases;
+  }
   return out;
+}
+
+/**
+ * Keep only string→string alias entries with sane keys/values.
+ * Keys are lowercased (matched case-insensitively), trimmed, and limited to
+ * `[a-z0-9][a-z0-9-_]*` (max 64 chars); values must be non-empty strings
+ * (max 256 chars). Absent when none survive. Silent — garbage becomes absent.
+ */
+function sanitizeModelAliases(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value !== "string") continue;
+    const name = key.trim().toLowerCase();
+    const target = value.trim();
+    if (!/^[a-z0-9][a-z0-9-_]*$/.test(name) || name.length > 64) continue;
+    if (target.length === 0 || target.length > 256) continue;
+    if (Object.keys(out).length >= 64) break;
+    out[name] = target;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /**

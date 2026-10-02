@@ -78,7 +78,10 @@ export function resolveSpawnConfig(
   params: Record<string, unknown>,
   registry: AgentTypeRegistry,
   modelInfo: ModelInfo,
-  settings: { readonly defaultMaxTurns: number | undefined },
+  settings: {
+    readonly defaultMaxTurns: number | undefined;
+    readonly modelAliases?: Readonly<Record<string, string>>;
+  },
 ): ResolvedSpawnConfig | SpawnConfigError {
   // Validated at the door, so the merge below and every layer past it receive a
   // level the SDK recognizes rather than one it would clamp to "off" (Refs #834).
@@ -105,12 +108,13 @@ export function resolveSpawnConfig(
     thinking: thinkingFromParams,
   });
 
-  // Resolve model
+  // Resolve model (aliases expand before exact/fuzzy lookup)
   const resolution = resolveInvocationModel(
     modelInfo.parentModel,
     resolvedConfig.modelInput,
     resolvedConfig.modelFromParams,
     modelInfo.modelRegistry,
+    settings.modelAliases,
   );
   if (resolution.error) return { error: resolution.error };
   const model = resolution.model;

@@ -45,6 +45,7 @@ export interface AgentToolRuntime {
 export type AgentToolSettings = {
 	readonly defaultMaxTurns: number | undefined;
 	readonly maxConcurrent: number;
+	readonly modelAliases?: Readonly<Record<string, string>>;
 };
 
 // ---- Class ----

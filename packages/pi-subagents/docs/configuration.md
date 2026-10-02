@@ -145,7 +145,7 @@ All fields are optional — sensible defaults for everything.
 | `description`       | filename       | Agent description shown in tool listings                                                                                                                                                                                                      |
 | `display_name`      | —              | Display name for UI (e.g. widget, agent list)                                                                                                                                                                                                 |
 | `tools`             | all 7          | The agent's complete tool allowlist — built-in or extension-registered names. `none` for no tools. See [Tool selection](#tool-selection)                                                                                                      |
-| `model`             | inherit parent | Model — `provider/modelId` or fuzzy name (`"haiku"`, `"sonnet"`)                                                                                                                                                                              |
+| `model`             | inherit parent | Model — alias (see `modelAliases`), `provider/modelId`, or fuzzy name (`"haiku"`, `"sonnet"`)                                                                                                                                                                              |
 | `thinking`          | inherit        | off, minimal, low, medium, high, xhigh, max. An unrecognized value is dropped, and the agent inherits the parent's level                                                                                                                      |
 | `max_turns`         | unlimited      | Max agentic turns before graceful shutdown. `0` or omit for unlimited                                                                                                                                                                         |
 | `prompt_mode`       | `append`       | `replace`: parent prompt is the cacheable base; body is appended last with full control and no `<agent_instructions>` wrapper. `append`: parent prompt is the base; body is wrapped in `<agent_instructions>` (agent acts as a "parent twin") |
@@ -156,6 +156,39 @@ All fields are optional — sensible defaults for everything.
 
 The caller decides, and the agent file fills the gaps.
 A `subagent` tool parameter wins over the agent file's value for `model`, `thinking`, `max_turns`, `inherit_context`, and `run_in_background`; the agent file supplies whichever of those the caller left unset.
+
+### Named model aliases
+
+Swap models without touching agent files. Define aliases once in `subagents.json`
+(global `~/.pi/agent/subagents.json`, project `<cwd>/.pi/subagents.json` — project
+replaces the whole map), then name the alias in any agent's `model:` frontmatter
+or `subagent(model=...)` param:
+
+```json
+{
+  "modelAliases": {
+    "fast": "anthropic/claude-haiku-4-5",
+    "balanced": "anthropic/claude-sonnet-4-6",
+    "max": "anthropic/claude-opus-4-6:max"
+  }
+}
+```
+
+```yaml
+---
+model: max
+thinking: max
+locked: [model]
+---
+```
+
+Resolution order per spawn: alias (case-insensitive, chains to 5 hops) →
+exact `provider/model-id` → fuzzy → inherit parent. An unresolvable alias
+fails before spawn (never inherits silently) and names the alias plus its
+target in the error; a cycle reports `alias cycle` instead of hanging.
+Per-call `model` still wins unless `locked`. No `/subagents:settings`
+affordance — hand-edited, round-tripped on save like
+`excludedExtensionPackages`.
 
 ### Locking fields against callers
 
