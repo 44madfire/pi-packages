@@ -205,7 +205,7 @@ export class ToolCallGatePipeline {
 
     const filePath = getPathBearingToolPath(tcc.toolName, tcc.input);
     if (filePath !== null) {
-      const accessPath = normalizer.forPath(filePath);
+      const accessPath = normalizer.forToolPath(tcc.toolName, filePath);
       return {
         pathAccess: {
           path: accessPath,

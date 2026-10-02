@@ -41,8 +41,9 @@ export function describePathGate(
 
   // Emit an access-path intent so the resolver matches the lexical aliases
   // *and* the canonical (symlink-resolved) form, the same set
-  // `external_directory` matches (#418, #486).
-  const accessPath = normalizer.forPath(filePath);
+  // `external_directory` matches (#418, #486). A built-in tool's path is the
+  // file Pi's resolver opens, not the spelling the model typed.
+  const accessPath = normalizer.forToolPath(tcc.toolName, filePath);
   const check = resolver.resolve({
     kind: "access-path",
     surface,

@@ -29,10 +29,14 @@ vi.mock("#src/access-intent/bash/program", () => ({
 const realpathSync = vi.hoisted(() =>
   vi.fn<(path: string) => string>((p) => p),
 );
-vi.mock("node:fs", () => ({
-  realpathSync,
-  default: { realpathSync },
-}));
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    realpathSync,
+    default: { ...actual, realpathSync },
+  };
+});
 
 function makeMockBashProgram(command = "echo hello") {
   return {
