@@ -410,6 +410,9 @@ function derivePolicyLoaderOptions(
     agentsDir: join(agentDir, "agents"),
     projectGlobalConfigPath: cwd ? getProjectConfigPath(cwd) : undefined,
     projectAgentsDir: cwd ? getProjectAgentsDir(cwd) : undefined,
+    // Pi's built-in MCP reads these two files (`extensions/mcp/config.ts`).
+    globalMcpConfigPath: join(agentDir, "mcp.json"),
+    projectMcpConfigPath: cwd ? join(cwd, ".pi", "mcp.json") : undefined,
   };
 }
 

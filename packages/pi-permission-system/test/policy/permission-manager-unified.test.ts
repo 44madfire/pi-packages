@@ -1743,6 +1743,58 @@ describe("PermissionManager — configureForCwd and agentDir option", () => {
     }
   });
 
+  describe("MCP server names from Pi's mcp.json files", () => {
+    const mcpCall = (
+      manager: PermissionManager,
+      tool: string,
+    ): PermissionCheckResult =>
+      manager.check({ kind: "tool", surface: "mcp", input: { tool } });
+
+    it("derives a server configured only in the project's .pi/mcp.json once the cwd is set", () => {
+      const { agentDir, cwd, cleanup } = createAgentDirHarness({
+        globalPermission: {
+          "*": "allow",
+          mcp: { "*": "allow", github: "deny" },
+        },
+      });
+      try {
+        writeFileSync(
+          join(cwd, ".pi", "mcp.json"),
+          JSON.stringify({ mcpServers: { github: {} } }),
+        );
+        const manager = new PermissionManager({ agentDir });
+        expect(mcpCall(manager, "github_search").state).toBe("allow");
+
+        manager.configureForCwd(cwd);
+        expect(mcpCall(manager, "github_search").state).toBe("deny");
+
+        manager.configureForCwd(undefined);
+        expect(mcpCall(manager, "github_search").state).toBe("allow");
+      } finally {
+        cleanup();
+      }
+    });
+
+    it("reads the global mcp.json from the agentDir it was given", () => {
+      const { agentDir, cleanup } = createAgentDirHarness({
+        globalPermission: {
+          "*": "allow",
+          mcp: { "*": "allow", github: "deny" },
+        },
+      });
+      try {
+        writeFileSync(
+          join(agentDir, "mcp.json"),
+          JSON.stringify({ mcpServers: { github: {} } }),
+        );
+        const manager = new PermissionManager({ agentDir });
+        expect(mcpCall(manager, "github_search").state).toBe("deny");
+      } finally {
+        cleanup();
+      }
+    });
+  });
+
   it("configureForCwd(cwd) derives projectAgentsDir at <cwd>/.pi/agents (regression: #428)", () => {
     // Bug: old code derived <cwd>/.pi/agent/agents instead of <cwd>/.pi/agents.
     // This test pins the correct path and verifies agentsDir is unchanged.
