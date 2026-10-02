@@ -31,3 +31,29 @@ The plan has six steps: extract a shared launch renderer (folding in #988), spli
 - #988's body cites a reporter-side commit (`a2712e2`) that exists in neither this repo nor the reporter's public forks, so it could not be read.
   The design does not depend on it.
 - The `Co-authored-by: Sungbin Jo <goranmoomin@daum.net>` trailer is recorded on step 5, using the address from an earlier credited commit.
+
+## Stage: Implementation — TDD (2026-10-02T19:39:42Z)
+
+### Session summary
+
+I implemented all six plan steps, plus one extra characterization commit, with every step's named killing mutation applied and observed red.
+The `subagent` tool now resumes in the background on an explicit `run_in_background: true`, and a resume nobody claims clears a stale carrier claim, so it is announced.
+The pi-subagents suite went from 1898 to 1915 tests (+17).
+
+### Observations
+
+- Deviation: I added an extra `test:` commit ("pin the background spawn launch message verbatim") before the renderer extraction.
+  The existing `spawnBackground` tests used `toContain`, so they could not hold the text byte-identical as the plan claimed.
+- Deviation: `mockResumeStart`/`mockResumeStartRefusal` moved from step 4 into step 5's commit.
+  With no consumer yet, `fallow dead-code` flagged them in step 4.
+- The background-resume tool test expects `Type: Agent`, which is the display name the test registry resolves for `general-purpose`, not the type name the plan's sketch implied.
+- The "leaves the resumed outcome uncollected" and "ignores an agent file's default" tests were green during Red, as deliberate pins.
+  Mutations (d) and (b) each killed exactly the pin they target.
+- Mutation (a) killed four tests, not just the one the plan named, because every background-resume assertion depends on the branch existing.
+- Mid-step, a Python block move misplaced a test across `describe` blocks.
+  I recovered with `git checkout` of the test file and a single anchored `Edit`; per the `edit-tool` skill, prefer `Edit` for block insertion over scripted moves.
+- Pre-completion reviewer: PASS.
+  It re-derived all three claim producers (`spawnAndWait`, a claimed resume, the `get_subagent_result` wait) and confirmed each is stale by the time a resume can start.
+  It noted one pre-existing race, which this change does not make worse.
+  A `get_subagent_result(wait: true)` waiter that wakes after a resume has begun calls `release()` unconditionally and could clear a foreground resume's claim.
+  That needs two concurrent parent tool calls on one agent; I have not filed it.
