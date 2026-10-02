@@ -247,7 +247,7 @@ export class PermissionSession implements ToolCallGateInputs {
         ...this.paths.piInfrastructureDirs,
         ...(this.config.piInfrastructureReadPaths ?? []),
       ],
-      excludedDirs: [],
+      excludedDirs: this.paths.piInfrastructureExcludedDirs,
     };
   }
 

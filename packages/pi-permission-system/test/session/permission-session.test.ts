@@ -330,7 +330,7 @@ describe("PermissionSession", () => {
       const { session } = createSession({ configStore });
       expect(session.getInfrastructureReadScope()).toEqual({
         dirs: ["/test/agent", "/test/agent/git", "/extra/path"],
-        excludedDirs: [],
+        excludedDirs: ["/test/agent/logs"],
       });
     });
 
@@ -338,7 +338,7 @@ describe("PermissionSession", () => {
       const { session } = createSession();
       expect(session.getInfrastructureReadScope()).toEqual({
         dirs: ["/test/agent", "/test/agent/git"],
-        excludedDirs: [],
+        excludedDirs: ["/test/agent/logs"],
       });
     });
   });

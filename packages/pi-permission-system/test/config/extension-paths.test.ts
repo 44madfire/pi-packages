@@ -47,6 +47,13 @@ describe("computeExtensionPaths", () => {
     expect(paths.globalLogsDir).toBe(getGlobalLogsDir("/test/agent"));
   });
 
+  it("excludes the package's own logs dir from infrastructure reads", () => {
+    const paths = computeExtensionPaths("/test/agent");
+    expect(paths.piInfrastructureExcludedDirs).toEqual([
+      getGlobalLogsDir("/test/agent"),
+    ]);
+  });
+
   it("includes agentDir in piInfrastructureDirs", () => {
     const paths = computeExtensionPaths("/test/agent");
     expect(paths.piInfrastructureDirs).toContain("/test/agent");

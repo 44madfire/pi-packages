@@ -386,6 +386,16 @@ describe("PathNormalizer", () => {
         true,
       );
     });
+
+    test("does not allow a read inside one of the scope's excluded dirs", () => {
+      const ap = normalizer.forPath("/infra/logs/review.jsonl");
+      expect(
+        normalizer.isInfrastructureRead("read", ap, {
+          dirs: ["/infra"],
+          excludedDirs: ["/infra/logs"],
+        }),
+      ).toBe(false);
+    });
   });
 
   describe("entryExists", () => {

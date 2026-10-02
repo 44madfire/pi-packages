@@ -24,6 +24,12 @@ export interface ExtensionPaths {
    * call time in the handler so they pick up config reloads.
    */
   readonly piInfrastructureDirs: readonly string[];
+  /**
+   * Directories never auto-allowed as infrastructure reads, even inside one of
+   * `piInfrastructureDirs` or a configured `piInfrastructureReadPaths` entry:
+   * this package's own logs directory, whose entries hold tool input.
+   */
+  readonly piInfrastructureExcludedDirs: readonly string[];
 }
 
 /**
@@ -62,5 +68,6 @@ export function computeExtensionPaths(
     forwardingDir,
     globalLogsDir,
     piInfrastructureDirs,
+    piInfrastructureExcludedDirs: [globalLogsDir],
   };
 }

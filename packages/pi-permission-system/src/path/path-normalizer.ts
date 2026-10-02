@@ -230,6 +230,7 @@ export class PathNormalizer {
       scope.dirs,
       this.cwd,
       this.flavor,
+      scope.excludedDirs,
     );
   }
 

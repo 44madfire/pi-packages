@@ -2691,4 +2691,23 @@ describe("Pi infrastructure reads", () => {
       expect(result?.block).toBeUndefined();
     });
   });
+
+  describe("the package's own logs", () => {
+    it("gates a read of the review log", async () => {
+      const reviewLog = join(getGlobalLogsDir(agentDir), REVIEW_LOG_FILENAME);
+      const result = await readOutcome(
+        { "*": "allow", external_directory_read: { "*": "deny" } },
+        reviewLog,
+      );
+      expect(result?.block).toBe(true);
+    });
+
+    it("still auto-allows the package's config beside them", async () => {
+      const result = await readOutcome(
+        { "*": "allow", external_directory_read: { "*": "deny" } },
+        getGlobalConfigPath(agentDir),
+      );
+      expect(result?.block).toBeUndefined();
+    });
+  });
 });
