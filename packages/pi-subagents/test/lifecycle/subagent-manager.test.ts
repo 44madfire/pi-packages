@@ -1603,6 +1603,51 @@ describe("SubagentManager", () => {
       });
     });
   });
+
+  describe("startResume", () => {
+    let manager: SubagentManager;
+
+    afterEach(async () => {
+      await manager.dispose();
+    });
+
+    it("returns the record already running the resume, before the resumed run settles", async () => {
+      const { factory, stub } = createSessionFactory();
+      ({ manager } = createManager({ createSubagentSession: factory }));
+      const id = spawnBg(manager);
+      const record = manager.getRecord(id)!;
+      await record.promise;
+      const gate = Promise.withResolvers<string>();
+      stub.resumeTurnLoop.mockReturnValue(gate.promise);
+
+      const start = manager.startResume(id, "continue");
+
+      expect(start).toEqual({ kind: "started", record });
+      expect(record.status).toBe("running");
+      gate.resolve("second");
+      await record.promise;
+      expect(record.status).toBe("completed");
+    });
+
+    it("refuses an id no record answers to", () => {
+      ({ manager } = createManager());
+
+      expect(manager.startResume("nope", "continue")).toEqual({ kind: "refused", reason: "unknown-agent" });
+    });
+
+    it("refuses a run that has not settled, starting no turn loop", async () => {
+      const { factory, stub } = createSessionFactory();
+      // The session exists and its first run is still in flight, so only the
+      // refusal stands between this call and a second turn loop.
+      stub.runTurnLoop.mockReturnValue(new Promise(() => {}));
+      ({ manager } = createManager({ createSubagentSession: factory }));
+      const id = spawnBg(manager);
+      await vi.waitFor(() => expect(stub.runTurnLoop).toHaveBeenCalled());
+
+      expect(manager.startResume(id, "continue")).toEqual({ kind: "refused", reason: "still-running" });
+      expect(stub.resumeTurnLoop).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("resolveRetentionWindow", () => {
