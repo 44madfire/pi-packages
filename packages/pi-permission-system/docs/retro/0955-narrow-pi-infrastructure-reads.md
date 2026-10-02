@@ -37,3 +37,26 @@ I filed #1018 (infra list never canonicalized) and dispositioned it as out of sc
 
 - None.
   The assessor's rejections (normalizer-held scope, merging `piInfrastructureReadPaths` into `ExtensionPaths`, and a shared within-any helper) are not worth a separate pass.
+
+## Stage: Implementation — TDD (2026-10-02T23:40:03Z)
+
+### Session summary
+
+All six planned steps landed: two preparatory refactors (`InfrastructureReadScope`, preCheck hoist), three breaking `fix!:` steps (targeted-deny yield, logs exclusion, harness-entry list), and the docs.
+The package suite went from 5312 to 5334 tests, all green, and every named killing mutation turned exactly its predicted tests red.
+
+### Observations
+
+- Deviation: `describeExternalDirectoryGate` had 6 direct test calls across the two acceptance files, not the 5 the plan estimated.
+- Deviation: `extension-paths.test.ts` lost four per-entry `toContain` tests, subsumed by a full-list `toEqual`, rather than having them rewritten one by one.
+- Pre-completion reviewer: WARN on the first round, PASS on the delta.
+  - It found that `isTargetedDeny` compared `matchedPattern !== "*"` literally, so a `"**"` catch-all (which compiles identically) counted as targeted.
+    It now uses `/^\*+$/`, and a unit test plus two mutations pin it.
+  - It noted no prefix-collision pins existed, so `settings.json.bak` and `skills-old/` were added to the composition-root `it.each`.
+    A prefix-glob mutation of the entry list kills exactly those two.
+  - It found that a symlinked `agentDir` plus a user glob leaves the logs exclusion unmatched: the same un-canonicalized derivation as #1018, recorded as a comment there.
+  - Both code fixes were autosquashed into their step commits before push.
+    The tree was verified identical across the rebase.
+- Scripting trap, twice: an `Edit` body typed `\u2500`/`\u2026` as literal escapes in a comment and a JSDoc.
+  Both were caught by grep and rewritten with the real character or plain words.
+- A placement slip: inserting the `AGENT_DIR_INFRASTRUCTURE_ENTRIES` constant before `export function` split the function's JSDoc from its declaration, and a scripted move fixed it.
