@@ -16,7 +16,7 @@ Permission enforcement extension for the [Pi](https://pi.mariozechner.at/) codin
 - **Hides disallowed tools** before the agent starts — no wasted turns probing for blocked tools
 - **Enforces allow / ask / deny** at tool-call time with UI confirmation dialogs
 - **Controls bash commands** with wildcard pattern matching (`git *: ask`, `rm -rf *: deny`)
-- **Gates MCP and skill access** at server, tool, and skill-name granularity
+- **Gates MCP and skill access** at server, tool, and skill-name granularity — Pi's built-in MCP tools and the `mcp` proxy alike
 - **Protects sensitive file patterns** — cross-cutting `path` rules deny `.env`, `~/.ssh/*`, etc. across all tools and bash at once, matching both the path as referenced and its symlink-resolved form so a deny cannot be evaded through a symlink alias
 - **Guards external paths** — prompts before file tools or bash commands reach outside `cwd`
 - **Fails closed** — an internal gate error blocks the tool (with a `gate_error` review-log entry and a matching `permissions:decision` broadcast), and a bash command the parser could not resolve, in whole or in part — or an indirection wrapper that hides the gated command (`bash -c`/`eval`, `sudo`, `env`, `xargs`, `find -exec`, …) — prompts (`ask`) rather than passing silently, unless the wrapped command is a pure reader whose direction is provable whatever it is fed (`xargs grep -l foo`); where a partial parse failure's own region re-parses cleanly on its own, the commands and paths it holds are recovered and gated rather than merely prompted for

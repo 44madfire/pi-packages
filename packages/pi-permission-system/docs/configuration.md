@@ -366,13 +366,13 @@ Omitting `"*"` defaults to `"ask"` (least privilege).
 Any registered tool name can be a surface key.
 A string value is a catch-all for that surface.
 
-| Surface example                               | Description                         |
-| --------------------------------------------- | ----------------------------------- |
-| `read`, `write`, `edit`, `grep`, `find`, `ls` | Canonical Pi built-in file tools    |
-| `bash`                                        | Shell command execution             |
-| `mcp`                                         | Registered MCP proxy tool           |
-| `task`                                        | Delegation tool                     |
-| `third_party_tool`                            | Any other registered extension tool |
+| Surface example                               | Description                                                 |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `read`, `write`, `edit`, `grep`, `find`, `ls` | Canonical Pi built-in file tools                            |
+| `bash`                                        | Shell command execution                                     |
+| `mcp`                                         | MCP calls: Pi's built-in MCP tools and the `mcp` proxy tool |
+| `task`                                        | Delegation tool                                             |
+| `third_party_tool`                            | Any other registered extension tool                         |
 
 ```jsonc
 {
@@ -543,7 +543,11 @@ To deliberately opt into permissive bash, set `"bash": { "*": "allow" }` explici
 
 ### `mcp` Surface
 
-MCP permissions match against derived targets from tool input:
+MCP permissions match against targets derived from each MCP call.
+Two kinds of tool make MCP calls, and both resolve on this one surface:
+
+- **Pi's built-in MCP** registers each server tool as its own tool, `mcp__<server>__<tool>` (for example `mcp__github__search_code`); see [Pi's built-in MCP tools](#pis-built-in-mcp-tools).
+- **The `mcp` proxy tool** (for example pi-mcp-adapter's) takes the call as input, `{"tool": …, "server": …}`.
 
 | Target type       | Examples                                                              |
 | ----------------- | --------------------------------------------------------------------- |
@@ -573,7 +577,7 @@ In that example `mcp_status` and `mcp_list` allow discovery, `myServer:*` prompt
 #### How a call becomes targets
 
 One MCP call is looked up under several names, and a rule may name any of them.
-When the call carries no explicit `server`, the server is derived from the tool name against the servers in your MCP config, in this order — the first convention that matches settles the name:
+When a proxied call carries no explicit `server`, the server is derived from the tool name against the servers in your MCP config (`~/.pi/agent/mcp.json`, plus `<project>/.pi/mcp.json` in a trusted project), in this order — the first convention that matches settles the name:
 
 1. **Qualified** — `server:tool` splits directly.
 2. **Prefix** — the **longest** configured server that is the leading segment of `<server>_<tool>`.
@@ -593,6 +597,28 @@ An explicit `server` argument skips derivation entirely.
 Deriving a server from a name is a heuristic, and it can attach the wrong rule: with `git` configured, a `git_lab_issues` tool from a different server derives `git`.
 Longest-match only helps when both servers are configured.
 Where the distinction matters, pass an explicit `server` argument or use a qualified `server:tool` name.
+
+#### Pi's built-in MCP tools
+
+Pi names each tool `mcp__<server>__<tool>`, replacing every character outside `[A-Za-z0-9_]` with `_`, so a server named `danger-srv` in `mcp.json` appears as `danger_srv` in the tool name.
+A call to such a tool is looked up under the same targets a proxied call gets, plus the tool's full Pi name, and the server is named in **both** spellings: the one in your `mcp.json` and the one in the tool name.
+Pi refuses two servers whose names differ only in `-` and `_`, so the two spellings always name the same server.
+
+| Call (`danger-srv` in `mcp.json`) | Targets                                                                                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mcp__danger_srv__wipe`           | `danger-srv_wipe`, `danger-srv:wipe`, `danger-srv`, `danger_srv_wipe`, `danger_srv:wipe`, `danger_srv`, `wipe`, `mcp__danger_srv__wipe`, `mcp_call` |
+| `mcp__github__search` (`github`)  | `github_search`, `github:search`, `github`, `search`, `mcp__github__search`, `mcp_call`                                                             |
+
+So `"danger-srv": "deny"`, `"danger_srv": "deny"`, `"danger-srv:*": "deny"`, and `"mcp__danger_srv__*": "deny"` each deny every tool of that server.
+The server is the longest configured name whose Pi spelling starts the tool name; a server no `mcp.json` names, such as one an extension registers in code, is split at the first `__` and gets only Pi's spelling.
+A tool name over 64 characters, or two of a server's tools that sanitize to the same name, gets an 8-character hash suffix from Pi; the suffix is part of the tool target, so a server-level rule is the reliable way to name such a tool.
+
+The tool's arguments are its own input, unlike the proxy's: the ask prompt and the review log show them, and the [`path` and `external_directory`](#path-surface) gates read a top-level `path` argument.
+Approving such a tool "for this session" records its full Pi name on the `mcp` surface, so the approval covers exactly that tool.
+A Pi MCP tool is withheld from the model when its targets resolve to `deny`.
+
+> **Migrating:** a top-level key naming a Pi MCP tool (`"mcp__danger_srv__wipe": "deny"`) still applies, as an `mcp` rule, and raises a notice at session start asking you to move it under `mcp`.
+> See [the migration guide](migration/1001-pi-mcp-tools-on-mcp-surface.md).
 
 #### Which rule shape to write
 
@@ -1339,9 +1365,9 @@ Additional behaviors:
   A skill listed in text pi did not render, such as your own `SYSTEM.md`, is not edited out; using it is still gated.
 - The prompt options are recomputed on every turn but are stable across turns for a stable policy/agent, so the provider's prompt cache is preserved rather than rewritten each turn.
   A policy change is an intentional cache transition, as a mid-session agent switch already is.
-- Extension-provided tools like `task`, `mcp`, and third-party tools are handled by exact registered name
+- Extension-provided tools like `task`, `mcp`, and third-party tools are handled by exact registered name; Pi's built-in MCP tools (`mcp__<server>__<tool>`) resolve on the `mcp` surface instead (see [Pi's built-in MCP tools](#pis-built-in-mcp-tools))
 - Generic extension-tool approval prompts include a bounded input preview; built-in file tools use concise human-readable summaries
-- Permission review logs include `toolInputPreview` values for non-bash/non-MCP tool calls, with sensitive-keyed values masked and every value bounded by `reviewLogFieldMaxWidth` (see [Log file sensitivity](#log-file-sensitivity))
+- Permission review logs include `toolInputPreview` values for tool calls other than bash and the `mcp` proxy, with sensitive-keyed values masked and every value bounded by `reviewLogFieldMaxWidth` (see [Log file sensitivity](#log-file-sensitivity))
 - A tool whose path came from an extractor registered in an **ancestor** session rather than this one records `extractorSource: "inherited"` beside the decision; the field is absent for every path this session resolved itself.
   This happens in a subagent child when the extractor's provider was kept out of the child but the tool's own package was not — the child borrows the declaration so its `path` and `external_directory` gates still see the path (see [Subagent Integration](https://github.com/gotgenes/pi-packages/blob/main/packages/pi-permission-system/docs/subagent-integration.md#loading-asymmetry))
 
