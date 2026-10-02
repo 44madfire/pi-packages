@@ -356,6 +356,8 @@ src/
 │   ├── prompts.ts                  system prompt building; inherits the parent prompt's identity, cutting the session-resolved tail (ADR 0006) and dropping Pi's `<tools>`/`<rules>` sections on the section-shaped prompt (ADR 0011) — and the project-context block too for a child running in its own directory (ADR 0010) — or its portable parts alone for a re-homing provider (ADR 0009)
 │   ├── project-context.ts          Pi's `<project_context>` block, rendered in pi ≥0.86's shape; the loader a child whose adopted identity describes another directory resolves its own with (ADR 0010)
 │   ├── ask-parent-tool.ts          child-facing ask_parent: records the child's question, tells it to end its turn
+│   ├── builtin-extensions.ts       selects the Pi built-ins (codemode, tool-search, MCP) a child's allowlist calls for
+│   ├── mcp-tool-patterns.ts        expands `mcp__…*` allowlist entries against the parent's registered tool names
 │   ├── notify-parent-tool.ts       child-facing notify_parent: one-way mid-run update, capped at 2000 characters
 │   ├── content-items.ts            shared message content parsing (tool-call names, assistant content)
 │   ├── context.ts                  parent conversation extraction
@@ -368,7 +370,7 @@ src/
 │
 ├── lifecycle/                      agent execution and state tracking
 │   ├── subagent-manager.ts         collection manager + observer wiring + session-retention sweep (consumption-aware; an unanswered question holds the safety cap); the resume choke point, refusing from the record's own predicate and reporting a discriminated outcome, so every front door declines the same resumes; a door that returns before the resumed run ends starts one synchronously, and each resume's caller decides whether its outcome is claimed
-│   ├── create-subagent-session.ts  assembly factory: session creation, spawn-tool denylist, core child-tool install, binding
+│   ├── create-subagent-session.ts  assembly factory: MCP pattern expansion, Pi built-in selection, session creation, spawn-tool denylist, core child-tool install, binding
 │   ├── subagent-session.ts         born-complete child session: turn loop, steer, shutdown-then-dispose teardown
 │   ├── turn-limits.ts              normalizeMaxTurns (turn-count policy)
 │   ├── subagent.ts                 owns full execution lifecycle (run, resume, abort, steer, wait-until-settled); a teardown with no result text to carry its addendum records it as a notice and announces one produced after delivery; answers why a resume would be refused (resumeRefusal, including a live run), which the resume choke point and every result carrier read rather than re-deriving; reports a resume's start as well as its end; wait-until-settled reports whether the waited run settled, has not, or was replaced by a resume (carrying what it ended with)
@@ -487,6 +489,13 @@ Naming an extension tool in `tools:` is therefore the supported way to give a ch
 The core does not widen that on the agent's behalf, and no settings key may name a tool.
 Inheriting every extension tool a child registers would hand a read-only agent whatever write-capable tools the parent's extensions happen to publish — a capability decision that belongs to whoever writes the agent file, expressed per agent, not a default.
 Tool _restriction_ beyond that stays with `@gotgenes/pi-permission-system`, per [ADR-0002].
+
+Pi supplies `codemode`, `tool_search`, and MCP tools through built-in extensions it hands only to its own CLI session, so `createSubagentSession` hands them to the child's loader itself, and only those the allowlist calls for (`builtin-extensions.ts`).
+They go in as `builtin: true, replaceable: true` entries under Pi's own names, so the operator's `-builtin:<name>` setting and Pi's replacement rule apply to children as they do to the parent.
+Selecting by allowlist rather than inheriting the parent's set keeps MCP, which connects every configured server when it loads, out of every child that cannot reach an MCP tool.
+
+An allowlist entry starting with `mcp__` and containing `*` is a pattern (`mcp__github__*`), expanded at child creation against the tool names the parent has registered (`mcp-tool-patterns.ts`, fed by the composition root's `listParentToolNames`).
+Pi's allowlist matches names exactly and an MCP server's names exist only once it connects, so the parent's registry is the one place a whole server can be named from; the agent still writes the pattern, so this does not widen the allowlist on its behalf.
 
 The core does install its own **protocol** in every child, on its own authority and independent of the agent file: the `<active_agent>` tag, the parent-context prefix, and the `ask_parent` / `notify_parent` tools.
 The distinction the boundary draws is capability, not provenance.

@@ -240,6 +240,53 @@ Two other settings interact with this list:
 - When [`@gotgenes/pi-permission-system`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system) is installed, its `permission:` frontmatter narrows the set further, per turn.
   Use it to deny a tool; use `tools` to decide what the agent has in the first place.
 
+#### Codemode, `tool_search`, and MCP tools
+
+Pi supplies `codemode`, `tool_search`, and MCP tools through built-in extensions.
+A child loads one only when its `tools` list names a tool that extension supplies:
+
+| Name in `tools`                                                                                          | Built-in the child loads |
+| -------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `codemode`                                                                                               | codemode                 |
+| `tool_search`                                                                                            | tool-search              |
+| any `mcp__<server>__<tool>`, `list_mcp_resources`, `list_mcp_resource_templates`, or `read_mcp_resource` | MCP                      |
+
+A child that names none of them loads none of them.
+That matters for MCP, which starts every server in your `mcp.json` when it loads, whether or not the child can reach that server's tools.
+A built-in you disabled in your Pi settings (for example `"extensions": ["-builtin:mcp"]`) stays disabled in children, and an extension that replaces a built-in in your session replaces it in children too.
+
+Pi names each MCP tool `mcp__<server>__<tool>`, where `<server>` is the server's key in `mcp.json`.
+Characters other than letters, digits, and `_` become `_`, and a name longer than 64 characters gets a hash suffix.
+An MCP server's tools are exposed `codemode` by default: the model calls them from a `codemode` script, so the agent must name `codemode` as well.
+A server configured with `deferred` exposure needs `tool_search` instead; a `direct` one needs neither.
+The child does not add these for you.
+
+You can name each MCP tool:
+
+```yaml
+---
+description: Triage GitHub issues
+tools: read, codemode, mcp__github__get_issue, mcp__github__list_issues, mcp__github__search_issues
+---
+```
+
+Or name a whole server, or a prefix of its tools, with `*`:
+
+```yaml
+tools: read, codemode, mcp__github__*                            # every github tool
+tools: read, codemode, mcp__github__get_*, mcp__github__list_*   # a read-shaped subset
+tools: read, codemode, mcp__*                                    # every MCP tool
+```
+
+A pattern is any entry that starts with `mcp__` and contains `*`, which matches any run of characters.
+`*` in any other entry is not special.
+The pattern expands when the agent spawns, to the matching tools **your session** has registered at that moment:
+
+- A server that has not connected yet (still starting, signed out, or disabled) contributes no tools, so the pattern matches nothing and is dropped.
+  Set `PI_SUBAGENTS_DEBUG=1` to see which patterns matched nothing.
+- A child running in another directory (a worktree) expands against your session's servers, even when that directory's `.pi/mcp.json` configures different ones.
+- Tools a server adds after the child started do not reach that child.
+
 ## Persistent Settings
 
 Runtime tuning values set via `/subagents:settings` (max concurrency, default max turns, grace turns, the two session-retention windows, the abort-on-interrupt policy, and the mid-run update channel) persist across pi restarts.
