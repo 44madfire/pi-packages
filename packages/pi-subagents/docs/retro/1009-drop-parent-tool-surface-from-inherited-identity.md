@@ -50,3 +50,16 @@ The change added 6 tests to `prompts.test.ts`, taking it from 74 to 80.
   It re-derived all three invariants with its own inputs.
   The warnings were about provenance (the fixtures are hand-built because `buildSystemPrompt` is not exported) and about a `SYSTEM.md` that quotes Pi's pair; ADR 0011's Consequences already records that case.
 - At ship: release before pi-permission-system's #999 release, and comment on #901.
+
+## Stage: Sync (worktree) (2026-10-02T03:46:08Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` both passed on the worktree.
+The plan's marker is `**Release:** ship independently`, but it must reach npm before pi-permission-system's #999 release; comment on #901 at ship.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1009--/2026-10-01T23-52-22-534Z_01a0f9e2-2506-7210-a7fa-e5ccb60ad326.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+No deferred work and no follow-up issues filed.
