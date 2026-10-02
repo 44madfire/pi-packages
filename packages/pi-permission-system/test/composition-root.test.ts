@@ -2710,4 +2710,28 @@ describe("Pi infrastructure reads", () => {
       expect(result?.block).toBeUndefined();
     });
   });
+
+  describe("under a catch-all external_directory_read deny", () => {
+    const DENY_ALL = { "*": "allow", external_directory_read: { "*": "deny" } };
+
+    it.each([
+      ["auth.json"],
+      ["sessions/s.jsonl"],
+      ["mcp-oauth/t.json"],
+      // Share a harness entry's prefix without being inside it.
+      ["settings.json.bak"],
+      ["skills-old/x/SKILL.md"],
+    ])("gates a read of %s, outside Pi's harness entries", async (entry) => {
+      const result = await readOutcome(DENY_ALL, join(agentDir, entry));
+      expect(result?.block).toBe(true);
+    });
+
+    it.each([["skills/x/SKILL.md"], ["settings.json"], ["APPEND_SYSTEM.md"]])(
+      "auto-allows a read of %s, one of Pi's harness entries",
+      async (entry) => {
+        const result = await readOutcome(DENY_ALL, join(agentDir, entry));
+        expect(result?.block).toBeUndefined();
+      },
+    );
+  });
 });
