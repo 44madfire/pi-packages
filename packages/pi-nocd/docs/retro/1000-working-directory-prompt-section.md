@@ -58,4 +58,19 @@ Completed all five plan steps: the pi-subagents pin, the devDependency bump to P
   - pi-subagents' `unanchored` no-skills path returns a parent's prompt unchanged when its `<cwd>` body does not match `toPromptPath(inherited.cwd)`.
     The reviewer found no way to reach it.
 
+## Stage: Sync (worktree) (2026-10-02T05:51:48Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` both passed from the worktree root.
+The plan's marker is `**Release:** ship independently`, and the fix commit is breaking, so the release is a major for `pi-nocd`.
+Close [#846] at `/ship`, as resolved by this change.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1000--/2026-10-02T05-19-02-442Z_01a0fb0d-372a-75d5-a4a8-22b377487141.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- Decide at `/ship` whether to leave a comment on issue #1000 pointing at the load-order caveat (an earlier forcing handler, such as pi-ask 1.2.0, still drops the section).
+- The plan's end-to-end check (Pi 1.0.0, one configured server) ran during the TDD stage and passed.
+
 [#846]: https://github.com/gotgenes/pi-packages/issues/846
