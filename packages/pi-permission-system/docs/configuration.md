@@ -1314,11 +1314,11 @@ permission:
 
 The extension integrates via Pi's lifecycle hooks:
 
-| Hook                 | Behavior                                                                                                                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `before_agent_start` | Filters the active tool set (restrict-only), restates the tool list and guidelines at the end of the system prompt to match (except under a custom system prompt outside a subagent), and hides denied skills |
-| `tool_call`          | Enforces permissions for every tool invocation                                                                                                                                                                |
-| `input`              | Intercepts `/skill:<name>` requests and enforces skill policy                                                                                                                                                 |
+| Hook                 | Behavior                                                                                                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `before_agent_start` | Filters the active tool set (restrict-only), states a subagent child's own tool list and rules, and hides denied skills, all through pi's prompt options rather than a rewritten prompt |
+| `tool_call`          | Enforces permissions for every tool invocation                                                                                                                                          |
+| `input`              | Intercepts `/skill:<name>` requests and enforces skill policy                                                                                                                           |
 
 Additional behaviors:
 
@@ -1326,16 +1326,18 @@ Additional behaviors:
 - Tool filtering is restrict-only: the active set starts from pi's already-active tools (`pi.getActiveTools()`) and only ever has denied tools removed — the permission system never activates a tool pi left off by default (e.g. `find`, `grep`, `ls`)
 - Policy is applied to the tool surface pi has activated over the session, not to the previous turn's filtered result, so removing a `deny` rule restores the tool it had hidden without restarting pi.
   A tool that stops being active for any other reason (another extension deactivating it, pi unregistering it) is not restored.
-- On the turn a tool is restored, it is callable immediately but its `Available tools:` line reappears one turn later: pi builds the prompt parts an extension receives before the extension runs, so the restored tool has no one-line description to render until it is already active
 - A tool is removed only when every value under its surface resolves to `deny`; a surface with any reachable `allow` or `ask` pattern stays available (see [Tool Surfaces](#tool-surfaces))
-- The tool list and guidelines are **relocated** rather than edited in place: the copies pi wrote are removed, and this session's own are rendered at the end of the system prompt, after the working directory pi states last.
-  They take the shape pi writes them in: `Available tools:` and `Guidelines:` sections after a `Current working directory:` footer through pi 0.85, and `<tools>` and `<rules>` sections after a `<cwd>` section from pi 0.86.
-  Each session states its own tool surface, which is what keeps a subagent child's inherited prompt byte-identical to its parent's (see [ADR 0014](decisions/0014-tool-surface-is-node-local-prose.md)); the tool list moves to the end of the prompt for every session on pi's default prompt, whether or not anything is denied.
-  A custom system prompt (`.pi/SYSTEM.md`, `~/.pi/agent/SYSTEM.md`, `--system-prompt`) is left exactly as pi built it: pi writes no tool list or rules under one, and this extension adds none either, so the prompt describes tools only if you wrote that yourself.
+- Every change this extension makes to the system prompt goes through pi's `systemPromptOptions`; it never returns a rewritten prompt.
+  A returned prompt is sent as the whole prompt, which would drop the sections other extensions add after this one runs, such as pi's `<mcp_servers>` list of `codemode` and `deferred` MCP servers (see [ADR 0015](decisions/0015-prompt-changes-through-system-prompt-options.md)).
+- On pi's default prompt, the tool list and guidelines stay where pi writes them, as its `<tools>` and `<rules>` sections, and pi renders them from the filtered active set, so a denied tool and its guidelines are absent and a restored tool is listed on the turn it returns.
+- A custom system prompt (`.pi/SYSTEM.md`, `~/.pi/agent/SYSTEM.md`, `--system-prompt`) is left exactly as pi built it: pi writes no tool list or rules under one, and this extension adds none either, so the prompt describes tools only if you wrote that yourself.
   Tool filtering and enforcement still apply, and the model still receives only the allowed tools in the request's tool list.
-  A subagent child is the exception: its prompt is always a custom one assembled by the subagent extension, so it still gets its own tool list and rules at the end, while any custom text it inherited stays untouched.
-- The rendered sections follow pi's own rules: a tool is listed only when pi supplied a one-line description for it, and the guideline bullets are the allowed tools' own contributions, then any rules another extension added to `systemPromptOptions.promptGuidelines`, around pi's built-in ones
-- The prompt is recomputed and returned on every turn but is stable across turns for a stable policy/agent, so the provider's prompt cache (tools + system prefix) is preserved rather than rewritten each turn.
+  A subagent child is the exception: its prompt is always a custom one assembled by the subagent extension, so it gets its own `<tools>` and `<rules>` sections, placed after the working directory, while any custom text it inherited stays untouched.
+  The child's sections follow pi's own rules: a tool is listed only when pi supplied a one-line description for it, and the guideline bullets are the allowed tools' own contributions, then any rules another extension added to `systemPromptOptions.promptGuidelines`, around pi's built-in ones.
+- A subagent child running with `@gotgenes/pi-subagents` needs a release that drops the parent's `<tools>` and `<rules>` from the prompt the child inherits; with an older one, the child shows the parent's tool list as well as its own.
+- A denied skill is removed from the skills catalogue pi renders.
+  A skill listed in text pi did not render, such as your own `SYSTEM.md`, is not edited out; using it is still gated.
+- The prompt options are recomputed on every turn but are stable across turns for a stable policy/agent, so the provider's prompt cache is preserved rather than rewritten each turn.
   A policy change is an intentional cache transition, as a mid-session agent switch already is.
 - Extension-provided tools like `task`, `mcp`, and third-party tools are handled by exact registered name
 - Generic extension-tool approval prompts include a bounded input preview; built-in file tools use concise human-readable summaries
