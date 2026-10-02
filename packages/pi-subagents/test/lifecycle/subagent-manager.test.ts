@@ -8,11 +8,12 @@ import type { SubagentSession } from "#src/lifecycle/subagent-session";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { NotificationManager } from "#src/observation/notification";
 import type { RunConfig } from "#src/runtime";
+import { GetResultTool } from "#src/tools/get-result-tool";
 import type { AgentConfig, Subagent } from "#src/types";
 import { makeWorkspace, makeWorkspaceProvider } from "#test/helpers/make-workspace";
 import { createBlockingFactory, createSessionFactory } from "#test/helpers/manager-stubs";
 import { createMockSession, createSubagentSessionStub, emitResumeUsageAndCompaction, toSubagentSession } from "#test/helpers/mock-session";
-import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
+import { STUB_CTX, STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
 
 /** Default max concurrent background agents (matches production default). */
 const DEFAULT_MAX_CONCURRENT = 4;
@@ -1635,6 +1636,36 @@ describe("SubagentManager", () => {
         await manager.resume(record.id, "second answer");
 
         expect(sendMessage).toHaveBeenCalledOnce();
+      });
+
+      it("announces nothing for a claimed resume that starts while a waiter is waking", async () => {
+        const sendMessage = vi.fn();
+        const notifications = new NotificationManager(sendMessage);
+        const { factory, stub } = createSessionFactory();
+        const resumed = Promise.withResolvers<string>();
+        stub.resumeTurnLoop.mockReturnValue(resumed.promise);
+        let resumeOutcome: Promise<unknown> | undefined;
+        ({ manager } = createManager({
+          createSubagentSession: factory,
+          observer: {
+            // A consumer that resumes the moment the run settles, as a
+            // subagents:completed handler can, before the waiter wakes.
+            onSubagentCompleted: (r) => {
+              notifications.sendCompletion(r);
+              resumeOutcome = manager.resume(r.id, "continue", { claimOutcome: true });
+            },
+            onSubagentResumed: (r) => notifications.sendCompletion(r),
+          },
+        }));
+        const id = spawnBg(manager);
+        const waiter = new GetResultTool(manager, defaultRegistry());
+
+        await waiter.execute("tc-1", { agent_id: id, wait: true }, new AbortController().signal, undefined, STUB_CTX);
+        resumed.resolve("second");
+        await resumeOutcome;
+
+        // The resumer receives the outcome; nothing announces it a second time.
+        expect(sendMessage).not.toHaveBeenCalled();
       });
 
       it("still announces nothing for a claimed resume", async () => {

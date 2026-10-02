@@ -88,6 +88,61 @@ describe("GetResultTool — carrier claim", () => {
 		expect(record.consumed).toBe(false);
 	});
 
+	it("leaves another carrier's claim in place when the parent turn is interrupted mid-wait", async () => {
+		const sessionStub = createSubagentSessionStub();
+		sessionStub.runTurnLoop.mockReturnValue(new Promise<never>(() => {}));
+		const record = createTestSubagent({
+			status: "running",
+			completedAt: undefined,
+			execution: makeStubExecution({
+				createSubagentSession: async () => toSubagentSession(sessionStub),
+			}),
+		});
+		record.start();
+		record.claim();
+		const controller = new AbortController();
+
+		const resultPromise = execute(
+			makeManager(new Map([["agent-1", record]])),
+			{ agent_id: "agent-1", wait: true },
+			controller.signal,
+		);
+		controller.abort();
+		await resultPromise;
+
+		// Only this call's claim was abandoned; the other carrier still delivers.
+		expect(record.claimed).toBe(true);
+	});
+
+	it("leaves a claimed resume's claim in place when the wait wakes after the resume started", async () => {
+		const sessionStub = createSubagentSessionStub();
+		sessionStub.runTurnLoop.mockResolvedValue({ responseText: "first", aborted: false, steered: false });
+		const resumed = Promise.withResolvers<string>();
+		sessionStub.resumeTurnLoop.mockReturnValue(resumed.promise);
+		const record = createTestSubagent({
+			status: "running",
+			completedAt: undefined,
+			execution: makeStubExecution({
+				createSubagentSession: async () => toSubagentSession(sessionStub),
+				// A consumer that resumes the moment the run settles, before the
+				// waiter's continuation runs, as a subagents:completed handler can.
+				observer: {
+					onRunFinished: (agent) => {
+						agent.claim();
+						void agent.resume("continue");
+					},
+				},
+			}),
+		});
+		record.start();
+
+		await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
+
+		expect(record.claimed).toBe(true);
+		resumed.resolve("second");
+		await record.promise;
+	});
+
 	it("leaves another carrier's claim untouched when wait is not requested", async () => {
 		const record = createTestSubagent({ status: "running", completedAt: undefined });
 		record.claim();

@@ -30,6 +30,14 @@ export type SubagentStatus =
 	| "stopped"
 	| "error";
 
+/**
+ * One carrier's commitment to deliver an outcome. Releasing it drops only this
+ * commitment, so the outcome stays claimed while any other carrier holds one.
+ */
+export interface CarrierClaim {
+	release(): void;
+}
+
 /** What a settled run ended with: the fields an outcome carrier renders. */
 export interface SettledOutcome {
 	status: SubagentStatus;
@@ -129,8 +137,10 @@ export class SubagentState {
 	// Transient runtime ownership, so deliberately not seedable via
 	// SubagentStateInit — a rehydrated record must not claim a carrier that no
 	// longer exists.
-	private _claimed = false;
-	get claimed(): boolean { return this._claimed; }
+	// One entry per carrier, so a carrier that abandons its commitment drops only
+	// its own: another carrier holding the same outcome still delivers it.
+	private readonly _claims = new Set<CarrierClaim>();
+	get claimed(): boolean { return this._claims.size > 0; }
 
 	// The question this agent ended its turn with, if it declared one. Part of the
 	// outcome like _result, and set alongside it at the terminal transition.
@@ -357,13 +367,15 @@ export class SubagentState {
 	 * A carrier has committed to delivering this outcome, so nothing else should
 	 * announce it. Unlike every other transition here, this one is revocable.
 	 */
-	claim(): void {
-		this._claimed = true;
+	claim(): CarrierClaim {
+		const claim: CarrierClaim = { release: () => { this._claims.delete(claim); } };
+		this._claims.add(claim);
+		return claim;
 	}
 
-	/** The carrier abandoned its commitment; announcing is owed again. */
+	/** Drop every carrier's commitment; announcing is owed again. */
 	releaseClaims(): void {
-		this._claimed = false;
+		this._claims.clear();
 	}
 
 	/** Transition to stopped state. Always valid — no guard. */

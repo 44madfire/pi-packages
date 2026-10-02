@@ -424,6 +424,61 @@ describe("SubagentState — carrier claim", () => {
 		expect(state.consumedAt).toBe(5000);
 	});
 
+	describe("claim handles", () => {
+		it("keeps the outcome claimed while another holder remains", () => {
+			const state = new SubagentState({ status: "running" });
+			const first = state.claim();
+			state.claim();
+
+			first.release();
+
+			expect(state.claimed).toBe(true);
+		});
+
+		it("hands responsibility back once every holder released", () => {
+			const state = new SubagentState({ status: "running" });
+			const first = state.claim();
+			const second = state.claim();
+
+			second.release();
+			first.release();
+
+			expect(state.claimed).toBe(false);
+		});
+
+		it("releasing one handle twice drops only its own claim", () => {
+			const state = new SubagentState({ status: "running" });
+			const first = state.claim();
+			state.claim();
+
+			first.release();
+			first.release();
+
+			expect(state.claimed).toBe(true);
+		});
+
+		it("releaseClaims clears every holder", () => {
+			const state = new SubagentState({ status: "running" });
+			state.claim();
+			state.claim();
+
+			state.releaseClaims();
+
+			expect(state.claimed).toBe(false);
+		});
+
+		it("a handle released after releaseClaims leaves a later claim in place", () => {
+			const state = new SubagentState({ status: "running" });
+			const stale = state.claim();
+			state.releaseClaims();
+			state.claim();
+
+			stale.release();
+
+			expect(state.claimed).toBe(true);
+		});
+	});
+
 	it("survives resetForResume, which clears consumption but not the claim", () => {
 		const state = new SubagentState({ status: "completed" });
 		state.claim();

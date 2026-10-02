@@ -13,7 +13,7 @@ import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent
 import type { ParentSnapshot } from "#src/lifecycle/parent-snapshot";
 import { RunListeners } from "#src/lifecycle/run-listeners";
 import type { SubagentSession, TurnLoopResult } from "#src/lifecycle/subagent-session";
-import { SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
+import { type CarrierClaim, SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { WorkspaceBracket } from "#src/lifecycle/workspace-bracket";
@@ -598,16 +598,19 @@ export class Subagent {
 		this.state.markUpdateAnnounced(message);
 	}
 
-	/** A carrier has committed to delivering this outcome; nothing else announces it. */
-	claim(): void {
-		this.state.claim();
+	/**
+	 * A carrier has committed to delivering this outcome; nothing else announces
+	 * it. The returned handle lets a carrier that abandons its commitment (a
+	 * waiter whose parent turn was interrupted) drop only its own.
+	 */
+	claim(): CarrierClaim {
+		return this.state.claim();
 	}
 
 	/**
 	 * No carrier holds this outcome; announcing is owed again. Called when a
-	 * waiting carrier abandons its claim (get-result-tool.ts), and when a resume
-	 * nobody claims starts (SubagentManager.startResume), clearing the claim a
-	 * previous carrier left after it delivered.
+	 * resume nobody claims starts (SubagentManager.startResume), clearing the
+	 * claims previous carriers left after they delivered.
 	 */
 	releaseClaims(): void {
 		this.state.releaseClaims();
