@@ -116,6 +116,26 @@ The plan's end-to-end check (one `codemode` MCP server, count `<mcp_servers>` in
   All three subagents (the tidy-first assessor and both pre-completion reviews) ran on `claude-sonnet-5-5`, read from their own transcripts; the review that found the timing regression shows Sonnet is adequate for that reviewer.
 - **Feedback-loop gap analysis** — the targeted vitest files and `pnpm run check` ran after every step, with the full suite, lint, and `fallow` at each commit; the one verification left to the end was the manual end-to-end check, and it was never run.
 
+### End-to-end verification (2026-10-02T05:12:12Z)
+
+Run after the retro commit, at the operator's request.
+Each arm is a fresh `pi -p --approve --no-session` in its own `/tmp/mcp-e2e/<arm>` directory, with one `github` server (`https://api.githubcopilot.com/mcp/`) in the project's `.pi/mcp.json` and a `before_provider_request` probe that saves the payload and exits before sending.
+
+| Arm       | pi-permission-system                                             | `colgrep` (project policy `deny`) | `<mcp_servers>` |
+| --------- | ---------------------------------------------------------------- | --------------------------------- | --------------- |
+| baseline  | disabled                                                         | n/a                               | 1               |
+| control   | npm 36.2.1                                                       | withheld                          | 0               |
+| treatment | local source, `src/` identical to `pi-permission-system-v37.0.0` | withheld                          | 1               |
+
+- The first three runs showed 0 in every arm, baseline included, because two other global extensions also return `systemPrompt`: `@gotgenes/pi-nocd` (#1000) and `@eko24ive/pi-ask` 1.2.0 (unconditional, every run).
+  Both are disabled in every arm above.
+  A baseline arm is what exposed this; without it, the control and treatment would both have read 0 and the fix would have looked broken.
+- Isolating Pi first (`-ne -e builtin:mcp -e builtin:codemode`) confirmed the section renders from config alone, without a live connection, which is what made a remote server with no install a valid choice.
+- The tool lists alone could not prove the extension loaded (the global policy fully denies nothing); the project `colgrep: deny` supplied that signal.
+- The upstream report already exists as eko24ive/pi-ask#16 (same cause, thinking-block and cache symptom); the `<mcp_servers>` symptom goes there as a comment rather than a new issue.
+- Practical consequence: the operator's real sessions still lack `<mcp_servers>` until #1000 ships and pi-ask drops its handler.
+
 ### Changes made
 
 1. `.pi/prompts/ship.md` step 2.3: an unrun manual or end-to-end check named in the stage notes is now an operator decision before the close, recorded in the close comment.
+2. Posted the end-to-end result on #999 (comment 5945994697), noting #1000 and eko24ive/pi-ask#16 as the remaining causes.
