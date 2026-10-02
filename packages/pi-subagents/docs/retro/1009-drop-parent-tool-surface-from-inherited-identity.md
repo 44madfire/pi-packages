@@ -27,3 +27,26 @@ The plan is three steps: refactor, fix, docs (new ADR 0011 amending ADR 0006 and
 #### Deferred tidyings
 
 - `packages/pi-subagents/test/session/prompts.test.ts`: ~1341 lines; splitting it was declined as out of scope for this change.
+
+## Stage: Implementation — TDD (2026-10-02T02:57:52Z)
+
+### Session summary
+
+Completed all three plan steps as three commits: "refactor(pi-subagents): report which prompt shape anchored the inherited tail", "fix(pi-subagents): stop children inheriting the parent's tool list and rules", and "docs(pi-subagents): record that a child never inherits Pi's tool surface".
+The change added 6 tests to `prompts.test.ts`, taking it from 74 to 80.
+
+### Observations
+
+- Three of the six new tests went red as the plan predicted; the other three (quoted pair, lone `<tools>`, footer shape) are invariant pins, and each was verified by its own killing mutation.
+- I ran all six mutations from a scripted runner (`/tmp/mutate.mjs`), which checks that each pattern is present before applying it.
+  Each mutation killed its predicted class.
+  The keep-rules and keep-separator mutations also killed the relocated-child test (3 reds rather than the 2 the plan named), which is extra coverage, not a gap.
+- Deviation: `withoutToolSurface` and its helper `laterSectionStart` use a `SECTIONS_BELOW_RULES` set for the bound instead of reusing the existing `*_OPEN` constants one by one.
+- Twice the `Edit` bodies emitted `\u2014`/`\u2265` escapes as literal text in TS comments.
+  I caught both by grep and fixed them with a Node `replaceAll`.
+  No lint gate covers escapes in `.ts` comments.
+- Docs: ADR 0011 is new; ADR 0006 and ADR 0008 gained status lines and pointers; `configuration.md` and `README.md` drop the pi-permission-system relocation claim; the skill gained an upstream-assumptions row for `buildSystemPromptSections` ordering.
+- Pre-completion reviewer: WARN (non-blocking).
+  It re-derived all three invariants with its own inputs.
+  The warnings were about provenance (the fixtures are hand-built because `buildSystemPrompt` is not exported) and about a `SYSTEM.md` that quotes Pi's pair; ADR 0011's Consequences already records that case.
+- At ship: release before pi-permission-system's #999 release, and comment on #901.
