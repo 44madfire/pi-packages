@@ -1,10 +1,11 @@
 /**
  * display.ts — Pure formatting helpers and display utilities for agent UI.
  *
- * All functions are stateless and dependency-free (no SDK, no widget lifecycle).
+ * All functions are stateless and dependency-free (no SDK runtime imports, no widget lifecycle).
  * Consumed by the widget, the menu, tool modules, and the notification renderer.
  */
 
+import type { ThemeColor } from "@earendil-works/pi-coding-agent";
 import type { AgentConfigLookup } from "#src/config/agent-types";
 import type { AgentInvocation, SubagentType } from "#src/types";
 import { GLYPHS } from "#src/ui/glyphs";
@@ -18,7 +19,7 @@ export interface ModelIdentity {
 }
 
 export type Theme = {
-  fg(color: string, text: string): string;
+  fg(color: ThemeColor, text: string): string;
   bold(text: string): string;
 };
 

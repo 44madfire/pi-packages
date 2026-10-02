@@ -101,7 +101,7 @@ function renderOverflowNotice(details: GetResultDetails, dropped: number): strin
 }
 
 /** The dim continuation line beneath the status line. */
-function subLine(text: string, color: string, theme: Theme): string {
+function subLine(text: string, color: Parameters<Theme["fg"]>[0], theme: Theme): string {
 	return theme.fg(color, `  ${GLYPHS.subLine}  ${text}`);
 }
 
