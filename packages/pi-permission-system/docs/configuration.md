@@ -618,6 +618,7 @@ Approving such a tool "for this session" records its full Pi name on the `mcp` s
 A Pi MCP tool is withheld from the model when its targets resolve to `deny`.
 
 > **Migrating:** a top-level key naming a Pi MCP tool (`"mcp__danger_srv__wipe": "deny"`) still applies, as an `mcp` rule, and raises a notice at session start asking you to move it under `mcp`.
+> A top-level wildcard of another shape (`"*__wipe"`) no longer reaches these tools.
 > See [the migration guide](migration/1001-pi-mcp-tools-on-mcp-surface.md).
 
 #### Which rule shape to write

@@ -27,7 +27,8 @@ The full list of names a call is looked up under is in [Pi's built-in MCP tools]
 
 ## Porting a top-level `mcp__…` key
 
-A top-level key naming a Pi MCP tool was the only rule that reached it, so it keeps working: it is applied as an `mcp` rule with the key as its pattern, after every other `mcp` rule.
+A top-level key naming a Pi MCP tool was the only rule that reached it, so it keeps working: it is also applied as an `mcp` rule with the key as its pattern, after every other `mcp` rule.
+The key keeps its original meaning too, so `"mcp__*"` still covers a tool from another extension whose name merely starts with `mcp__`; a key that can name no Pi MCP tool, such as `"mcp__foo"`, is left alone and raises no notice.
 At session start you see a notice naming each such key:
 
 ```text
@@ -73,6 +74,12 @@ When the rule was meant for the whole server, a server rule says so directly and
 ```
 
 A wildcard key such as `"mcp__danger_srv__*"` ports the same way, or becomes the server rule above.
+
+## Other top-level wildcards
+
+Only keys starting with `mcp__` carry over.
+A top-level wildcard of another shape that used to match a Pi MCP tool's name, such as `"mcp_*"` or `"*__wipe"`, no longer reaches it, because the tool now resolves on the `mcp` surface rather than under its own name.
+It raises no notice; rewrite it as an `mcp` rule (`"mcp": {"*__wipe": "deny"}`) if you relied on it.
 
 ## Rules written for Pi 0.99.0 and 0.99.1
 

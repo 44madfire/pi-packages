@@ -330,7 +330,8 @@ An object value maps patterns to actions.
 Ahead of it, `expandDirectionalSugar` runs once per scope inside `mergeScopesWithOrigins`, rewriting a bare `path` / `external_directory` key into its two directional members so origins stay attributed to the authoring scope.
 After expansion no rule lives on a bare family surface; `PermissionResolver.resolve` answers a bare-family query by folding the members most-restrictive.
 
-After normalization, `relocateMcpToolKeyRules` moves the catch-all rule of every top-level `mcp__…` key onto the `mcp` surface (the key becomes the pattern) and appends it after every other config rule, since that key was once the only rule reaching the Pi MCP tool it names.
+After normalization, `relocateMcpToolKeyRules` copies the catch-all rule of every top-level key that can name a Pi MCP tool (the name itself or an `mcp__`-prefixed wildcard) onto the `mcp` surface, with the key as the pattern, and appends the copy after every other config rule, since that key was once the only rule reaching the tool.
+The original rule stays, so `mcp__*` still covers non-Pi tools resolving on their own name.
 The MCP baseline is synthesized from the rules as written, before relocation, and the relocated keys drive a port notice in `getConfigIssues`.
 
 ## MCP pre-processing
@@ -893,7 +894,7 @@ src/
 │   └── status.ts            Footer status bar integration
 ├── policy/               Policy domain: the rule model and the composition that turns configuration into a decision. Depends on `config/` for loading and on nothing above it
 │   ├── rule.ts                 Rule type, Ruleset type, evaluate() (takes an injected `PathFlavor` for win32 path-surface case-folding); exports `pathMatchOptions(surface, flavor)` and `isSurfaceFullyDenied(surface, rules, flavor)`, the reachability probe tool exposure asks (each configured pattern probed through evaluate, so last-match-wins shadowing is honored)
-│   ├── normalize.ts            Config → Ruleset normalization (flat format); `expandDirectionalSugar` rewrites a scope's bare `path` / `external_directory` key into its directional members before composition, sugar entries first and explicit directional entries appended after, whatever the file's key order. Constraint: no rule survives on a bare family surface — the resolver's family fold is the read path (ADR 0013 §4). `relocateMcpToolKeyRules` moves a top-level `mcp__…` key's catch-all onto the `mcp` surface, appended after every other rule
+│   ├── normalize.ts            Config → Ruleset normalization (flat format); `expandDirectionalSugar` rewrites a scope's bare `path` / `external_directory` key into its directional members before composition, sugar entries first and explicit directional entries appended after, whatever the file's key order. Constraint: no rule survives on a bare family surface — the resolver's family fold is the read path (ADR 0013 §4). `relocateMcpToolKeyRules` copies a top-level key that can name a Pi MCP tool onto the `mcp` surface, appended after every other rule, and leaves the original in place
 │   ├── synthesize.ts           Universal default + MCP baseline → Ruleset
 │   ├── wildcard-matcher.ts     Compiled glob matching. `CompiledWildcardPattern.matches(value)` is the only match surface (no exposed `RegExp`). Constraint: the win32 `windowsSeparators` fold applies to the pattern and the matched value alike, and lives on the compiled pattern so it cannot be half-applied — folding only the pattern makes every forward-slash value unmatchable (#653)
 │   ├── scope-merge.ts          Cross-scope permission merge + origin-map bookkeeping
