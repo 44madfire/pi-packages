@@ -63,3 +63,16 @@ Built-in file tool paths are now gated as the file Pi opens, in four places: the
   The `forNativeTarget` docstring overstated parity with `forPath`: an absolute spelling containing `..` or a doubled separator no longer keeps its as-typed alias.
   That is the safe direction, and a test now pins it.
   The second round, scoped to the fixes only, returned PASS.
+
+## Stage: Sync (worktree) (2026-10-02T22:29:27Z)
+
+### Session summary
+
+Pre-push checks passed on the branch: `pnpm run lint` and `pnpm fallow dead-code`, both from the worktree root.
+The plan's marker is `**Release:** ship independently`; the follow-up filed during planning is #1016, already dispositioned out of scope for Phase 15.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-997--/2026-10-02T21-28-16-448Z_01a0fe84-9340-7055-ae41-739cd771824c.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The one behavior change worth a line in the close comment is that built-in file tools no longer match a `$HOME/…` spelling as the expanded home path, because Pi does not expand it.
