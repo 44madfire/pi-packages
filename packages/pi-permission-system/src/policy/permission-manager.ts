@@ -446,6 +446,7 @@ function deriveSource(
     case "path":
       // Built-in path-bearing tools (read/write/edit/grep/find/ls).
       return "tool";
+    case "mcp-tool":
     case "extension":
       // Extension tools distinguish a synthesized-default match from a rule.
       return rule.layer === "default" ? "default" : "tool";

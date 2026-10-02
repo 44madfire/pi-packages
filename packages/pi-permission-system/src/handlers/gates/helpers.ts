@@ -119,6 +119,7 @@ export function deriveDecisionValue(
       return check.target ?? toolName;
     case "path":
     case "skill":
+    case "mcp-tool":
     case "extension":
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- || intentional: an empty path falls through to toolName (the original `if (path)` truthiness)
       return path || toolName;

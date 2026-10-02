@@ -190,6 +190,7 @@ export function normalizeInput(
     // an access-path intent (#502). Missing-path and extension-tool cases both
     // collapse to the surface catch-all.
     case "path":
+    case "mcp-tool":
     case "extension":
       return {
         surface: toolName,
