@@ -331,35 +331,12 @@ function summarizeFailures(
   return { lines, failedBatchCount };
 }
 
-function summarizeFallbackUsages(result: PromptAutoformatterResult): string[] {
-  const lines: string[] = [];
-  for (const group of result.groups) {
-    for (const run of group.runs) {
-      if (!run.success) {
-        continue;
-      }
-      if (!run.fallbackContext || run.fallbackContext.skipped.length === 0) {
-        continue;
-      }
-      lines.push(formatterLabel(run.formatterName, run.fallbackContext));
-    }
-  }
-  return lines;
-}
-
 function collectAllFiles(result: PromptAutoformatterResult): string[] {
   const files: string[] = [];
   for (const group of result.groups) {
     files.push(...group.files);
   }
   return files;
-}
-
-function summarizeSuccessPaths(files: string[]): string | undefined {
-  if (files.length === 0 || files.length > 3) {
-    return undefined;
-  }
-  return files.join(", ");
 }
 
 type FlushSummary = {
@@ -369,7 +346,6 @@ type FlushSummary = {
   failureBatchCount: number;
   failureLines: string[];
   formatterLabels: string[];
-  fallbackUsages: string[];
 };
 
 function summarizeFlush(
@@ -377,7 +353,6 @@ function summarizeFlush(
   config?: AutoformatConfig,
 ): FlushSummary {
   const failureSummary = summarizeFailures(result, config);
-  const fallbackUsages = summarizeFallbackUsages(result);
   const fileCount = collectAllFiles(result).length;
 
   const seen = new Set<string>();
@@ -403,7 +378,6 @@ function summarizeFlush(
     failureBatchCount: failureSummary.failedBatchCount,
     failureLines: failureSummary.lines,
     formatterLabels,
-    fallbackUsages,
   };
 }
 
@@ -531,22 +505,6 @@ function buildLegacyFailureMessage(summary: FlushSummary): string {
   ].join("\n");
 }
 
-function buildLegacySuccessMessage(
-  result: PromptAutoformatterResult,
-  summary: FlushSummary,
-): string {
-  const allFiles = collectAllFiles(result);
-  const successPaths = summarizeSuccessPaths(allFiles);
-  const fileWord = allFiles.length === 1 ? "file" : "files";
-  const baseMessage = successPaths
-    ? `Autoformatted ${allFiles.length} ${fileWord}: ${successPaths}`
-    : `Autoformatted ${allFiles.length} ${fileWord}.`;
-
-  return summary.fallbackUsages.length > 0
-    ? `${baseMessage} [${summary.fallbackUsages.join("; ")}]`
-    : baseMessage;
-}
-
 function defaultReportFlushResult(
   result: PromptAutoformatterResult,
   options: {
@@ -570,21 +528,19 @@ function defaultReportFlushResult(
     return;
   }
 
-  if (options.config.hideSummariesInTui && options.ctx.hasUI) {
+  // A successful flush is reported only in a UI. Without one, a console write
+  // lands on whatever owns the terminal, which for an in-process child session
+  // is the parent's TUI.
+  if (!options.ctx.hasUI) {
+    return;
+  }
+
+  if (options.config.hideSummariesInTui) {
     setAutoformatStatus(options.ctx, undefined);
     return;
   }
 
-  if (options.ctx.hasUI) {
-    setAutoformatStatus(options.ctx, formatStatusLine(summary, options.ctx));
-    return;
-  }
-
-  reportMessage(
-    options.ctx,
-    buildLegacySuccessMessage(result, summary),
-    "info",
-  );
+  setAutoformatStatus(options.ctx, formatStatusLine(summary, options.ctx));
 }
 
 function defaultReportConfigIssues(

@@ -914,7 +914,7 @@ describe("createAutoformatExtension", () => {
     expect(failureStatus?.[1]).toContain("1 batch failed");
   });
 
-  it("keeps non-interactive success summaries on console.log without setStatus", async () => {
+  it("stays silent on non-interactive success", async () => {
     const pi = new TestPi();
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -952,9 +952,7 @@ describe("createAutoformatExtension", () => {
     await pi.emit("session_start", {}, ctx);
     await pi.emit("agent_end", {}, ctx);
 
-    expect(log).toHaveBeenCalledWith(
-      "[pi-autoformat] Autoformatted 1 file: /repo/a.ts",
-    );
+    expect(log).not.toHaveBeenCalled();
     expect(setStatus).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
 
