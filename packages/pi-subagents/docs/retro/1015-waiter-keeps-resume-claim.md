@@ -62,3 +62,48 @@ The plan's marker is `**Release:** ship independently`; no follow-up issues were
 ### Observations
 
 The pre-completion reviewer's WARN (the unpinned double-resume fall-through) stands as recorded in the TDD stage entry.
+
+## Stage: Final Retrospective (2026-10-02T22:09:37Z)
+
+### Session summary
+
+The root `/ship` fast-forward-merged the worktree branch, passed lint, `fallow dead-code`, and CI, closed the issue, and released `pi-subagents-v21.9.4`.
+The issue went from plan to release in about 40 minutes across the planning, TDD, and sync stages (peer, Opus then Sonnet) and the root ship.
+No stage reported a deviation from the plan.
+
+### Observations
+
+#### What went well
+
+- The planning spike against the real `SubagentManager` surfaced a second symptom: run 1's outcome reached the parent through no channel.
+  It also showed the issue's stated trigger was unreachable, so the fix targeted the reachable `subagents:completed` trigger.
+- Each TDD step named its killing mutations in the plan, and the peer ran every one with a `cp` backup and restore; each reddened exactly the predicted tests.
+- The ship was friction-free: one ff-merge, one CI run, one release run, no retries.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` — the peer prefixed most TDD bash calls with `cd packages/pi-subagents;` instead of `pnpm --filter`/`pnpm -C` from the root, as `AGENTS.md` directs.
+  Self-identified: no. Impact: added friction but no rework.
+- `other` — the em-dash-as-escape slip recurred three times (twice in TDD source comments, once in the sync retro note).
+  The existing gates and `pi-autoformat` caught or decoded each one.
+  Impact: in the sync stage, an `Edit` repairing it failed in the same tool batch as the dependent `git commit`, which still ran; the agent then spent two calls confirming the autoformat had already decoded it.
+- `instruction-violation` — the ship's final report said it had not checked whether this was a roadmap phase's last step, rather than checking.
+  Self-identified.
+  Impact: none; `pi-subagents` has no open improvement phase (both phase docs under `docs/architecture/history/` are archived).
+
+#### What caused friction (user side)
+
+- None observed; operator involvement was the planning gates (two-symptom scope, holder set over run generation, superseded report shape), which were strategic.
+
+### Diagnostic details
+
+- Model-performance correlation: the TDD stage ran on `anthropic/claude-opus-5-5` and the mechanical sync stage on `anthropic/claude-sonnet-5-5` — a sensible fit.
+- Feedback-loop gap analysis: the peer ran the targeted Vitest files after every Red, Green, and mutation, and the full gates only once at the end; no gap.
+
+### Follow-ups
+
+- The double-resume fall-through (ordinal advanced by two or more, record inactive, reports `settled`) is unpinned; it is classified unreachable, so no issue was filed.
+
+### Changes made
+
+1. No prompt, skill, or `AGENTS.md` changes; every friction point is already covered by an existing rule or gate.
