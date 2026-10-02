@@ -39,3 +39,25 @@ Candidate cause: the `mcp` surface is the one subsystem no phase has touched sin
 The package decides once at the boundary for paths (`AccessPath`) and shells (`ShellInvocation`); MCP has two derivations of one identity (proxy input guessing, Pi name parsing) sharing no type.
 Seed issue: #1014 (ADR, then phase), gathering #946 (proxy as a registered reader), #952's MCP half (`readOnlyHint`/`destructiveHint` annotations as declared direction), #1002 (first-prompt exposure), forwarded-candidate fidelity, the legacy-key relocation's removal date, and the `path-values` rename.
 Design direction discussed with the operator: an `McpCall { server, tool, verb }` value object built at the boundary, Pi's built-in MCP as the primary reader, the proxy as one registered reader, and rules naming server/tool independent of a client's spelling.
+
+## Stage: Implementation — TDD (2026-10-02T20:11:54Z)
+
+### Session summary
+
+Implemented all nine TDD steps: `buildConfigRules` extraction, the `mcp-tool` kind, project `.pi/mcp.json` server names, `createPiMcpToolTargets`, routing Pi MCP tools onto the `mcp` surface (breaking), copying top-level `mcp__` keys onto `mcp` with a port notice, exposure agreement, forwarded/service `mcp` targets evaluated as-is, and docs plus a migration guide.
+The `pi-permission-system` suite went from 5139 to 5204 tests (+65).
+
+### Observations
+
+- Deviation: an approve-for-session answer on a Pi MCP tool records its exact full name on `mcp` (new `suggestExactSessionPattern`), because the proxy target heuristic (`suggestMcpPattern`) would have widened `danger_srv_wipe` to `danger_*`.
+- Deviation: an `agentDir`-built manager now reads the global `mcp.json` from that `agentDir`, not the ambient `getAgentDir()`.
+- Deviation: `ResolverForService.resolve` widened to accept `PathValuesAccessIntent`, so the service can hand a value-bearing `mcp` query to the resolver as-is.
+- The plan wrote step 5's header as `fix!(pkg):`; the grammar requires `fix(pkg)!:`, which is what was committed.
+- The plan's killing mutation for "first instead of longest" server survived the first longest-prefix test (`a` never prefixes `a_b__x`); the test was rewritten to `["a", "a--b"]` on `mcp__a__b__x`, which kills it.
+- The manager-level key-order tests cannot discriminate in-place vs appended relocation: the schema emits well-known keys such as `mcp` ahead of free-form ones, so file key order never decided; the `normalize` unit tests carry that pin.
+- `before-agent-start.test.ts` and `forwarded-request-server.test.ts` (named in the plan) mock the layer under change, so the exposure and forwarding pins live in `permission-manager-unified.test.ts` instead.
+- Pre-completion reviewer round 1: FAIL.
+  Moving every `mcp__` key dropped a deny on a non-Pi tool named `mcp__foo` (still resolving on its own surface).
+  Fixed by copying instead of moving, and only for keys that can name a Pi MCP tool; folded into the relocation commit via autosquash.
+  Its WARN (top-level wildcards like `*__wipe` no longer reach Pi tools) is documented in the migration guide.
+- Pre-completion reviewer round 2 (delta): PASS.
