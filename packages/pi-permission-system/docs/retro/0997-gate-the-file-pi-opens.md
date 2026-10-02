@@ -76,3 +76,52 @@ The plan's marker is `**Release:** ship independently`; the follow-up filed duri
 ### Observations
 
 The one behavior change worth a line in the close comment is that built-in file tools no longer match a `$HOME/…` spelling as the expanded home path, because Pi does not expand it.
+
+## Stage: Final Retrospective (2026-10-02T22:38:25Z)
+
+### Session summary
+
+The issue ran in four sessions: planning, TDD, and sync in one peer worktree session, then ship and this retro at the root.
+The ship fast-forwarded 18 commits, CI passed, #997 closed, and `pi-permission-system-v38.0.2` released.
+The split-out filesystem-alias class remains open as #1016, already dispositioned out of scope for Phase 15.
+
+### Observations
+
+#### What went well
+
+- The planning spike imported Pi's real `resolveReadPath`/`resolveToCwd` from the pinned `dist/` and ran them on real files.
+  That turned a third-party report into a measured table of bypass classes before any design choice, and it separated the Pi-caused classes from the APFS-caused one, which became #1016.
+- The same import trick became a permanent parity oracle in the test suite (`test/path/path-flavor.test.ts`, `test/path/native-tool-target.test.ts`).
+  A Pi upgrade that changes its resolver now fails our tests, which is a novel drift guard for a non-exported upstream function.
+- Every TDD step ran a scripted mutation (`cp` to `/tmp/green.ts`, `perl` mutate, run, restore, `cmp`), and each mutation killed exactly its predicted rows.
+- The pre-completion reviewer earned its keep: it caught the stale `$HOME` claim in `docs/configuration.md` that the docs step missed.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (self-identified, at retro) — the ship close comment thanked "the reporter" instead of crediting @LeonEthan by `@login`.
+  The ship prompt's credit bullet points at `gh issue view --json comments` only, and the reporter's measurements were in the issue **body**, which that read cannot see.
+  Impact: the close comment shipped without attribution; it needs a follow-up comment.
+- `instruction-violation` (self-identified both times) — both the TDD and the Sync stage notes were written with a literal `\u2026` escape inside a code span (`$HOME/…`, `forPath(…)`).
+  The gate decodes escapes outside code spans only, by design, so `--fix` left them and each stage needed a `perl` pass plus a `git commit --amend`.
+  The same slip happened on two different models (Opus in TDD, Sonnet in Sync).
+  Impact: about 2 extra tool calls and an amend per stage; no rework of content.
+- `other` — three commits in TDD were rejected by the pre-commit hook (a Biome `noTemplateCurlyInString` finding and two format fixes) because only `eslint` ran on the touched files before `git commit`.
+  Impact: about 6 extra tool calls; no rework.
+- `missing-context` — the docs step grepped for specific phrases but not for `$HOME`, although the plan's Risks section named the `$HOME` behavior change.
+  Impact: one review round-trip and one follow-up `docs:` commit.
+
+#### What caused friction (user side)
+
+- None observed: the one operator decision (mirror Pi's resolution, split the APFS class) came at a well-briefed gate in planning.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Opus ran planning and TDD (judgment-heavy, appropriate); Sonnet ran the mechanical Sync stage.
+  The `tidy-first-assessor` ran on Sonnet and produced an accurate, file-cited assessment whose two recommendations became steps 1–2; no mismatch.
+- **Feedback-loop gap analysis** — verification ran incrementally: a targeted `vitest` run after every red/green/mutation, `check` per step, full-suite gates at the end.
+  The one gap is format/lint: `biome` was not part of the per-step loop, which the hook rejections above reflect.
+
+### Changes made
+
+1. `.pi/prompts/ship.md`: the close-comment credit bullet now names the issue's author as well as commenters, and reads `gh issue view --json author,comments`.
+2. Posted a follow-up comment on #997 crediting @LeonEthan for the measured report.
