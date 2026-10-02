@@ -9,6 +9,7 @@ import type {
 	ResumeCallOptions,
 	ResumeOutcome,
 	ResumeRefusalReason,
+	ResumeStart,
 } from "#src/lifecycle/subagent-manager";
 import {
 	renderOutcomeAddenda,
@@ -31,6 +32,7 @@ export interface AgentToolManager {
 	spawn: (snapshot: ParentSnapshot, type: string, prompt: string, opts: AgentSpawnConfig) => string;
 	spawnAndWait: (snapshot: ParentSnapshot, type: string, prompt: string, opts: Omit<AgentSpawnConfig, "background">) => Promise<Subagent>;
 	resume: (id: string, prompt: string, options: ResumeCallOptions) => Promise<ResumeOutcome>;
+	startResume: (id: string, prompt: string, options: ResumeCallOptions) => ResumeStart;
 	getRecord: (id: string) => Subagent | undefined;
 }
 

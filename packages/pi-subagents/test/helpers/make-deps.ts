@@ -56,6 +56,7 @@ export function createToolDeps(overrides: Partial<AgentToolFixture> = {}): Agent
 			spawn: vi.fn().mockReturnValue("agent-1"),
 			spawnAndWait: vi.fn().mockResolvedValue(createTestSubagent()),
 			resume: vi.fn().mockResolvedValue({ kind: "resumed", record: createTestSubagent() }),
+			startResume: vi.fn().mockReturnValue({ kind: "started", record: createTestSubagent() }),
 			getRecord: vi.fn().mockReturnValue(createTestSubagent()),
 		},
 		runtime,
