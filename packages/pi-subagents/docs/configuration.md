@@ -26,14 +26,14 @@ Its own preamble and tool guidelines come first, then your `AGENTS.md` or `CLAUD
 A child inherits only the **stable identity** layers: everything up to, but not including, the skills catalogue.
 The layers after it are resolved against one session, so Pi and the child's own extensions rebuild them for the child rather than the child borrowing the parent's:
 
-| Layer                              | Where a child's copy comes from                                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Pi preamble                        | inherited from the parent, byte for byte                                                                |
-| `<project_context>`                | inherited byte for byte, unless the child runs in its own directory — then resolved from that directory |
-| `Available tools:` / `Guidelines:` | stated by the child's own `@gotgenes/pi-permission-system`                                              |
-| Skills catalogue                   | rebuilt by Pi for the child's own directory and tool set                                                |
-| `Current working directory:`       | rebuilt by Pi for the child's own directory                                                             |
-| Extension-appended blocks          | rebuilt by the child's own extensions                                                                   |
+| Layer                        | Where a child's copy comes from                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Pi preamble                  | inherited from the parent, byte for byte                                                                     |
+| `<project_context>`          | inherited byte for byte, unless the child runs in its own directory — then resolved from that directory      |
+| `<tools>` / `<rules>`        | never inherited; stated by the child's own `@gotgenes/pi-permission-system` when installed, otherwise absent |
+| Skills catalogue             | rebuilt by Pi for the child's own directory and tool set                                                     |
+| `Current working directory:` | rebuilt by Pi for the child's own directory                                                                  |
+| Extension-appended blocks    | rebuilt by the child's own extensions                                                                        |
 
 This matters most for a child that runs somewhere other than the parent — one given an isolated workspace by a `WorkspaceProvider`.
 Its skills resolve from its own workspace, and its working-directory claim names that workspace.
@@ -47,11 +47,13 @@ A `WorkspaceProvider` whose workspace is not a checkout — a bare sandbox direc
 Inheriting the identity rather than the whole prompt also gives the child a leading prefix it shares with the parent, which local inference engines reuse instead of reprocessing.
 How much that is worth depends on the host: a provider whose cache prefix covers the tool definitions ahead of the system prompt — Anthropic's does — reuses nothing for a child, because a child's tool set always differs from its parent's.
 
-The tool sections are listed above as the child's own rather than inherited because `@gotgenes/pi-permission-system` relocates them to the end of the prompt, so each session states the tools it actually holds without editing the bytes a child inherits.
-Without that extension installed, a child inherits the parent's `Available tools:` listing unchanged, which names the parent's tools rather than the child's ([#901]).
+Pi renders the `<tools>` and `<rules>` sections from one session's tool set, and writes neither for a child, so a child drops its parent's copies rather than presenting the parent's tools as its own.
+With `@gotgenes/pi-permission-system` installed, the child states its own after its working directory.
+Without it, a child carries no tool list or guidelines in its prompt; its tool definitions still name exactly the tools it holds ([#901]).
+On Pi releases before 0.86, which render the tool surface as untagged `Available tools:` prose, the child inherits the parent's listing unchanged.
 
 If you write extensions that add to the system prompt, see [Extensions that append to the system prompt](../README.md#extensions-that-append-to-the-system-prompt).
-The reasoning behind the boundary is recorded in [ADR 0006](decisions/0006-inherited-prompt-is-identity-only.md), and what the inherited region guarantees in [ADR 0008](decisions/0008-inherited-region-is-shared-parts.md).
+The reasoning behind the boundary is recorded in [ADR 0006](decisions/0006-inherited-prompt-is-identity-only.md), what the inherited region guarantees in [ADR 0008](decisions/0008-inherited-region-is-shared-parts.md), and why the tool sections are dropped in [ADR 0011](decisions/0011-tool-surface-sections-are-session-resolved.md).
 
 ### Portable inheritance (opt-in)
 
