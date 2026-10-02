@@ -874,6 +874,23 @@ describe("buildAgentPrompt", () => {
         expect(prompt).toContain(IDENTITY);
       });
 
+      it("drops an extension section rendered after the cwd section", () => {
+        // Pi renders a section an extension adds from before_agent_start after
+        // `<cwd>`; pi-nocd's names the parent's directory, and the child's own
+        // extensions write theirs for the child.
+        const prompt = buildAgentPrompt(replaceConfig(), "/workspace", env, {
+          systemPrompt: sectionParentPrompt({
+            skills: [skill("colgrep")],
+            cwd: PARENT_CWD,
+            extensionTail: `<working_directory>\nShell commands already execute in \`${PARENT_CWD}\`.\n</working_directory>`,
+          }),
+          cwd: PARENT_CWD,
+        });
+
+        expect(prompt).not.toContain("<working_directory>");
+        expect(prompt).not.toContain(`\`${PARENT_CWD}\``);
+      });
+
       it("cuts the inherited cwd section when the parent resolved no skills", () => {
         const prompt = buildAgentPrompt(replaceConfig(), PARENT_CWD, env, {
           systemPrompt: sectionParentPrompt({ cwd: PARENT_CWD }),
