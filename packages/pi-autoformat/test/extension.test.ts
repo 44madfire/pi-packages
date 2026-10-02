@@ -187,6 +187,10 @@ function createFlushResult(): PromptAutoformatterResult {
 }
 
 describe("createAutoformatExtension", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("preserves the theme `this` binding when coloring the status line", async () => {
     // Regression: Pi's real Theme.fg is an instance method that reads
     // `this.fgColors`. If our extension destructures the method off the
@@ -955,9 +959,6 @@ describe("createAutoformatExtension", () => {
     expect(log).not.toHaveBeenCalled();
     expect(setStatus).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
-
-    log.mockRestore();
-    warn.mockRestore();
   });
 
   it("reports non-interactive formatter failures via console warnings", async () => {
@@ -1009,9 +1010,6 @@ describe("createAutoformatExtension", () => {
       .setStatus;
     expect(setStatus).toBeDefined();
     expect(setStatus).not.toHaveBeenCalled();
-
-    warn.mockRestore();
-    log.mockRestore();
   });
 
   it("reports non-interactive config issues via console warnings", async () => {
@@ -1041,8 +1039,6 @@ describe("createAutoformatExtension", () => {
     expect(warn).toHaveBeenCalledWith(
       "[pi-autoformat] Configuration issues detected:\n/repo/.pi/extensions/pi-autoformat/config.json commandTimeoutMs: Expected a positive integer.",
     );
-
-    warn.mockRestore();
   });
 
   it("clears the autoformat status on session_start and session_shutdown", async () => {
