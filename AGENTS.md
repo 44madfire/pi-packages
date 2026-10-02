@@ -63,6 +63,10 @@ It also reflows what you just wrote (line wrapping, quote style), so an `oldText
 A slash command's expanded body is a snapshot from when the Pi process loaded it — so after this session edits a `.pi/prompts/*.md` template, a later same-process invocation of that command can run the **pre-edit** copy.
 When the pasted prompt body contradicts the on-disk file (e.g. you just changed `/ship` and its steps read stale), treat the **on-disk file as authoritative** and follow it, not the injected text.
 
+### Stale skill bodies
+
+A skill read earlier in the session is a snapshot; after a `git pull` that changed `.pi/skills/`, re-read it before following it, even where a prompt says to skip skills already loaded.
+
 ### Stale in-process extension code
 
 Pi loads each package's extension once at session start, so a session that edits — or fast-forward-merges — `packages/<pkg>/src/` keeps running the **pre-merge** tool for the rest of its life.
