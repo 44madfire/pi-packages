@@ -1602,6 +1602,49 @@ describe("SubagentManager", () => {
         expect(manager.getRecord(id)!.status).toBe("stopped");
       });
     });
+
+    describe("announcement after an outcome a carrier already delivered", () => {
+      let sendMessage: Mock;
+
+      // A real NotificationManager wired the way SubagentEventsObserver wires it,
+      // with the parent idle, so a resumed outcome nobody claims is sent at once.
+      beforeEach(() => {
+        sendMessage = vi.fn();
+        const notifications = new NotificationManager(sendMessage);
+        const { factory, stub } = createSessionFactory();
+        stub.resumeTurnLoop.mockResolvedValue("second");
+        ({ manager } = createManager({
+          createSubagentSession: factory,
+          observer: { onSubagentResumed: (r) => notifications.sendCompletion(r) },
+        }));
+      });
+
+      it("announces an unclaimed resume of an agent a foreground spawn delivered", async () => {
+        const record = await spawnFg(manager);
+
+        await manager.resume(record.id, "continue");
+
+        expect(sendMessage).toHaveBeenCalledOnce();
+        expect(record.claimed).toBe(false);
+      });
+
+      it("announces an unclaimed resume of an agent a claimed resume delivered", async () => {
+        const record = await spawnFg(manager);
+        await manager.resume(record.id, "first answer", { claimOutcome: true });
+
+        await manager.resume(record.id, "second answer");
+
+        expect(sendMessage).toHaveBeenCalledOnce();
+      });
+
+      it("still announces nothing for a claimed resume", async () => {
+        const record = await spawnFg(manager);
+
+        await manager.resume(record.id, "continue", { claimOutcome: true });
+
+        expect(sendMessage).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("startResume", () => {

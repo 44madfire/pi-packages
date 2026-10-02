@@ -603,11 +603,12 @@ export class Subagent {
 		this.state.claim();
 	}
 
-	/** The carrier abandoned its commitment; announcing is owed again. */
-	// Called on the `Subagent` returned by `getRecord()` from get-result-tool.ts
-	// and agent-tool.ts, both of which declare it through their own structural
-	// interface — fallow cannot trace through interfaces, and reaches this only
-	// through the release-then-announce test.
+	/**
+	 * No carrier holds this outcome; announcing is owed again. Called when a
+	 * waiting carrier abandons its claim (get-result-tool.ts), and when a resume
+	 * nobody claims starts (SubagentManager.startResume), clearing the claim a
+	 * previous carrier left after it delivered.
+	 */
 	release(): void {
 		this.state.release();
 	}

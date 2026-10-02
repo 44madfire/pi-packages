@@ -427,7 +427,11 @@ export class SubagentManager {
     if (refusal) return { kind: "refused", reason: refusal };
     // Before the resume starts: resetForResume runs synchronously inside
     // resume(), so a claim taken afterwards would miss the terminal edge.
+    // Each resume's caller decides who carries this run's outcome; a claim a
+    // previous carrier left behind belongs to an outcome already delivered, and
+    // no carrier is live on a settled record.
     if (options.claimOutcome) agent.claim();
+    else agent.release();
     // Published as agent.promise, which always resolves; it rejects only for a
     // missing session, which resumeRefusal has already refused as no-session.
     void agent.resume(prompt, options.signal);
