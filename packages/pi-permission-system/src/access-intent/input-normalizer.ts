@@ -1,7 +1,11 @@
 import { stripBashCommentLines } from "#src/access-intent/bash/bash-arity";
 import type { PathNormalizer } from "#src/path/path-normalizer";
 import { getNonEmptyString, toRecord } from "#src/value-guards";
-import type { AccessIntent, ResolvedAccessIntent } from "./access-intent";
+import type {
+  AccessIntent,
+  PathValuesAccessIntent,
+  ResolvedAccessIntent,
+} from "./access-intent";
 import {
   createMcpPermissionTargets,
   createPiMcpToolTargets,
@@ -17,16 +21,19 @@ import { classifyToolKind } from "./tool-kind";
  * For a path-shaped surface (`path`, `external_directory`, or a path-bearing
  * tool) carrying a non-empty value, it builds an `AccessPath` and emits an
  * `access-path` intent, so the resolver matches the lexical aliases ∪ canonical
- * (symlink-resolved) set — at parity with the gates (#486, #502). Every other
- * surface, and any value-less surface-level query, keeps the `tool` intent so
- * the manager's `normalizeInput` `["*"]` fallback is preserved.
+ * (symlink-resolved) set — at parity with the gates (#486, #502). An `mcp`
+ * query carrying a value evaluates that value as-is: an MCP target is already
+ * a candidate name, and rebuilding proxy input from it would derive only the
+ * status probe `mcp_status`. Every other surface, and any value-less
+ * surface-level query, keeps the `tool` intent so the manager's
+ * `normalizeInput` `["*"]` fallback is preserved.
  */
 export function buildAccessIntentForSurface(
   surface: string,
   value: string | undefined,
   normalizer: PathNormalizer,
   agentName: string | undefined,
-): AccessIntent {
+): AccessIntent | PathValuesAccessIntent {
   const pathValue = getNonEmptyString(value);
   if (pathValue !== null && PATH_SURFACES.has(surface)) {
     return {
@@ -35,6 +42,9 @@ export function buildAccessIntentForSurface(
       path: normalizer.forPath(pathValue),
       agentName,
     };
+  }
+  if (pathValue !== null && surface === "mcp") {
+    return { kind: "path-values", surface, values: [pathValue], agentName };
   }
   return {
     kind: "tool",
@@ -51,9 +61,11 @@ export function buildAccessIntentForSurface(
  *
  * Unlike {@link buildAccessIntentForSurface}, this never touches a
  * `PathNormalizer` and never rebuilds an `AccessPath` — a path-shaped surface
- * gets a `path-values` intent carrying `matchValues` as-is (the values the
- * child already fixed), and every other surface gets a `tool` intent built
- * from its single portable value. `agentName` is always the requester's
+ * or `mcp` gets a `path-values` intent carrying `matchValues` as-is (the values
+ * the child already fixed), and every other surface gets a `tool` intent built
+ * from its single portable value. An `mcp` request carries the child's target;
+ * evaluating it alone can only be stricter than the child, since what the
+ * serving node adds is session grants. `agentName` is always the requester's
  * `principal.agentName` (ADR 0008 §3, agent-scoped serving).
  */
 export function buildResolvedIntentFromMatchValues(
@@ -61,7 +73,7 @@ export function buildResolvedIntentFromMatchValues(
   matchValues: readonly string[],
   agentName: string,
 ): ResolvedAccessIntent {
-  if (PATH_SURFACES.has(surface)) {
+  if (PATH_SURFACES.has(surface) || surface === "mcp") {
     return {
       kind: "path-values",
       surface,

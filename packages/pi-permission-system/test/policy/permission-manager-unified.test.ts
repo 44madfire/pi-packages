@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, it, test } from "vitest";
 import type { ResolvedAccessIntent } from "#src/access-intent/access-intent";
 import { BashProgram } from "#src/access-intent/bash/program";
+import { buildResolvedIntentFromMatchValues } from "#src/access-intent/input-normalizer";
 import { getPathPolicyValues } from "#src/access-intent/path-normalization";
 import {
   getGlobalConfigPath,
@@ -4004,5 +4005,39 @@ describe("tool exposure for a Pi MCP tool follows its mcp rules", () => {
         expect(manager.isToolFullyDenied("mcp__other__x")).toBe(true);
       },
     );
+  });
+});
+
+describe("a forwarded mcp request resolves its own target", () => {
+  const config = {
+    "*": "ask",
+    mcp: { github: "allow", danger: "deny" },
+  };
+
+  function serve(values: string[]): PermissionCheckResult {
+    const { manager, cleanup } = createManagerWithConfig(config, [
+      "github",
+      "danger",
+    ]);
+    try {
+      return manager.check(
+        buildResolvedIntentFromMatchValues("mcp", values, "Explore"),
+      );
+    } finally {
+      cleanup();
+    }
+  }
+
+  it("denies a target on a denied server rather than allowing the status probe", () => {
+    const result = serve(["danger"]);
+    expect(result.state).toBe("deny");
+    expect(result.target).toBe("danger");
+    expect(result.matchedPattern).toBe("danger");
+  });
+
+  it("asks for a target no rule names rather than allowing the status probe", () => {
+    const result = serve(["danger_wipe"]);
+    expect(result.state).toBe("ask");
+    expect(result.target).toBe("danger_wipe");
   });
 });

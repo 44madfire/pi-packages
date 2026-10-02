@@ -456,3 +456,43 @@ describe("buildResolvedIntentFromMatchValues", () => {
     expect(intent.agentName).toBe("");
   });
 });
+
+describe("a value-bearing mcp query evaluates its value as-is", () => {
+  // Building `{}` for an mcp value derives only the status probe
+  // `mcp_status`, which the MCP baseline allows whenever any mcp allow exists,
+  // so a forwarded or service mcp query must carry its own value instead.
+  const normalizer = new PathNormalizer(posixPathFlavor, "/test/project");
+
+  it("serves a forwarded mcp request from its child-fixed values", () => {
+    expect(
+      buildResolvedIntentFromMatchValues("mcp", ["danger_wipe"], "Explore"),
+    ).toEqual({
+      kind: "path-values",
+      surface: "mcp",
+      values: ["danger_wipe"],
+      agentName: "Explore",
+    });
+  });
+
+  it("answers a service mcp query from the value it names", () => {
+    expect(
+      buildAccessIntentForSurface("mcp", "danger", normalizer, "Explore"),
+    ).toEqual({
+      kind: "path-values",
+      surface: "mcp",
+      values: ["danger"],
+      agentName: "Explore",
+    });
+  });
+
+  it("keeps a value-less mcp query on the tool intent", () => {
+    expect(
+      buildAccessIntentForSurface("mcp", undefined, normalizer, "Explore"),
+    ).toEqual({
+      kind: "tool",
+      surface: "mcp",
+      input: {},
+      agentName: "Explore",
+    });
+  });
+});
