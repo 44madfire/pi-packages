@@ -139,3 +139,4 @@ Each arm is a fresh `pi -p --approve --no-session` in its own `/tmp/mcp-e2e/<arm
 
 1. `.pi/prompts/ship.md` step 2.3: an unrun manual or end-to-end check named in the stage notes is now an operator decision before the close, recorded in the close comment.
 2. Posted the end-to-end result on #999 (comment 5945994697), noting #1000 and eko24ive/pi-ask#16 as the remaining causes.
+3. Commented on eko24ive/pi-ask#16 (comment 5946014302) with the `<mcp_servers>` symptom and an isolated reproduction (section present without pi-ask, absent with it), verified before posting.
