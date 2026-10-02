@@ -229,14 +229,28 @@ function inheritedIdentity(
   cutProjectContext: boolean,
 ): string {
   const lines = prompt.split("\n");
-  const tailStart = sessionResolvedTailStart(lines, parentCwd, cutProjectContext);
-  return tailStart === -1
+  const tail = sessionResolvedTailStart(lines, parentCwd, cutProjectContext);
+  return tail.at === -1
     ? prompt
-    : lines.slice(0, tailStart).join("\n").trimEnd();
+    : lines.slice(0, tail.at).join("\n").trimEnd();
 }
 
 /**
- * Line index at which Pi's per-session layers begin, or -1 when none is present.
+ * Which of Pi's prompt renderers anchored the session-resolved tail: the ≤0.85
+ * `Current working directory:` footer, the ≥0.86 `<cwd>` section, or neither
+ * (a prompt something downstream rewrote).
+ */
+type PromptShape = "footer" | "section" | "unanchored";
+
+/** Where the session-resolved tail begins, and the prompt shape that placed it. */
+interface AnchoredTail {
+  /** Line index at which the tail begins, or -1 when none is present. */
+  readonly at: number;
+  readonly shape: PromptShape;
+}
+
+/**
+ * Where Pi's per-session layers begin, and the prompt shape that anchored them.
  *
  * The catalogue precedes the footer, so cutting at the catalogue already
  * removes it; the footer is the anchor only for a parent session that resolved
@@ -249,16 +263,17 @@ function sessionResolvedTailStart(
   lines: readonly string[],
   parentCwd: string,
   cutProjectContext: boolean,
-): number {
-  const tailAt = cwdAnchoredTailStart(lines, parentCwd);
-  if (!cutProjectContext || tailAt === -1) return tailAt;
-  const projectContextAt = projectContextStart(lines, tailAt);
-  return projectContextAt === -1 ? tailAt : projectContextAt;
+): AnchoredTail {
+  const tail = cwdAnchoredTailStart(lines, parentCwd);
+  if (!cutProjectContext || tail.at === -1) return tail;
+  const projectContextAt = projectContextStart(lines, tail.at);
+  return projectContextAt === -1 ? tail : { ...tail, at: projectContextAt };
 }
 
 /**
- * Line index at which Pi's per-session layers begin, across both of its
- * prompt renderers, or -1 when none is present.
+ * Where Pi's per-session layers begin across both of its prompt renderers —
+ * a line index, or -1 when none is present — and which renderer's shape
+ * placed them.
  *
  * Through 0.85 the layers end in a `Current working directory:` footer line,
  * and the catalogue is anchored to it positionally. From 0.86 the prompt is
@@ -272,19 +287,21 @@ function sessionResolvedTailStart(
 function cwdAnchoredTailStart(
   lines: readonly string[],
   parentCwd: string,
-): number {
+): AnchoredTail {
   const footerAt = lines.lastIndexOf(
     `Current working directory: ${toPromptPath(parentCwd)}`,
   );
   if (footerAt !== -1) {
     const catalogueAt = skillsSectionStart(lines, footerAt);
-    return catalogueAt === -1 ? footerAt : catalogueAt;
+    return { at: catalogueAt === -1 ? footerAt : catalogueAt, shape: "footer" };
   }
   const cwdAt = cwdSectionStart(lines, parentCwd);
-  if (cwdAt !== -1) return skillsSectionWrapperStart(lines, cwdAt);
+  if (cwdAt !== -1) {
+    return { at: skillsSectionWrapperStart(lines, cwdAt), shape: "section" };
+  }
   // Neither cwd layer: something downstream rewrote a 0.85-shaped prompt, and
   // the last closing tag is the best remaining guess.
-  return skillsSectionStart(lines, -1);
+  return { at: skillsSectionStart(lines, -1), shape: "unanchored" };
 }
 
 /**
