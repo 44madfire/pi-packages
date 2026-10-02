@@ -36,14 +36,19 @@ export function describeExternalDirectoryGate(
   );
   if (!externalDirectoryPath) return null;
 
-  if (!normalizer.isOutsideWorkingDirectory(externalDirectoryPath)) {
+  // The boundary decision and the infrastructure-read containment check use
+  // the canonical, symlink-resolved path; pattern matching uses the typed and
+  // resolved aliases (#418). A built-in tool's path is the file Pi's resolver
+  // opens, so a `file://` spelling of an outside file is judged outside.
+  const accessPath = normalizer.forToolPath(
+    tcc.toolName,
+    externalDirectoryPath,
+  );
+  if (
+    !normalizer.isBoundaryOutsideWorkingDirectory(accessPath.boundaryValue())
+  ) {
     return null;
   }
-
-  // The boundary decision (above) and the infrastructure-read containment
-  // check (below) use the canonical, symlink-resolved path; pattern matching
-  // uses the typed and resolved aliases (#418).
-  const accessPath = normalizer.forPath(externalDirectoryPath);
 
   // ── Pi infrastructure read bypass ──────────────────────────────────────
   if (normalizer.isInfrastructureRead(tcc.toolName, accessPath, infraDirs)) {

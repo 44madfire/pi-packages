@@ -25,6 +25,7 @@ import {
   type GateDescriptor,
   isGateDescriptor,
 } from "#src/handlers/gates/descriptor";
+import { describeExternalDirectoryGate } from "#src/handlers/gates/external-directory";
 import { describePathGate } from "#src/handlers/gates/path";
 import { ToolCallGatePipeline } from "#src/handlers/gates/tool-call-gate-pipeline";
 import type { ToolCallContext } from "#src/handlers/gates/types";
@@ -152,6 +153,54 @@ describe("a path rule applies to the file a built-in tool opens", () => {
       expect(result.sessionApproval?.grants).toEqual([
         { surface: "path_read", pattern: `${curlyDir}/*` },
       ]);
+    });
+  });
+
+  describe("the external_directory gate", () => {
+    function outsideFile(name: string): string {
+      const dir = realpathSync(mkdtempSync(join(tmpdir(), "native-outside-")));
+      cleanups.push(() => {
+        rmSync(dir, { recursive: true, force: true });
+      });
+      const file = join(dir, name);
+      writeFileSync(file, "x");
+      return file;
+    }
+
+    it("asks for an outside file spelled as a file URL", () => {
+      const file = outsideFile("secret.txt");
+      const resolver = makeResolver({
+        permission: { "*": "allow", external_directory: { "*": "ask" } },
+      });
+
+      const result = describeExternalDirectoryGate(
+        readCall(pathToFileURL(file).href),
+        [],
+        resolver,
+        normalizer,
+      );
+
+      expect(isGateDescriptor(result)).toBe(true);
+      expect((result as GateDescriptor).preCheck?.state).toBe("ask");
+    });
+
+    it("allows a rewritten spelling of an outside file the allow names", () => {
+      const file = outsideFile("my file.txt");
+      const resolver = makeResolver({
+        permission: {
+          "*": "allow",
+          external_directory: { "*": "ask", [file]: "allow" },
+        },
+      });
+
+      const result = describeExternalDirectoryGate(
+        readCall(file.replace(" ", "\u00A0")),
+        [],
+        resolver,
+        normalizer,
+      );
+
+      expect((result as GateDescriptor).preCheck?.state).toBe("allow");
     });
   });
 

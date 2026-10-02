@@ -186,27 +186,12 @@ export class PathNormalizer {
     return this.flavor.isWithin(pathValue, directory);
   }
 
-  /** Canonical (symlink-resolved) outside-cwd test against the baked cwd. */
-  isOutsideWorkingDirectory(pathValue: string): boolean {
-    const canonicalPath = canonicalNormalizePathForComparison(
-      pathValue,
-      this.cwd,
-      this.flavor,
-    );
-    return isPathOutsideWorkingDirectory(
-      canonicalPath,
-      this.canonicalCwd,
-      this.flavor,
-    );
-  }
-
   /**
    * Outside-cwd test for an already-canonical boundary value (from
    * {@link AccessPath.boundaryValue}), against the baked cwd.
    *
-   * Unlike {@link isOutsideWorkingDirectory}, it does not re-derive the
-   * canonical form — the caller passes a value the {@link AccessPath} already
-   * canonicalized, so a device's preserved `/dev/null` reaches the pure check's
+   * It does not re-derive the canonical form — the caller passes a value the
+   * {@link AccessPath} already canonicalized, so a device's preserved `/dev/null` reaches the pure check's
    * `isSafeSystemPath` exclusion intact.
    */
   isBoundaryOutsideWorkingDirectory(canonicalPath: string): boolean {
