@@ -176,6 +176,31 @@ const CWD_SECTION_OPEN = "<cwd>";
 /** Closing tag of that section. */
 const CWD_SECTION_CLOSE = "</cwd>";
 
+/** Opening tag of the section Pi ≥0.86 lists the session's tools in. */
+const TOOLS_SECTION_OPEN = "<tools>";
+
+/** Closing tag of that section. */
+const TOOLS_SECTION_CLOSE = "</tools>";
+
+/** Opening tag of the section Pi ≥0.86 writes the session's guidelines in. */
+const RULES_SECTION_OPEN = "<rules>";
+
+/** Closing tag of that section. */
+const RULES_SECTION_CLOSE = "</rules>";
+
+/**
+ * Opening tags of the sections Pi ≥0.86 renders below `<rules>`, in its
+ * order: `<docs>`, the `--append-system-prompt` addendum, project context,
+ * the skills catalogue, and the cwd.
+ */
+const SECTIONS_BELOW_RULES: ReadonlySet<string> = new Set([
+  "<docs>",
+  "<addendum>",
+  "<project_context>",
+  "<skills>",
+  "<cwd>",
+]);
+
 /** Opening tag of the block Pi renders the session's context files into. */
 const PROJECT_CONTEXT_OPEN = "<project_context>";
 
@@ -211,9 +236,12 @@ const PROJECT_CONTEXT_LEAD_IN = "Project-specific instructions and guidelines:";
  * Everything from the first such layer onward is therefore dropped. What
  * precedes it is returned byte for byte, so it stays a shared prefix with the
  * parent's prompt for hosts that reuse one over the system text (#180, #400).
- * That is why no extension may edit the region in place: `Available tools:`
- * sits a few hundred characters into it, and narrowing it there ended the
- * shared prefix for every child with a narrowed tool set (#890).
+ *
+ * One exception sits inside that region: from 0.86 Pi renders the session's
+ * tool surface as `<tools>` and `<rules>` sections just below the preamble.
+ * They are as session-resolved as the catalogue, so they are excised rather
+ * than inherited (ADR 0011); the shared prefix then ends at the preamble for a
+ * parent that renders them, and is unchanged for one that does not.
  *
  * A prompt carrying neither layer is not one `buildSystemPrompt` assembled, and
  * is returned unchanged.
@@ -230,9 +258,50 @@ function inheritedIdentity(
 ): string {
   const lines = prompt.split("\n");
   const tail = sessionResolvedTailStart(lines, parentCwd, cutProjectContext);
-  return tail.at === -1
-    ? prompt
-    : lines.slice(0, tail.at).join("\n").trimEnd();
+  if (tail.at === -1) return prompt;
+  const head = lines.slice(0, tail.at);
+  const kept = tail.shape === "section" ? withoutToolSurface(head) : head;
+  return kept.join("\n").trimEnd();
+}
+
+/**
+ * The head with Pi ≥0.86's `<tools>` and `<rules>` sections excised, or the
+ * head unchanged when Pi wrote neither there.
+ *
+ * Both sections are rendered from the parent session's own tool set, and Pi
+ * writes neither for a child, whose prompt is a `customPrompt` — so an
+ * inherited copy is the parent's tool surface presented as the child's.
+ *
+ * Located positionally, like every other anchor here: Pi writes the pair
+ * adjacent, `<rules>` one blank line below `</tools>`, and above every later
+ * section it renders. A pair quoted in an addendum or a context file sits below
+ * that bound, and a lone `<tools>` block is not Pi's. The blank line below
+ * `</rules>` goes with the pair, so the head reads exactly as Pi renders it
+ * without them.
+ */
+function withoutToolSurface(head: readonly string[]): readonly string[] {
+  const bound = laterSectionStart(head);
+  const toolsAt = head.indexOf(TOOLS_SECTION_OPEN);
+  if (toolsAt === -1 || toolsAt >= bound) return head;
+  const toolsCloseAt = head.indexOf(TOOLS_SECTION_CLOSE, toolsAt);
+  if (toolsCloseAt === -1 || toolsCloseAt >= bound) return head;
+  const rulesAt = toolsCloseAt + 2;
+  if (head[toolsCloseAt + 1] !== "" || head[rulesAt] !== RULES_SECTION_OPEN) {
+    return head;
+  }
+  const rulesCloseAt = head.indexOf(RULES_SECTION_CLOSE, rulesAt);
+  if (rulesCloseAt === -1 || rulesCloseAt >= bound) return head;
+  const spanEnd = head[rulesCloseAt + 1] === "" ? rulesCloseAt + 2 : rulesCloseAt + 1;
+  return [...head.slice(0, toolsAt), ...head.slice(spanEnd)];
+}
+
+/**
+ * Line index of the first section Pi renders below `<rules>`, or the line
+ * count when the head carries none of them.
+ */
+function laterSectionStart(head: readonly string[]): number {
+  const at = head.findIndex((line) => SECTIONS_BELOW_RULES.has(line));
+  return at === -1 ? head.length : at;
 }
 
 /**

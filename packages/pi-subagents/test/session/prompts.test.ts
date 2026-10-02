@@ -802,6 +802,9 @@ describe("buildAgentPrompt", () => {
     function sectionParentPrompt(
       layers: {
         identity?: string;
+        tools?: string;
+        rules?: string;
+        docs?: string;
         contextFiles?: ContextFile[];
         skills?: Skill[];
         cwd?: string;
@@ -809,6 +812,15 @@ describe("buildAgentPrompt", () => {
       } = {},
     ): string {
       const sections: string[] = [];
+      if (layers.tools !== undefined) {
+        sections.push(`<tools>\n${layers.tools}\n</tools>`);
+      }
+      if (layers.rules !== undefined) {
+        sections.push(`<rules>\n${layers.rules}\n</rules>`);
+      }
+      if (layers.docs !== undefined) {
+        sections.push(`<docs>\n${layers.docs}\n</docs>`);
+      }
       if (layers.contextFiles) {
         const content = [
           "Project-specific instructions and guidelines:",
@@ -942,6 +954,117 @@ describe("buildAgentPrompt", () => {
         });
 
         expect(prompt.startsWith(`${IDENTITY}\n\n`)).toBe(true);
+      });
+
+      // Pi renders `<tools>` and `<rules>` from the session's own tool set, so
+      // a child's copy of its parent's describes tools the child may not hold;
+      // a child of a parent that narrows them in place would show two lists
+      // that disagree.
+      describe("Pi's tool surface", () => {
+        /** Pi's tool section content: bullets plus its closing sentence. */
+        const TOOLS = [
+          "- read: Read file contents",
+          "- bash: Execute bash commands",
+          "",
+          "In addition to the tools above, you may have access to other custom tools depending on the project.",
+        ].join("\n");
+        const RULES = [
+          "- Use bash for file operations like ls, rg, find",
+          "- Be concise in your responses",
+          "- Show file paths clearly when working with files",
+        ].join("\n");
+        const DOCS = "Pi documentation (read only when the user asks about pi itself):";
+
+        it("drops the parent's <tools> and <rules>, keeping what follows byte for byte", () => {
+          const prompt = buildAgentPrompt(replaceConfig(), PARENT_CWD, env, {
+            systemPrompt: sectionParentPrompt({
+              tools: TOOLS,
+              rules: RULES,
+              docs: DOCS,
+              skills: [skill("colgrep")],
+              cwd: PARENT_CWD,
+            }),
+            cwd: PARENT_CWD,
+          });
+
+          const expectedHead = `${IDENTITY}\n\n<docs>\n${DOCS}\n</docs>\n\n<active_agent`;
+          expect(prompt.slice(0, expectedHead.length)).toBe(expectedHead);
+        });
+
+        it("matches the identity a parent without them produces", () => {
+          const layers = {
+            docs: DOCS,
+            contextFiles: PARENT_CONTEXT,
+            skills: [skill("colgrep")],
+            cwd: PARENT_CWD,
+          };
+          const fromPiAuthored = buildAgentPrompt(appendConfig(), PARENT_CWD, env, {
+            systemPrompt: sectionParentPrompt({ ...layers, tools: TOOLS, rules: RULES }),
+            cwd: PARENT_CWD,
+          });
+          const fromRelocated = buildAgentPrompt(appendConfig(), PARENT_CWD, env, {
+            systemPrompt: sectionParentPrompt(layers),
+            cwd: PARENT_CWD,
+          });
+
+          expect(fromPiAuthored).toBe(fromRelocated);
+        });
+
+        it("drops them for a relocated child too", () => {
+          const prompt = buildAgentPrompt(replaceConfig(), "/workspace", env, {
+            systemPrompt: sectionParentPrompt({
+              tools: TOOLS,
+              rules: RULES,
+              docs: DOCS,
+              contextFiles: PARENT_CONTEXT,
+              cwd: PARENT_CWD,
+            }),
+            cwd: PARENT_CWD,
+          });
+
+          const expectedHead = `${IDENTITY}\n\n<docs>\n${DOCS}\n</docs>\n\n<active_agent`;
+          expect(prompt.slice(0, expectedHead.length)).toBe(expectedHead);
+        });
+
+        it("keeps a quoted pair inside project context", () => {
+          const quoted = "<tools>\n- x\n</tools>\n\n<rules>\n- y\n</rules>";
+          const parent = sectionParentPrompt({
+            contextFiles: [{ path: `${PARENT_CWD}/AGENTS.md`, content: quoted }],
+            skills: [skill("colgrep")],
+            cwd: PARENT_CWD,
+          });
+          const prompt = buildAgentPrompt(appendConfig(), PARENT_CWD, env, {
+            systemPrompt: parent,
+            cwd: PARENT_CWD,
+          });
+
+          const identity = parent.slice(0, parent.indexOf("\n\n<skills>"));
+          expect(prompt.startsWith(`${identity}\n\n<active_agent`)).toBe(true);
+        });
+
+        it("keeps a <tools> block that Pi's <rules> does not follow", () => {
+          const identity = `${IDENTITY}\n\n<tools>\n- x\n</tools>\n\nOperator prose.`;
+          const prompt = buildAgentPrompt(appendConfig(), PARENT_CWD, env, {
+            systemPrompt: sectionParentPrompt({ identity, cwd: PARENT_CWD }),
+            cwd: PARENT_CWD,
+          });
+
+          expect(prompt.startsWith(`${identity}\n\n<active_agent`)).toBe(true);
+        });
+
+        it("leaves the footer shape alone", () => {
+          const identity = `${IDENTITY}\n\n<tools>\n${TOOLS}\n</tools>\n\n<rules>\n${RULES}\n</rules>`;
+          const prompt = buildAgentPrompt(appendConfig(), PARENT_CWD, env, {
+            systemPrompt: parentPrompt({
+              identity,
+              skills: [skill("colgrep")],
+              footerCwd: PARENT_CWD,
+            }),
+            cwd: PARENT_CWD,
+          });
+
+          expect(prompt.startsWith(`${identity}\n\n<active_agent`)).toBe(true);
+        });
       });
     });
 
