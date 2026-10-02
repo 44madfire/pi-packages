@@ -213,7 +213,8 @@ classDiagram
         -registry: SpawnTypeResolver
         +spawn(snapshot, type, prompt, config)
         +spawnAndWait(snapshot, type, prompt, config)
-        +resume(id, prompt, signal)
+        +resume(id, prompt, options)
+        +startResume(id, prompt, options)
         +getRecord(id): Subagent
         +listAgents(): Subagent[]
         +abort(id)
@@ -366,7 +367,7 @@ src/
 │   └── session-dir.ts              session directory derivation
 │
 ├── lifecycle/                      agent execution and state tracking
-│   ├── subagent-manager.ts         collection manager + observer wiring + session-retention sweep (consumption-aware; an unanswered question holds the safety cap); the resume choke point, refusing from the record's own predicate and reporting a discriminated outcome, so every front door declines the same resumes
+│   ├── subagent-manager.ts         collection manager + observer wiring + session-retention sweep (consumption-aware; an unanswered question holds the safety cap); the resume choke point, refusing from the record's own predicate and reporting a discriminated outcome, so every front door declines the same resumes; a door that returns before the resumed run ends starts one synchronously, and each resume's caller decides whether its outcome is claimed
 │   ├── create-subagent-session.ts  assembly factory: session creation, spawn-tool denylist, core child-tool install, binding
 │   ├── subagent-session.ts         born-complete child session: turn loop, steer, shutdown-then-dispose teardown
 │   ├── turn-limits.ts              normalizeMaxTurns (turn-count policy)
@@ -398,7 +399,7 @@ src/
 │   ├── result-renderer.ts          pure per-status result rendering
 │   ├── spawn-config.ts             pure config resolution
 │   ├── foreground-runner.ts        foreground execution loop
-│   ├── background-spawner.ts       background spawn setup
+│   ├── background-spawner.ts       background spawn setup + the launch message every background door (spawn, resume) returns
 │   ├── get-result-tool.ts          get_subagent_result tool
 │   ├── get-result-report.ts        pure get_subagent_result report formatter
 │   ├── get-result-renderer.ts      pure get_subagent_result line assembly for the collapsed and expanded TUI views

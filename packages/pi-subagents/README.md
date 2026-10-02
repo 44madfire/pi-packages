@@ -132,6 +132,9 @@ Launch a sub-agent.
 These five parameters win over the agent file's own values, which fill whichever the call leaves unset.
 An agent file can withhold one with [`locked`](./docs/configuration.md#locking-fields-against-callers); the result then names the agent and the parameters it ignored.
 
+A call with `resume` and `run_in_background: true` resumes the agent without waiting: it returns the agent ID at once, and you are notified when the resumed run finishes.
+Only the call's own flag does this; an agent file's `run_in_background` default does not apply to a resume.
+
 ### `get_subagent_result`
 
 Check status and retrieve results from a background agent.
