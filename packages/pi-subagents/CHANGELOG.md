@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.9.1](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.0...pi-subagents-v21.9.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **pi-subagents:** stop children inheriting the parent's tool list and rules ([6a1fa48](https://github.com/gotgenes/pi-packages/commit/6a1fa48d1104978cd4addc57c17db35e7679b46f)), closes [#1009](https://github.com/gotgenes/pi-packages/issues/1009)
+
+### Documentation
+
+* **pi-subagents:** record that a child never inherits Pi's tool surface ([e4e564d](https://github.com/gotgenes/pi-packages/commit/e4e564da2a3daad6abca431048088910915392e0)), closes [#1009](https://github.com/gotgenes/pi-packages/issues/1009)
+
 ## [21.9.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.8.1...pi-subagents-v21.9.0) (2026-10-01)
 
 
