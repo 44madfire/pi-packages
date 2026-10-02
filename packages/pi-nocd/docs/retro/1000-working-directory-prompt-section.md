@@ -33,4 +33,29 @@ The plan is in `packages/pi-nocd/docs/plans/1000-working-directory-prompt-sectio
 - Run the end-to-end check (plan step 5) before `/ship`; #999's check was skipped and caught this issue only afterwards.
   The probe lives at `/tmp/nocd-e2e/probe.ts`.
 
+## Stage: Implementation — TDD (2026-10-02T05:50:11Z)
+
+### Session summary
+
+Completed all five plan steps: the pi-subagents pin, the devDependency bump to Pi 1.0.0, the breaking fix, the README and skill update, and the end-to-end check. pi-nocd's suite went from 11 tests to 7: the 7-test `ensureWorkingDirectoryPrompt` suite and the heading test were removed, and 3 handler tests plus 1 exact-sentence test were added. pi-subagents' `prompts.test.ts` gained 1 test, 81 in total.
+
+### Observations
+
+- Every killing mutation hit exactly the tests the plan predicted:
+  - restoring a `systemPrompt` return reddened 1 test (the `undefined`-return test);
+  - deleting the assignment reddened 2 (both section tests);
+  - replacing `sections` wholesale reddened 1 (the preserve-existing test);
+  - prepending the heading reddened 1 (the exact-sentence test);
+  - an early `return prompt;` in `inheritedIdentity` reddened the pi-subagents pin.
+- The handler tests' Red step proved nothing about their assertions: they all crashed on the missing `event.systemPrompt`.
+  The mutations above are what shows each assertion discriminates.
+- End-to-end on Pi 1.0.0 (fresh `pi -p`, `builtin:mcp`, one configured server): without pi-nocd, `<mcp_servers>` 1 and `<working_directory>` 0.
+  With the working tree's pi-nocd, `<mcp_servers>` 1, `<working_directory>` 1, and `# Working Directory` 0.
+- Deviation: I amended the fix commit's message to put `BREAKING CHANGE:` in the final paragraph, below `Refs #1000`, matching the precedent of pi-permission-system's floor raise.
+- Pre-completion reviewer: WARN.
+  - `packages/pi-subagents/docs/decisions/0006-inherited-prompt-is-identity-only.md` (line 91) still cites [#846] as tracking pi-nocd's rewrite path.
+    This is ADR history, so the fix is to close [#846] at `/ship`, not to edit the ADR.
+  - pi-subagents' `unanchored` no-skills path returns a parent's prompt unchanged when its `<cwd>` body does not match `toPromptPath(inherited.cwd)`.
+    The reviewer found no way to reach it.
+
 [#846]: https://github.com/gotgenes/pi-packages/issues/846
