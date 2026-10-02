@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [21.9.3](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.2...pi-subagents-v21.9.3) (2026-10-02)
+
+
+### Bug Fixes
+
+* **pi-subagents:** announce a resumed agent's outcome even after an earlier carrier delivered it ([dab3c05](https://github.com/gotgenes/pi-packages/commit/dab3c0532316f5a9bee3e84683ef49e49abe4526)), closes [#987](https://github.com/gotgenes/pi-packages/issues/987)
+* **pi-subagents:** resume a subagent in the background when the call asks for run_in_background ([0681086](https://github.com/gotgenes/pi-packages/commit/06810861c55ca0107c5f9cfa917d813ee264be0f)), closes [#987](https://github.com/gotgenes/pi-packages/issues/987)
+
+### Documentation
+
+* **pi-subagents:** document background resume ([3b0a702](https://github.com/gotgenes/pi-packages/commit/3b0a70217995ae35f6c36c11fc74e25ced826386)), closes [#987](https://github.com/gotgenes/pi-packages/issues/987)
+
 ## [21.9.2](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.1...pi-subagents-v21.9.2) (2026-10-02)
 
 
