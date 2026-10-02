@@ -1,6 +1,7 @@
 import { capabilitySurfaceForTool } from "#src/access-intent/path-surfaces";
 import { getToolInputPath } from "#src/access-intent/tool-input-path";
 import type { PathNormalizer } from "#src/path/path-normalizer";
+import type { InfrastructureReadScope } from "#src/path/pi-infrastructure-read";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import { buildExternalDirectoryAskPayload } from "#src/presentation/path-ask-payload";
 import { SessionApproval } from "#src/session/session-approval";
@@ -24,7 +25,7 @@ import type { ToolCallContext } from "./types";
  */
 export function describeExternalDirectoryGate(
   tcc: ToolCallContext,
-  infraDirs: string[],
+  infraScope: InfrastructureReadScope,
   resolver: ScopedPermissionResolver,
   normalizer: PathNormalizer,
   extractors?: ToolAccessExtractorLookup,
@@ -51,7 +52,7 @@ export function describeExternalDirectoryGate(
   }
 
   // ── Pi infrastructure read bypass ──────────────────────────────────────
-  if (normalizer.isInfrastructureRead(tcc.toolName, accessPath, infraDirs)) {
+  if (normalizer.isInfrastructureRead(tcc.toolName, accessPath, infraScope)) {
     return {
       action: "allow",
       // Containment allowed this, not a rule the operator wrote.

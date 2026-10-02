@@ -10,7 +10,10 @@ import { deriveApprovalPattern } from "./approval-pattern";
 import { resolveNativeToolTarget } from "./native-tool-target";
 import { isPathOutsideWorkingDirectory } from "./path-containment";
 import type { PathFlavor } from "./path-flavor";
-import { isPiInfrastructureRead } from "./pi-infrastructure-read";
+import {
+  type InfrastructureReadScope,
+  isPiInfrastructureRead,
+} from "./pi-infrastructure-read";
 
 /**
  * The interpreted effect of a literal `cd` target on the effective base, under
@@ -219,12 +222,12 @@ export class PathNormalizer {
   isInfrastructureRead(
     toolName: string,
     accessPath: AccessPath,
-    infraDirs: readonly string[],
+    scope: InfrastructureReadScope,
   ): boolean {
     return isPiInfrastructureRead(
       toolName,
       accessPath.boundaryValue(),
-      infraDirs,
+      scope.dirs,
       this.cwd,
       this.flavor,
     );

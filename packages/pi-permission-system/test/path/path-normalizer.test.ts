@@ -356,31 +356,35 @@ describe("PathNormalizer", () => {
 
   describe("isInfrastructureRead", () => {
     const normalizer = new PathNormalizer(posixPathFlavor, "/projects/my-app");
+    const INFRA_SCOPE = { dirs: ["/infra"], excludedDirs: [] };
+    const EMPTY_SCOPE = { dirs: [], excludedDirs: [] };
 
     test("allows a read-only tool targeting a configured infra dir", () => {
       const ap = normalizer.forPath("/infra/git/pkg/SKILL.md");
-      expect(normalizer.isInfrastructureRead("read", ap, ["/infra"])).toBe(
+      expect(normalizer.isInfrastructureRead("read", ap, INFRA_SCOPE)).toBe(
         true,
       );
     });
 
     test("does not allow a write tool targeting an infra dir", () => {
       const ap = normalizer.forPath("/infra/git/pkg/file.ts");
-      expect(normalizer.isInfrastructureRead("write", ap, ["/infra"])).toBe(
+      expect(normalizer.isInfrastructureRead("write", ap, INFRA_SCOPE)).toBe(
         false,
       );
     });
 
     test("does not allow a read-only tool outside any infra dir", () => {
       const ap = normalizer.forPath("/elsewhere/file.ts");
-      expect(normalizer.isInfrastructureRead("read", ap, ["/infra"])).toBe(
+      expect(normalizer.isInfrastructureRead("read", ap, INFRA_SCOPE)).toBe(
         false,
       );
     });
 
     test("allows a read targeting the project-local .pi/npm dir (from baked cwd)", () => {
       const ap = normalizer.forPath("/projects/my-app/.pi/npm/dep/index.js");
-      expect(normalizer.isInfrastructureRead("read", ap, [])).toBe(true);
+      expect(normalizer.isInfrastructureRead("read", ap, EMPTY_SCOPE)).toBe(
+        true,
+      );
     });
   });
 

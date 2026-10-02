@@ -4,6 +4,7 @@ import type { BashExternalPath } from "#src/access-intent/bash/bash-path-resolve
 import { isGateDescriptor } from "#src/handlers/gates/descriptor";
 import { ToolCallGatePipeline } from "#src/handlers/gates/tool-call-gate-pipeline";
 import { PathNormalizer } from "#src/path/path-normalizer";
+import type { InfrastructureReadScope } from "#src/path/pi-infrastructure-read";
 
 import {
   makeGateInputs,
@@ -124,16 +125,18 @@ describe("ToolCallGatePipeline", () => {
       expect(getToolPreviewLimits).toHaveBeenCalled();
     });
 
-    it("calls getInfrastructureReadDirs() during evaluate", async () => {
-      const getInfrastructureReadDirs = vi.fn<() => string[]>(() => []);
+    it("calls getInfrastructureReadScope() during evaluate", async () => {
+      const getInfrastructureReadScope = vi.fn<() => InfrastructureReadScope>(
+        () => ({ dirs: [], excludedDirs: [] }),
+      );
       const resolver = makeResolver(makeCheckResult());
-      const inputs = makeGateInputs({ getInfrastructureReadDirs });
+      const inputs = makeGateInputs({ getInfrastructureReadScope });
       const { runner } = makeGateRunner();
       const pipeline = new ToolCallGatePipeline(resolver, inputs);
 
       await pipeline.evaluate(makeTcc({ toolName: "read", input: {} }), runner);
 
-      expect(getInfrastructureReadDirs).toHaveBeenCalled();
+      expect(getInfrastructureReadScope).toHaveBeenCalled();
     });
 
     it("calls getActiveSkillEntries() during evaluate", async () => {

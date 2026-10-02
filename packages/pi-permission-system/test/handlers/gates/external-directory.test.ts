@@ -41,7 +41,7 @@ function gateUnderTest(
 ) {
   return describeExternalDirectoryGate(
     tcc,
-    infraDirs,
+    { dirs: infraDirs, excludedDirs: [] },
     resolver,
     new PathNormalizer(pathFlavorForPlatform(process.platform), tcc.cwd),
     extractors,
@@ -420,7 +420,7 @@ describe("describeExternalDirectoryGate — extension and MCP tools (#352)", () 
         input: { path: "C:\\Other\\data\\x.txt" },
         cwd: "C:\\Projects\\App",
       }),
-      [],
+      { dirs: [], excludedDirs: [] },
       makeResolver(
         makeCheckResult({ state: "ask", toolName: "external_directory" }),
       ),

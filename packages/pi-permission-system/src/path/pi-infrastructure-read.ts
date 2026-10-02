@@ -4,6 +4,18 @@ import { wildcardMatch } from "#src/policy/wildcard-matcher";
 import { expandHomePath } from "./expand-home";
 import type { PathFlavor } from "./path-flavor";
 
+/**
+ * Where Pi infrastructure reads are auto-allowed: the roots a read-only tool
+ * may read without the `external_directory` gate, and the directories never
+ * auto-allowed even inside a root.
+ */
+export interface InfrastructureReadScope {
+  /** Roots (directories, files, or glob patterns) whose reads are auto-allowed. */
+  readonly dirs: readonly string[];
+  /** Directories never auto-allowed, even inside a root; wins over `dirs`. */
+  readonly excludedDirs: readonly string[];
+}
+
 function containsGlobChars(value: string): boolean {
   return value.includes("*") || value.includes("?");
 }

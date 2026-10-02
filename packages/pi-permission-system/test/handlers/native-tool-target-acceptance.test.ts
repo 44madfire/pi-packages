@@ -214,7 +214,7 @@ describe("a path rule applies to the file a built-in tool opens", () => {
 
       const result = describeExternalDirectoryGate(
         readCall(pathToFileURL(file).href),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         normalizer,
       );
@@ -231,7 +231,7 @@ describe("a path rule applies to the file a built-in tool opens", () => {
 
       const result = describeExternalDirectoryGate(
         readCall(pathToFileURL(file).href),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         normalizer,
       ) as GateDescriptor;
@@ -253,7 +253,7 @@ describe("a path rule applies to the file a built-in tool opens", () => {
 
       const result = describeExternalDirectoryGate(
         readCall(file.replace(" ", "\u00A0")),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         normalizer,
       );

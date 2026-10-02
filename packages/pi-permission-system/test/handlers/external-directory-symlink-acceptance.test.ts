@@ -87,7 +87,7 @@ describe("external_directory symlink acceptance (#418)", () => {
     try {
       const result = describeExternalDirectoryGate(
         readTcc(),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         new PathNormalizer(pathFlavorForPlatform(process.platform), cwd),
       );
@@ -110,7 +110,7 @@ describe("external_directory symlink acceptance (#418)", () => {
     try {
       const result = describeExternalDirectoryGate(
         readTcc(),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         new PathNormalizer(pathFlavorForPlatform(process.platform), cwd),
       );
@@ -128,7 +128,7 @@ describe("external_directory symlink acceptance (#418)", () => {
     try {
       const result = describeExternalDirectoryGate(
         readTcc(),
-        [],
+        { dirs: [], excludedDirs: [] },
         resolver,
         new PathNormalizer(pathFlavorForPlatform(process.platform), cwd),
       );
