@@ -850,15 +850,22 @@ For `external_directory`, the decision of whether a path is outside the working 
 
 #### Pi Infrastructure Read Auto-Allow
 
-Read-only tools (`read`, `find`, `grep`, `ls`) targeting Pi infrastructure directories are automatically allowed without triggering the gate, even when `external_directory` is `ask` or `deny`.
-Infrastructure directories include:
+Read-only tools (`read`, `find`, `grep`, `ls`) targeting Pi infrastructure paths are automatically allowed without triggering the gate, even when `external_directory` is `ask` or a catch-all `deny`.
+Infrastructure paths include:
 
-1. The agent config directory (`~/.pi/agent/` or `$PI_CODING_AGENT_DIR`)
-2. Git-cloned global packages (`<agentDir>/git/`)
-3. The global `node_modules` root (auto-discovered from the extension's own install path; falls back to `npm root -g` when running from a local development checkout)
-4. Pi's own install directory (auto-discovered via the coding-agent `getPackageDir()` API, so Pi's bundled docs and examples are readable regardless of install layout)
-5. Project-local Pi packages (`<cwd>/.pi/npm/` and `<cwd>/.pi/git/`)
-6. Any paths listed in `piInfrastructureReadPaths`
+1. Pi's harness entries under the agent config directory (`~/.pi/agent/` or `$PI_CODING_AGENT_DIR`): the directories `agents/`, `extensions/`, `git/`, `npm/`, `prompts/`, `skills/`, and `themes/`, and the files `settings.json`, `SYSTEM.md`, `APPEND_SYSTEM.md`, and `AGENTS.md`
+2. The global `node_modules` root (auto-discovered from the extension's own install path; falls back to `npm root -g` when running from a local development checkout)
+3. Pi's own install directory (auto-discovered via the coding-agent `getPackageDir()` API, so Pi's bundled docs and examples are readable regardless of install layout)
+4. Project-local Pi packages (`<cwd>/.pi/npm/` and `<cwd>/.pi/git/`)
+5. Any paths listed in `piInfrastructureReadPaths`
+
+Everything else under the agent config directory, such as `auth.json`, `models.json`, `mcp-oauth/`, and `sessions/`, goes through the gate like any other outside path.
+This package's own logs directory (`extensions/pi-permission-system/logs/`) is never auto-allowed, even when a `piInfrastructureReadPaths` entry covers it.
+
+A deny rule on `external_directory` or `external_directory_read` whose pattern names an infrastructure path outranks the auto-allow and blocks the read.
+A catch-all `"*"` deny and the universal `permission["*"]` fallback do not, so a deny-by-default policy keeps its skill and package reads.
+Rules are last-match-wins, so write the catch-all before the targeted deny.
+See [the migration guide](migration/0955-pi-infrastructure-read-narrowed.md) for the change from earlier releases.
 
 Write tools (`write`, `edit`) to infrastructure paths are **not** auto-allowed and still go through the gate.
 
