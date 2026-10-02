@@ -76,6 +76,7 @@ A decision presented early from the plan is far less likely to be reversed than 
    Do this in **both** lanes: a plan's risk table and the planning and TDD stage notes routinely record a ship-time close target — an adopted third-party PR — that no commit in the range mentions.
    A step that only greps the plan for `**Release:**` cannot see it.
    Carry what you find into step 9 and step 10.
+   A verification the stage notes say has not run (a manual or end-to-end check) is a decision, not a report line: ask the operator now whether to run it before step 9 or ship without it, and record the answer in the close comment.
    A ship-time comment on another issue takes its content from the plan's or retro's wording, not a paraphrase of the hit that named it.
 
 This section only reads and (conditionally) asks — it performs no git, push, or CI action.
