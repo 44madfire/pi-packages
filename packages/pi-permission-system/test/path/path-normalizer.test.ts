@@ -124,6 +124,65 @@ describe("PathNormalizer", () => {
       ).toBe(false);
     });
 
+    describe("outside-cwd boundary through an AccessPath's boundary value", () => {
+      test("keeps a path inside the baked cwd", () => {
+        const ap = normalizer.forPath("/projects/my-app/src");
+        expect(
+          normalizer.isBoundaryOutsideWorkingDirectory(ap.boundaryValue()),
+        ).toBe(false);
+      });
+
+      test("flags an absolute path outside cwd", () => {
+        const ap = normalizer.forPath("/etc/hosts");
+        expect(
+          normalizer.isBoundaryOutsideWorkingDirectory(ap.boundaryValue()),
+        ).toBe(true);
+      });
+
+      test("expands a home-relative token", () => {
+        const ap = normalizer.forPath("~/secrets");
+        expect(
+          normalizer.isBoundaryOutsideWorkingDirectory(ap.boundaryValue()),
+        ).toBe(true);
+      });
+
+      test("resolves a relative token inside cwd", () => {
+        const ap = normalizer.forPath("src/index.ts");
+        expect(
+          normalizer.isBoundaryOutsideWorkingDirectory(ap.boundaryValue()),
+        ).toBe(false);
+      });
+
+      test("follows an in-cwd symlink to an external target", () => {
+        realpathSync.mockImplementation((p: string) => {
+          if (p === "/projects/my-app/link/hosts") return "/etc/hosts";
+          return p;
+        });
+        const ap = normalizer.forPath("./link/hosts");
+        expect(
+          normalizer.isBoundaryOutsideWorkingDirectory(ap.boundaryValue()),
+        ).toBe(true);
+      });
+
+      test("keeps a path inside a symlinked cwd", () => {
+        realpathSync.mockImplementation((p: string) => {
+          if (p.startsWith("/tmp/")) return `/private/tmp${p.slice(4)}`;
+          if (p === "/tmp") return "/private/tmp";
+          return p;
+        });
+        const symlinkNormalizer = new PathNormalizer(
+          posixPathFlavor,
+          "/private/tmp",
+        );
+        const ap = symlinkNormalizer.forPath("/tmp/workspace/file.ts");
+        expect(
+          symlinkNormalizer.isBoundaryOutsideWorkingDirectory(
+            ap.boundaryValue(),
+          ),
+        ).toBe(false);
+      });
+    });
+
     test("comparableValue returns the lexical absolute form (no FS)", () => {
       expect(normalizer.comparableValue("src/foo.ts")).toBe(
         "/projects/my-app/src/foo.ts",
@@ -216,6 +275,17 @@ describe("PathNormalizer", () => {
         normalizer.isOutsideWorkingDirectory("c:\\projects\\app\\src"),
       ).toBe(false);
       expect(normalizer.isOutsideWorkingDirectory("C:\\Other\\dir")).toBe(true);
+    });
+
+    test("the boundary value case-folds against the baked cwd", () => {
+      const inside = normalizer.forPath("c:\\projects\\app\\src");
+      const outside = normalizer.forPath("C:\\Other\\dir");
+      expect(
+        normalizer.isBoundaryOutsideWorkingDirectory(inside.boundaryValue()),
+      ).toBe(false);
+      expect(
+        normalizer.isBoundaryOutsideWorkingDirectory(outside.boundaryValue()),
+      ).toBe(true);
     });
 
     test("comparableValue case-folds the lexical absolute form", () => {
