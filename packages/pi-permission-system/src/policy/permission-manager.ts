@@ -21,7 +21,7 @@ import type {
   PermissionState,
 } from "#src/types";
 import { isPermissionState } from "#src/types";
-import { normalizeFlatConfig } from "./normalize";
+import { normalizeFlatConfig, relocateMcpToolKeyRules } from "./normalize";
 import type { Rule, RuleOrigin, Ruleset } from "./rule";
 import {
   evaluate,
@@ -62,6 +62,11 @@ type ResolvedPermissions = {
    * names also drive the fail-closed notice in {@link getConfigIssues}.
    */
   failClosedScopes: RuleOrigin[];
+  /**
+   * Top-level permission keys naming Pi MCP tools, relocated onto the `mcp`
+   * surface; they drive the port notice in {@link getConfigIssues}.
+   */
+  legacyMcpToolKeys: string[];
 };
 
 /**
@@ -152,7 +157,8 @@ export class PermissionManager implements ScopedPermissionManager {
 
   getConfigIssues(agentName?: string): string[] {
     // Trigger a load/resolve to ensure issues are collected.
-    const { failClosedScopes } = this.resolvePermissions(agentName);
+    const { failClosedScopes, legacyMcpToolKeys } =
+      this.resolvePermissions(agentName);
     const issues = [...this.loader.getConfigIssues()];
     if (failClosedScopes.length > 0) {
       issues.push(
@@ -160,6 +166,9 @@ export class PermissionManager implements ScopedPermissionManager {
           `failing closed: 'allow' rules are clamped to 'ask' for this session ` +
           `until the configuration is corrected.`,
       );
+    }
+    if (legacyMcpToolKeys.length > 0) {
+      issues.push(formatMcpToolKeyPortNotice(legacyMcpToolKeys));
     }
     return issues;
   }
@@ -202,11 +211,15 @@ export class PermissionManager implements ScopedPermissionManager {
       origins.get("*")?.get("*") ?? "builtin";
 
     const configRules = buildConfigRules(mergedPermission, origins);
+    // A top-level `mcp__…` key now names an `mcp` candidate. The baseline reads
+    // the rules as written, so a relocated `allow` on one Pi MCP tool does not
+    // newly open the proxy's discovery targets.
+    const relocation = relocateMcpToolKeyRules(configRules);
 
     const composedRules = composeRuleset(
       synthesizeDefaults(universalFallback, universalFallbackOrigin),
       synthesizeBaseline(configRules),
-      configRules,
+      relocation.rules,
     );
 
     // Fail closed when a non-global scope's config is invalid: floor every
@@ -227,6 +240,7 @@ export class PermissionManager implements ScopedPermissionManager {
     const value: ResolvedPermissions = {
       composedRules: effectiveRules,
       failClosedScopes,
+      legacyMcpToolKeys: [...new Set(relocation.relocatedKeys)],
     };
     this.resolvedPermissionsCache.set(cacheKey, { stamp, value });
     return value;
@@ -373,6 +387,18 @@ function buildCheckResult(
     origin: rule.origin,
     ...extras,
   };
+}
+
+const MCP_TOOL_KEY_MIGRATION_GUIDE =
+  "https://github.com/gotgenes/pi-packages/blob/main/packages/pi-permission-system/docs/migration/1001-pi-mcp-tools-on-mcp-surface.md";
+
+/** The notice asking the operator to move top-level `mcp__…` keys under `mcp`. */
+function formatMcpToolKeyPortNotice(keys: readonly string[]): string {
+  const named = keys.map((key) => `"${key}"`).join(", ");
+  return (
+    `Top-level permission keys naming Pi MCP tools are applied as "mcp" rules: ${named}. ` +
+    `Move them under "mcp" — see ${MCP_TOOL_KEY_MIGRATION_GUIDE}`
+  );
 }
 
 /**

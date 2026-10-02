@@ -3884,3 +3884,84 @@ describe("Pi MCP tools (mcp__<server>__<tool>) resolve on the mcp surface", () =
     expect(result.state).toBe("deny");
   });
 });
+
+describe("a top-level mcp__ key keeps applying to the Pi MCP tool it names", () => {
+  const toolName = "mcp__danger_srv__wipe";
+  const portNotice =
+    'Top-level permission keys naming Pi MCP tools are applied as "mcp" rules: "mcp__danger_srv__wipe". ' +
+    'Move them under "mcp" — see https://github.com/gotgenes/pi-packages/blob/main/packages/pi-permission-system/docs/migration/1001-pi-mcp-tools-on-mcp-surface.md';
+
+  function withManager<T>(
+    permission: Record<string, unknown>,
+    use: (manager: PermissionManager) => T,
+  ): T {
+    const { manager, cleanup } = createManagerWithConfig(permission, [
+      "danger-srv",
+    ]);
+    try {
+      return use(manager);
+    } finally {
+      cleanup();
+    }
+  }
+
+  it.each([
+    ["before", { "*": "allow", [toolName]: "deny", mcp: { "*": "allow" } }],
+    ["after", { "*": "allow", mcp: { "*": "allow" }, [toolName]: "deny" }],
+  ])(
+    "denies when the key is written %s the mcp catch-all",
+    (_order, config) => {
+      withManager(config, (manager) => {
+        const result = checkTool(manager, toolName, { target: "prod" });
+        expect(result.state).toBe("deny");
+        expect(result.matchedPattern).toBe(toolName);
+        expect(result.source).toBe("mcp");
+      });
+    },
+  );
+
+  it("applies a wildcard key to every tool it names", () => {
+    withManager({ "*": "allow", "mcp__danger_srv__*": "deny" }, (manager) => {
+      expect(checkTool(manager, toolName, {}).state).toBe("deny");
+      expect(checkTool(manager, "mcp__other__x", {}).state).toBe("allow");
+    });
+  });
+
+  it("does not let a relocated allow open the proxy's discovery targets", () => {
+    withManager({ "*": "ask", [toolName]: "allow" }, (manager) => {
+      expect(checkTool(manager, toolName, {}).state).toBe("allow");
+      expect(checkTool(manager, "mcp", {}).state).toBe("ask");
+    });
+  });
+
+  it("asks the operator to port the key", () => {
+    withManager({ "*": "allow", [toolName]: "deny" }, (manager) => {
+      expect(manager.getConfigIssues()).toEqual([portNotice]);
+    });
+  });
+
+  it.each([
+    ["an exact key", { "*": "allow", mcp__foo: "deny" }],
+    ["a wildcard key", { "*": "allow", "mcp__*": "deny" }],
+  ])(
+    "still denies a non-Pi tool named mcp__foo through %s",
+    (_label, config) => {
+      withManager(config, (manager) => {
+        expect(checkTool(manager, "mcp__foo", {}).state).toBe("deny");
+        expect(manager.isToolFullyDenied("mcp__foo")).toBe(true);
+      });
+    },
+  );
+
+  it("raises no notice for a key that can name no Pi MCP tool", () => {
+    withManager({ "*": "allow", mcp__foo: "deny" }, (manager) => {
+      expect(manager.getConfigIssues()).toEqual([]);
+    });
+  });
+
+  it("raises no notice when no such key exists", () => {
+    withManager({ "*": "allow", mcp: { "danger-srv": "deny" } }, (manager) => {
+      expect(manager.getConfigIssues()).toEqual([]);
+    });
+  });
+});
