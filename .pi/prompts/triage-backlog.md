@@ -293,11 +293,14 @@ The document contains:
    Follow it with the recommended disposition for each `out of scope` item (close as not-planned citing the non-goal, or redirect), and a **Carried forward** subsection recording the verdicts inherited from the prior run, the head SHA each PR verdict was taken against, and the outcome of any re-check.
 3. **The prioritized table** — the deliverable, carrying only `aligned`, `adjacent`, and `no charter` items:
 
-   | Rank | Item | Kind         | Severity | Why now                              |
-   | ---- | ---- | ------------ | -------- | ------------------------------------ |
-   | 1    | #639 | issue (ours) | keystone | Decides #671, #684, #680, #603, #604 |
+   | Rank | Item | Package(s)           | Kind         | Severity | Why now                              |
+   | ---- | ---- | -------------------- | ------------ | -------- | ------------------------------------ |
+   | 1    | #639 | pi-permission-system | issue (ours) | keystone | Decides #671, #684, #680, #603, #604 |
 
    Use `#N` bare (they auto-link on GitHub), mark third-party items, and keep `Why now` to one sentence.
+   The `Package(s)` column lets the reader pick items that can run in parallel: work on different packages parallelizes, work on the same package does not.
+   Name every package an item touches (the issue's `pkg:` labels, or the PR's changed `packages/<pkg>/` paths), comma-separated, without the `@gotgenes/` scope; write `repo` for a `scope:repo` item.
+   A row grouping several items lists the union of their packages.
    For an `adjacent` item, name the owning package or extension point there.
 4. **Keystones** — each keystone with its dependants listed by number.
 5. **Findings that changed a rank** — the verification results from Steps 4 and 5: stale greens, defects already fixed, flakes masking real failures, green-but-misaligned PRs.
