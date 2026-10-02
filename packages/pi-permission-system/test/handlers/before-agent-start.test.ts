@@ -1,4 +1,8 @@
-import type { NormalizedBuildSystemPromptOptions } from "@earendil-works/pi-coding-agent";
+import {
+  formatSkillsForPrompt,
+  type NormalizedBuildSystemPromptOptions,
+  type Skill,
+} from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
 import type { ToolRegistry } from "#src/exposure/tool-registry";
 import {
@@ -40,6 +44,31 @@ function makeEvent(
     systemPrompt,
     systemPromptOptions: makePromptOptions(systemPromptOptions),
   };
+}
+
+function makeSkill(name: string, overrides: Partial<Skill> = {}): Skill {
+  const filePath = `/skills/${name}/SKILL.md`;
+  return {
+    name,
+    description: `Description of ${name}`,
+    filePath,
+    baseDir: `/skills/${name}`,
+    sourceInfo: {
+      path: filePath,
+      source: "local",
+      scope: "user",
+      origin: "top-level",
+    },
+    disableModelInvocation: false,
+    ...overrides,
+  };
+}
+
+/** An event whose prompt carries the catalogue Pi renders from `skills`. */
+function skillEvent(skills: Skill[]) {
+  return makeEvent(`You are an assistant.${formatSkillsForPrompt(skills)}`, {
+    skills,
+  });
 }
 
 function makeSetup(opts?: {
@@ -214,36 +243,103 @@ describe("AgentPrepHandler.handle", () => {
     expect(toolRegistry.setActive).toHaveBeenCalledTimes(2);
   });
 
-  it("filters a denied skill from the systemPrompt on every turn, not just the first", async () => {
-    const systemPrompt = [
-      "You are an assistant.",
-      "",
-      "<available_skills>",
-      "  <skill>",
-      "    <name>secret</name>",
-      "    <description>A denied skill</description>",
-      "    <location>/skills/secret/SKILL.md</location>",
-      "  </skill>",
-      "</available_skills>",
-    ].join("\n");
-    const { handler, permissionManager } = makeSetup();
-    vi.mocked(permissionManager.check).mockImplementation((intent) =>
-      intent.surface === "skill"
-        ? makeCheckResult({ state: "deny" })
-        : makeCheckResult(),
-    );
+  describe("the skill catalogue", () => {
+    function denySkill(
+      permissionManager: ReturnType<typeof makeSetup>["permissionManager"],
+      deniedName: string,
+    ): void {
+      vi.mocked(permissionManager.check).mockImplementation((intent) =>
+        intent.surface === "skill" &&
+        intent.kind === "tool" &&
+        (intent.input as { name?: string }).name === deniedName
+          ? makeCheckResult({ state: "deny" })
+          : makeCheckResult(),
+      );
+    }
 
-    const first = await handler.handle(makeEvent(systemPrompt), makeCtx());
-    const second = await handler.handle(makeEvent(systemPrompt), makeCtx());
+    it("drops a denied skill from the prompt options on every turn, not just the first", async () => {
+      const { handler, permissionManager } = makeSetup();
+      denySkill(permissionManager, "secret");
+      const skills = [makeSkill("secret"), makeSkill("open")];
 
-    expect(first).toHaveProperty("systemPrompt");
-    expect((first as { systemPrompt: string }).systemPrompt).not.toContain(
-      "secret",
-    );
-    expect(second).toHaveProperty("systemPrompt");
-    expect((second as { systemPrompt: string }).systemPrompt).not.toContain(
-      "secret",
-    );
+      for (const turn of [1, 2]) {
+        const event = skillEvent(skills);
+        const result = await handler.handle(event, makeCtx());
+
+        expect(result, `turn ${turn}`).toEqual({});
+        expect(
+          event.systemPromptOptions.skills.map((s) => s.name),
+          `turn ${turn}`,
+        ).toEqual(["open"]);
+      }
+    });
+
+    it("drops a denied skill on a turn whose rendered prompt carries no catalogue yet", async () => {
+      // The prompt a handler reads is rendered before this turn's tool changes.
+      // On the turn `read`/`bash` return from a full denial it has no `<skills>`,
+      // but Pi renders one from `skills` after the chain.
+      const { handler, permissionManager } = makeSetup();
+      denySkill(permissionManager, "secret");
+      const event = makeEvent("You are an assistant.", {
+        skills: [makeSkill("secret"), makeSkill("open")],
+      });
+
+      await handler.handle(event, makeCtx());
+
+      expect(event.systemPromptOptions.skills.map((s) => s.name)).toEqual([
+        "open",
+      ]);
+    });
+
+    it("keeps a skill Pi does not list in the prompt", async () => {
+      // `disableModelInvocation` skills are never rendered into the catalogue,
+      // so the prompt says nothing about them either way.
+      const { handler, permissionManager } = makeSetup();
+      denySkill(permissionManager, "secret");
+      const event = skillEvent([
+        makeSkill("secret"),
+        makeSkill("manual-only", { disableModelInvocation: true }),
+      ]);
+
+      await handler.handle(event, makeCtx());
+
+      expect(event.systemPromptOptions.skills.map((s) => s.name)).toEqual([
+        "manual-only",
+      ]);
+    });
+
+    it("still drops a denied skill under an operator's custom prompt", async () => {
+      const custom = "You are my personal coding assistant.";
+      const { handler, permissionManager } = makeSetup();
+      denySkill(permissionManager, "secret");
+      const skills = [makeSkill("secret"), makeSkill("open")];
+      const event = makeEvent(`${custom}${formatSkillsForPrompt(skills)}`, {
+        customPrompt: custom,
+        skills,
+      });
+
+      const result = await handler.handle(event, makeCtx());
+
+      expect(result).toEqual({});
+      expect(event.systemPromptOptions.skills.map((s) => s.name)).toEqual([
+        "open",
+      ]);
+    });
+
+    it("stores only the visible skills for path matching", async () => {
+      const { handler, permissionManager, session } = makeSetup();
+      denySkill(permissionManager, "secret");
+      const spy = vi.spyOn(session, "setActiveSkillEntries");
+
+      await handler.handle(
+        skillEvent([makeSkill("secret"), makeSkill("open")]),
+        makeCtx(),
+      );
+
+      expect(spy.mock.calls.at(-1)?.[0].map((entry) => entry.name)).toEqual([
+        "open",
+      ]);
+    });
   });
 
   it("stores resolved skill entries on the session", async () => {
@@ -317,40 +413,6 @@ describe("AgentPrepHandler.handle", () => {
 
       expect(toolRegistry.setActive).toHaveBeenCalledWith(["read"]);
       expect(result).toEqual({});
-    });
-
-    it("still filters a denied skill out of an operator's custom prompt", async () => {
-      const systemPrompt = [
-        custom,
-        "",
-        "<available_skills>",
-        "  <skill>",
-        "    <name>secret</name>",
-        "    <description>A denied skill</description>",
-        "    <location>/skills/secret/SKILL.md</location>",
-        "  </skill>",
-        "</available_skills>",
-      ].join("\n");
-      const { handler, permissionManager } = makeSetup({
-        toolRegistry: { getActive: vi.fn().mockReturnValue(["read"]) },
-      });
-      vi.mocked(permissionManager.check).mockImplementation((intent) =>
-        intent.surface === "skill"
-          ? makeCheckResult({ state: "deny" })
-          : makeCheckResult(),
-      );
-
-      const result = await handler.handle(
-        makeEvent(systemPrompt, {
-          customPrompt: custom,
-          toolSnippets: { read: "Read file contents" },
-        }),
-        makeCtx(),
-      );
-
-      const out = result.systemPrompt ?? "";
-      expect(out.startsWith(custom)).toBe(true);
-      expect(out).not.toContain("secret");
     });
 
     describe("in a subagent child", () => {

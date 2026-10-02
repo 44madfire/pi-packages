@@ -4,7 +4,10 @@ import type {
   NormalizedBuildSystemPromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import type { SubagentDetector } from "#src/authority/subagent-detection";
-import { resolveSkillPromptEntries } from "#src/exposure/skill-prompt-sanitizer";
+import {
+  visibleSkillPromptEntries,
+  withoutDeniedSkills,
+} from "#src/exposure/skill-prompt-sanitizer";
 import {
   type RegisteredTools,
   readRegisteredTools,
@@ -26,11 +29,12 @@ interface BeforeAgentStartPayload {
    * itself, see what this handler writes here. `customPrompt` says whether Pi
    * wrote a preamble at all: under one, it writes no tool surface.
    * `toolSnippets` and `promptGuidelines` are what a child's own tool surface
-   * renders from, and `sections` is where it is stated.
+   * renders from, and `sections` is where it is stated. `skills` is the
+   * catalogue Pi renders, which policy narrows.
    */
   systemPromptOptions: Pick<
     NormalizedBuildSystemPromptOptions,
-    "customPrompt" | "toolSnippets" | "promptGuidelines" | "sections"
+    "customPrompt" | "toolSnippets" | "promptGuidelines" | "sections" | "skills"
   >;
 }
 
@@ -126,18 +130,25 @@ export class AgentPrepHandler {
       options.sections.rules = sections.rules;
     }
 
-    // Read after the sections are written: the getter re-renders the options.
-    const prompt = event.systemPrompt;
-    const skillPromptResult = resolveSkillPromptEntries(
-      prompt,
+    // Path-match entries come from every catalogue the rendered prompt lists,
+    // read before the skill list is narrowed.
+    this.session.setActiveSkillEntries(
+      visibleSkillPromptEntries(
+        event.systemPrompt,
+        this.resolver,
+        agentName,
+        this.session.getPathNormalizer(),
+      ),
+    );
+    // Denials are judged on the list Pi renders `<skills>` from, not on the
+    // rendered prompt: that prompt predates this turn's tool changes, and on
+    // the turn `read`/`bash` return from a full denial it lists no catalogue.
+    options.skills = withoutDeniedSkills(
+      options.skills,
       this.resolver,
       agentName,
-      this.session.getPathNormalizer(),
     );
-    this.session.setActiveSkillEntries(skillPromptResult.entries);
-    return skillPromptResult.prompt !== prompt
-      ? { systemPrompt: skillPromptResult.prompt }
-      : {};
+    return {};
   }
 
   /**
