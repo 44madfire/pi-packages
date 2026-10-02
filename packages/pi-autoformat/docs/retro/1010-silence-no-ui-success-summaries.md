@@ -35,3 +35,16 @@ Test count unchanged (44 in `test/extension.test.ts`; one test rewritten); the a
 - The killing mutation (an `"info"` `reportMessage` call ahead of the `!hasUI` return) reddened the target test plus the four `hasUI` success-path tests, which catch the extra `notify`; the extra reds came from where the plan put the mutation, not from a mistake in the plan.
 - No deviations from the plan.
 - Pre-completion reviewer: PASS.
+
+## Stage: Sync (worktree) (2026-10-02T23:28:35Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` both passed on the branch before the rebase onto `main`.
+The plan's marker is `**Release:** ship independently`, so the root dispatches a `pi-autoformat` release after the land; no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1010--/2026-10-02T22-42-01-588Z_01a0fec8-18f4-70bb-bf65-76e18c3f1eae.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The `fix(pi-autoformat):` commit carries the `Co-authored-by:` trailer for the reporter; the rebase must keep it intact.
