@@ -252,11 +252,11 @@ A child loads one only when its `tools` list names a tool that extension supplie
 | any `mcp__<server>__<tool>`, `list_mcp_resources`, `list_mcp_resource_templates`, or `read_mcp_resource` | MCP                      |
 
 A child that names none of them loads none of them.
-That matters for MCP, which starts every server in your `mcp.json` when it loads, whether or not the child can reach that server's tools.
+That matters for MCP, which starts every enabled server in your `mcp.json` when it loads, whether or not the child can reach that server's tools.
 A built-in you disabled in your Pi settings (for example `"extensions": ["-builtin:mcp"]`) stays disabled in children, and an extension that replaces a built-in in your session replaces it in children too.
 
 Pi names each MCP tool `mcp__<server>__<tool>`, where `<server>` is the server's key in `mcp.json`.
-Characters other than letters, digits, and `_` become `_`, and a name longer than 64 characters gets a hash suffix.
+Characters other than letters, digits, and `_` become `_`, and a name longer than 64 characters, or one that collides with another tool's, gets a hash suffix; a pattern saves you writing those by hand.
 An MCP server's tools are exposed `codemode` by default: the model calls them from a `codemode` script, so the agent must name `codemode` as well.
 A server configured with `deferred` exposure needs `tool_search` instead; a `direct` one needs neither.
 The child does not add these for you.
