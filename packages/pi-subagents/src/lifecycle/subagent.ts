@@ -609,8 +609,8 @@ export class Subagent {
 	 * nobody claims starts (SubagentManager.startResume), clearing the claim a
 	 * previous carrier left after it delivered.
 	 */
-	release(): void {
-		this.state.release();
+	releaseClaims(): void {
+		this.state.releaseClaims();
 	}
 
 	/**

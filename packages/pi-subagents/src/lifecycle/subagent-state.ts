@@ -349,7 +349,7 @@ export class SubagentState {
 	}
 
 	/** The carrier abandoned its commitment; announcing is owed again. */
-	release(): void {
+	releaseClaims(): void {
 		this._claimed = false;
 	}
 

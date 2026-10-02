@@ -431,7 +431,7 @@ export class SubagentManager {
     // previous carrier left behind belongs to an outcome already delivered, and
     // no carrier is live on a settled record.
     if (options.claimOutcome) agent.claim();
-    else agent.release();
+    else agent.releaseClaims();
     // Published as agent.promise, which always resolves; it rejects only for a
     // missing session, which resumeRefusal has already refused as no-session.
     void agent.resume(prompt, options.signal);

@@ -394,16 +394,16 @@ describe("SubagentState — carrier claim", () => {
 		expect(state.claimed).toBe(true);
 	});
 
-	it("release hands responsibility back", () => {
+	it("releaseClaims hands responsibility back", () => {
 		const state = new SubagentState({ status: "running" });
 		state.claim();
-		state.release();
+		state.releaseClaims();
 		expect(state.claimed).toBe(false);
 	});
 
-	it("release without a prior claim is a no-op", () => {
+	it("releaseClaims without a prior claim is a no-op", () => {
 		const state = new SubagentState({ status: "running" });
-		state.release();
+		state.releaseClaims();
 		expect(state.claimed).toBe(false);
 	});
 
@@ -419,7 +419,7 @@ describe("SubagentState — carrier claim", () => {
 		state.claim();
 		expect(state.consumed).toBe(false);
 		state.markConsumed(5000);
-		state.release();
+		state.releaseClaims();
 		expect(state.claimed).toBe(false);
 		expect(state.consumedAt).toBe(5000);
 	});

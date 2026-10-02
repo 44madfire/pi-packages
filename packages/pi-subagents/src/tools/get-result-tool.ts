@@ -61,7 +61,7 @@ export class GetResultTool {
 		if (!record.isActive()) {
 			record.markConsumed();
 		} else if (waited) {
-			record.release();
+			record.releaseClaims();
 		}
 
 		const verbose = params.verbose === true;
