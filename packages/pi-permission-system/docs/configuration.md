@@ -1106,8 +1106,9 @@ A prefix is recognized only when it stands alone or precedes a separator, so a l
 
 The pattern is stored and displayed as written (e.g. `~/development/*`) in logs and approval dialogs.
 
-Path **values** supplied by tool calls and bash commands are expanded the same way.
-This means `~/...`, `$HOME/...`, `${HOME}/...`, and the fully-expanded absolute form all match a single home-anchored pattern: a `read` tool called with path `~/.ssh/config`, `$HOME/.ssh/config`, `${HOME}/.ssh/config`, or `/Users/me/.ssh/config` is all caught by a `"~/.ssh/*": "deny"` rule.
+Path **values** supplied by bash commands and extension tools are expanded the same way.
+This means `~/...`, `$HOME/...`, `${HOME}/...`, and the fully-expanded absolute form all match a single home-anchored pattern: `cat ~/.ssh/config`, `cat $HOME/.ssh/config`, or `cat /Users/me/.ssh/config` is caught by a `"~/.ssh/*": "deny"` rule.
+Pi's built-in file tools expand only `~`, as Pi itself does: a `read` of `~/.ssh/config` or `/Users/me/.ssh/config` is caught, while a `read` of `$HOME/.ssh/config` opens `<cwd>/$HOME/.ssh/config` and is matched as that file.
 
 ---
 
