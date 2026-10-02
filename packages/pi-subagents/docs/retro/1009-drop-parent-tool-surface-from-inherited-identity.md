@@ -63,3 +63,44 @@ The plan's marker is `**Release:** ship independently`, but it must reach npm be
 ### Observations
 
 No deferred work and no follow-up issues filed.
+
+## Stage: Final Retrospective (2026-10-02T03:55:02Z)
+
+### Session summary
+
+The excision of Pi's `<tools>`/`<rules>` from `inheritedIdentity` went from plan through a refactor, fix, and docs commit to `main`, and shipped as `pi-subagents-v21.9.1` ahead of pi-permission-system's #999 release, as the plan required.
+
+Issue #1009 closed citing `6a1fa48d`; the #901 comment was posted at ship but misstated the residual, and was corrected in this retro.
+
+### Observations
+
+#### What went well
+
+- The TDD session pinned each invariant test with its own scripted killing mutation (`/tmp/mutate.mjs`, which checks each pattern is present before applying it), so the three non-red tests are known to guard something.
+- The ship-time actions (release ordering, the #901 comment) were carried through all three peer stage notes, so the root had them without reading the peer transcript.
+
+##### What caused friction (agent side)
+
+- `instruction-violation` — `/ship` step 2.3 says to read the retro file in full; the ship session instead grepped it for `PR #|release|close|Sync|breaking`.
+  The hits named "comment on #901" but not the comment's content, which the planning entry and the plan's ship-time line (243) both spell out: "no tool list or rules in prose … stays open for a child-stated list".
+  The posted #901 comment instead said it stayed open "for the <=0.85 footer shape", an invented residual.
+  The same grep shortcut ran on the #970 ship earlier in the session, harmlessly.
+  Self-identified after posting (flagged in the ship report, sourced and fixed in this retro).
+  Impact: a wrong public comment on #901 for about 10 minutes, corrected by editing it in place.
+- `other` — twice in the TDD session, `Edit` bodies wrote `\u2014`/`\u2265` as literal escapes in `.ts` comments; caught by grep, fixed with a Node `replaceAll`.
+  No lint gate covers escapes outside markdown.
+  Impact: two fix-up edits, no rework commit.
+
+##### What caused friction (user side)
+
+- None.
+
+#### Diagnostic details
+
+- Model-performance correlation: planning and TDD ran on `anthropic/claude-opus-5-5` (judgment-heavy: ADR design, mutation planning), sync on `anthropic/claude-sonnet-5-5` (mechanical) — a good split.
+- Feedback loop: each TDD step ran `check` plus targeted eslint/biome before its commit, and the full `check`/lint/test/`fallow` sweep before the reviewer.
+
+#### Changes made
+
+1. Edited the #901 ship comment in place to state the residual the plan names (no tool list or rules in prose; open for a child-stated list).
+2. `.pi/prompts/ship.md` step 2.3: read the retro with `git show`/`Read`, never a keyword grep, and take a ship-time comment's content from the plan's or retro's wording.

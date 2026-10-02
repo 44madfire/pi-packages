@@ -71,11 +71,12 @@ A decision presented early from the plan is far less likely to be reversed than 
      Record the decision.
    - Any other `**Release:**` value (`ship independently` or `ship now — batch "<name>" tail`) → record "release now"; note the recommendation in the final report; do **not** ask.
    - No `**Release:**` marker, or no plan found → record "release now" (default); do **not** ask, and say so in the final report rather than letting the absence pass silently.
-3. Read the issue's retro file in full — `docs/retro/NNNN-*.md` or `packages/*/docs/retro/NNNN-*.md`, matching the plan's `NNNN`.
+3. Read the issue's retro file in full, with `git show` or `Read`, never a keyword grep — `docs/retro/NNNN-*.md` or `packages/*/docs/retro/NNNN-*.md`, matching the plan's `NNNN`.
    In the worktree lane it is on the branch (`git show "<branch>:<retro-path>"`), and its `## Stage: Sync (worktree)` entry is where the peer records release-relevant handoff — a sibling package bumped by a docs-only commit, work deferred to this ship, a PR to close.
    Do this in **both** lanes: a plan's risk table and the planning and TDD stage notes routinely record a ship-time close target — an adopted third-party PR — that no commit in the range mentions.
    A step that only greps the plan for `**Release:**` cannot see it.
    Carry what you find into step 9 and step 10.
+   A ship-time comment on another issue takes its content from the plan's or retro's wording, not a paraphrase of the hit that named it.
 
 This section only reads and (conditionally) asks — it performs no git, push, or CI action.
 Step 8 applies the recorded release decision.
