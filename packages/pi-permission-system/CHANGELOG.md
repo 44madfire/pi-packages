@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [38.0.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v38.0.0...pi-permission-system-v38.0.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** tolerate a non-Pi before_agent_start payload ([#860](https://github.com/gotgenes/pi-packages/issues/860)) ([33f6a24](https://github.com/gotgenes/pi-packages/commit/33f6a24c820f23d43a56c9377245e804c2fd8ba2)), closes [#860](https://github.com/gotgenes/pi-packages/issues/860)
+
 ## [38.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v37.0.0...pi-permission-system-v38.0.0) (2026-10-02)
 
 
