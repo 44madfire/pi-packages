@@ -7,12 +7,11 @@ issue_title: "mcp_servers prompt section missing when pi-permission-system is en
 
 ## Release Recommendation
 
-**Release:** ship independently
+**Release:** ship now — batch "pi-1.0 prompt options" tail (this issue completes the batch)
 
-This issue is in no improvement roadmap and no release batch.
-It does depend on two other releases going out first.
-[#970] raises the peer floor to `>=1.0.0`, and this plan assumes its 1.0 event types and its deletion of the ≤0.85 header layout.
-[#1009] is the pi-subagents cut, and pi-subagents must be released before this package, or subagent children double-list their tools during the gap (see Risks).
+At [#970]'s planning the operator deferred its release so one major carries both the `>=1.0.0` peer floor and this fix (an ad-hoc batch recorded in [#970]'s retro, with this issue as the tail).
+[#970] has landed unreleased, and [#1009] (the pi-subagents cut) has already shipped as pi-subagents 21.9.1, so the double-listing window in Risks is closed on the pi-subagents side.
+[#970] moved the ≤0.85 header-layout deletion into this issue, so this plan deletes both prompt layouts.
 
 ## Problem Statement
 
@@ -49,7 +48,7 @@ The breaking part of this sequence, the peer floor raise, belongs to [#970].
 - **The pi-subagents cut**, which is [#1009].
   It is a prerequisite, not part of this plan.
 - **pi-nocd's identical defect**, which is [#1000].
-- **The peer-floor raise and the ≤0.85 header-layout deletion**, which are [#970].
+- **The peer-floor raise**, which is [#970] (landed).
 - **Filtering an `<available_skills>` catalogue Pi did not render.**
   A catalogue written into an operator's `SYSTEM.md`, an `--append-system-prompt`, or another extension's text is no longer edited.
   The old string pass removed denied entries from every catalogue in the prompt.
@@ -186,7 +185,7 @@ The test fixture builds a fresh event per fire anyway (Tidy-First finding).
   - Add `renderToolSurfaceSections` and `ToolSurfaceSections`.
   - Delete `renderToolSurface`, `PromptLayout`, `SECTION_LAYOUT`, `detectPromptLayout`, `lastCwdSectionClose`, `settleRegion`, and every removal function.
   - Also delete `findTaggedSection`, `laterPiSectionStart`, `renderSectionBlock`, `taggedSection`, `normalizePrompt`, `collapseExtraBlankLines`, `isSectionBodyLine`, `findSection`, and the constants only they read.
-  - Delete whatever header-layout residue [#970] left.
+  - Delete the ≤0.85 header layout too (`HEADER_LAYOUT`, `removeToolSurfaceSections`, `renderHeaderBlock`, the footer handling, and their header-shaped tests), which [#970] left in place for this issue.
   - Rewrite the module doc comment, which describes relocation.
 - `src/exposure/skill-prompt-sanitizer.ts`:
   - Add `classifySkillPromptEntries`.
@@ -255,7 +254,7 @@ The test fixture builds a fresh event per fire anyway (Tidy-First finding).
 
 ## TDD Order
 
-Prerequisite: [#970] has landed on `main`, so the devDependency is 1.0 and the header layout is gone.
+Prerequisite: [#970] has landed on `main`, so the devDependency is 1.0; both prompt layouts are still present and step 4 deletes them.
 Re-read `tool-surface-prompt.ts` before step 1, since [#970] reshapes it.
 
 1. **`refactor(pi-permission-system): render the tool surface as section contents`**
