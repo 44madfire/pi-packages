@@ -20,3 +20,18 @@ The operator picked the reporter's patch (option A) and classified it as non-bre
 - The Tidy-First assessor found no preparatory tidying; its dead-helper list (`buildLegacySuccessMessage`, `summarizeSuccessPaths`, `summarizeFallbackUsages`, `FlushSummary.fallbackUsages`) was re-verified by grep and folded into the `fix:` step, with the `NotificationType` narrowing as a follow-on `refactor:` step.
 - Deleting the new `if (!ctx.hasUI) return;` does not turn the test red, because `setAutoformatStatus` already no-ops without a UI; the plan records this so the implementer doesn't chase it.
 - The `fix:` commit carries `Co-authored-by: JoyceWil <42863578+code-lixm@users.noreply.github.com>`.
+
+## Stage: Implementation — TDD (2026-10-02T23:26:51Z)
+
+### Session summary
+
+Completed all three plan steps: the `fix:` that silences no-UI success summaries and deletes the dead legacy builder, the `refactor:` narrowing `NotificationType`, and the README/`configuration.md` update.
+Test count unchanged (44 in `test/extension.test.ts`; one test rewritten); the acceptance suite also passed (2/2).
+
+### Observations
+
+- Red produced two failures, not one: the rewritten test failed before its manual `mockRestore()`, leaking the `console.log` spy into the next test ("reports non-interactive formatter failures…"), which passes in isolation.
+  The file restores spies by hand rather than in an `afterEach`, so any failure cascades this way.
+- The killing mutation (an `"info"` `reportMessage` call ahead of the `!hasUI` return) reddened the target test plus the four `hasUI` success-path tests, which catch the extra `notify`; the extra reds came from where the plan put the mutation, not from a mistake in the plan.
+- No deviations from the plan.
+- Pre-completion reviewer: PASS.
