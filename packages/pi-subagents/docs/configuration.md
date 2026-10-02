@@ -361,8 +361,7 @@ Inheritance is a **snapshot taken when the agent spawns**.
 A provider registered in the parent after a child has started does not appear in that running child; agents spawned afterwards pick it up.
 This matches the rest of the parent state a child captures at spawn — working directory, model, and system prompt are all frozen the same way.
 
-Provider inheritance needs no configuration.
-It does require Pi 0.81.0 or newer, which is the floor this package declares — that is the release where the model registry began exposing every runtime registration for replay.
+Provider inheritance needs no configuration, and every Pi release this package supports (1.0.0 or newer) exposes the runtime registrations it replays.
 
 One thing the child does still share with the parent: when a provider's API key is a shell command (`"apiKey": "!my-command"`), Pi caches the command's resolved output process-wide, so parent and children reuse one result rather than re-running it per agent.
 That cache is Pi's, not this extension's, and it predates provider inheritance.

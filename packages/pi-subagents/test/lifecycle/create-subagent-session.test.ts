@@ -11,6 +11,12 @@ import {
   createSubagentSessionIO,
 } from "#test/helpers/subagent-session-io";
 
+/**
+ * The context a custom tool's `execute` receives, derived from the call it
+ * feeds so the stub fits whichever context type the installed SDK declares.
+ */
+type ExecuteCtx = Parameters<NonNullable<CreateSessionOptions["customTools"]>[number]["execute"]>[4];
+
 /** Mock AgentConfigLookup. */
 const mockAgentLookup = createAgentLookup();
 
@@ -392,7 +398,7 @@ describe("createSubagentSession — the core's own child tools", () => {
         { question: "Which config wins?" },
         new AbortController().signal,
         () => {},
-        STUB_CTX,
+        STUB_CTX as ExecuteCtx,
       );
       expect(askParent).toHaveBeenCalledWith("Which config wins?");
     });

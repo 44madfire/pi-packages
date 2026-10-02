@@ -206,7 +206,7 @@ export class SubagentSession {
 
   /** The session's message history. */
   get messages(): readonly unknown[] {
-    return this._session.messages as readonly unknown[];
+    return this._session.messages;
   }
 
   /** The session's message history, typed for Pi's session-rendering machinery. */
