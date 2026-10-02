@@ -182,6 +182,61 @@ function removePromptRange(prompt: string, start: number, end: number): string {
   return `${beforeSection}${afterSection}`;
 }
 
+/** A prompt's skill catalogue entries, classified by policy. */
+export interface ClassifiedSkillEntries {
+  /** Entries not denied, in catalogue order: what the session may use. */
+  readonly entries: SkillPromptEntry[];
+  /** Names of the skills policy denies, each named once. */
+  readonly deniedNames: ReadonlySet<string>;
+}
+
+/**
+ * Classify every skill listed in the prompt's `<available_skills>` catalogues
+ * by policy, without editing the prompt.
+ */
+export function classifySkillPromptEntries(
+  prompt: string,
+  permissionManager: SkillPermissionChecker,
+  agentName: string | null,
+  normalizer: PathNormalizer,
+): ClassifiedSkillEntries {
+  const resolved = resolveSectionEntries(
+    parseAllSkillPromptSections(prompt),
+    permissionManager,
+    agentName,
+    normalizer,
+  ).flat();
+  return {
+    entries: resolved.filter((entry) => entry.state !== "deny"),
+    deniedNames: new Set(
+      resolved
+        .filter((entry) => entry.state === "deny")
+        .map((entry) => entry.name),
+    ),
+  };
+}
+
+/** Each section's entries with their policy state, one array per section. */
+function resolveSectionEntries(
+  sections: readonly SkillPromptSection[],
+  permissionManager: SkillPermissionChecker,
+  agentName: string | null,
+  normalizer: PathNormalizer,
+): SkillPromptEntry[][] {
+  const permissionCache = new Map<string, PermissionState>();
+  return sections.map((section) =>
+    section.entries.map((entry) => {
+      const state = resolvePermissionState(
+        entry.name,
+        permissionManager,
+        agentName,
+        permissionCache,
+      );
+      return createResolvedSkillEntry(entry, state, normalizer);
+    }),
+  );
+}
+
 export function resolveSkillPromptEntries(
   prompt: string,
   permissionManager: SkillPermissionChecker,
@@ -193,21 +248,18 @@ export function resolveSkillPromptEntries(
     return { prompt, entries: [] };
   }
 
-  const permissionCache = new Map<string, PermissionState>();
+  const resolvedSections = resolveSectionEntries(
+    sections,
+    permissionManager,
+    agentName,
+    normalizer,
+  );
   const visibleEntries: SkillPromptEntry[] = [];
   const replacements: Array<{ start: number; end: number; content: string }> =
     [];
 
-  for (const section of sections) {
-    const resolvedEntries = section.entries.map((entry) => {
-      const state = resolvePermissionState(
-        entry.name,
-        permissionManager,
-        agentName,
-        permissionCache,
-      );
-      return createResolvedSkillEntry(entry, state, normalizer);
-    });
+  for (const [index, section] of sections.entries()) {
+    const resolvedEntries = resolvedSections[index];
 
     const visibleSectionEntries = resolvedEntries.filter(
       (entry) => entry.state !== "deny",

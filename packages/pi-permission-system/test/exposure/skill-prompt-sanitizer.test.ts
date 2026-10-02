@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  classifySkillPromptEntries,
   findSkillPathMatch,
   parseAllSkillPromptSections,
   resolveSkillPromptEntries,
@@ -183,6 +184,42 @@ describe("resolveSkillPromptEntries", () => {
 });
 
 // ── findSkillPathMatch ──────────────────────────────────────────────────────
+
+describe("classifySkillPromptEntries", () => {
+  test("names a denied skill and keeps it out of the visible entries", () => {
+    const input = availableSkillsSection("alpha", "beta");
+    const manager = makeManager("allow", { beta: "deny" });
+    const result = classifySkillPromptEntries(input, manager, null, normalizer);
+    expect([...result.deniedNames]).toEqual(["beta"]);
+    expect(result.entries.map((e) => e.name)).toEqual(["alpha"]);
+  });
+
+  test("does not name a skill that resolves to ask", () => {
+    const input = availableSkillsSection("alpha", "beta");
+    const manager = makeManager("allow", { beta: "ask" });
+    const result = classifySkillPromptEntries(input, manager, null, normalizer);
+    expect([...result.deniedNames]).toEqual([]);
+    expect(result.entries.map((e) => e.name)).toEqual(["alpha", "beta"]);
+  });
+
+  test("names a skill denied in two catalogues once", () => {
+    const input = `${availableSkillsSection("beta")}\n${availableSkillsSection("beta")}`;
+    const manager = makeManager("allow", { beta: "deny" });
+    const result = classifySkillPromptEntries(input, manager, null, normalizer);
+    expect([...result.deniedNames]).toEqual(["beta"]);
+  });
+
+  test("names nothing when the prompt carries no catalogue", () => {
+    const result = classifySkillPromptEntries(
+      "You are a helpful assistant.",
+      makeManager("deny"),
+      null,
+      normalizer,
+    );
+    expect([...result.deniedNames]).toEqual([]);
+    expect(result.entries).toEqual([]);
+  });
+});
 
 describe("findSkillPathMatch", () => {
   const entries = [
