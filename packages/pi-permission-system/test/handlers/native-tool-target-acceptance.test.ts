@@ -136,6 +136,23 @@ describe("a path rule applies to the file a built-in tool opens", () => {
       },
     );
 
+    it("discloses the file a fallback opens in the ask", () => {
+      const file = onDisk("d\u2019x.txt");
+      const resolver = makeResolver({
+        permission: { "*": "allow", path: { "*": "ask" } },
+      });
+
+      const result = describePathGate(
+        readCall(file.replace("\u2019", "'")),
+        resolver,
+        normalizer,
+      ) as GateDescriptor;
+
+      expect(result.payload.evidence).toEqual([
+        { label: "resolves to", text: file, detail: null },
+      ]);
+    });
+
     it("approves the directory of the file a fallback opens for the session", () => {
       const curlyDir = join(cwd, "q\u2019s");
       mkdirSync(curlyDir);
@@ -182,6 +199,25 @@ describe("a path rule applies to the file a built-in tool opens", () => {
 
       expect(isGateDescriptor(result)).toBe(true);
       expect((result as GateDescriptor).preCheck?.state).toBe("ask");
+    });
+
+    it("discloses the outside file a file URL names in the ask", () => {
+      const file = outsideFile("secret.txt");
+      const resolver = makeResolver({
+        permission: { "*": "allow", external_directory: { "*": "ask" } },
+      });
+
+      const result = describeExternalDirectoryGate(
+        readCall(pathToFileURL(file).href),
+        [],
+        resolver,
+        normalizer,
+      ) as GateDescriptor;
+
+      expect(result.payload.evidence).toEqual([
+        { label: "resolves to", text: file, detail: null },
+        { label: "working directory", text: cwd, detail: null },
+      ]);
     });
 
     it("allows a rewritten spelling of an outside file the allow names", () => {

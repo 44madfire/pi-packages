@@ -65,6 +65,7 @@ export function describePathGate(
   const payload = buildPathAskPayload({
     toolName: tcc.toolName,
     pathValue: filePath,
+    resolvedPath: accessPath.resolvedAlias(),
     agentName: tcc.agentName,
     matchedPattern: check.matchedPattern,
     surface,
