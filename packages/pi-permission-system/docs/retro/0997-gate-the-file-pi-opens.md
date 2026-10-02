@@ -1,0 +1,40 @@
+---
+issue: 997
+issue_title: "pi-permission-system: path policy and native read can disagree on the effective file target"
+---
+
+# Retro: #997 — pi-permission-system: path policy and native read can disagree on the effective file target
+
+## Stage: Planning (2026-10-02T21:57:22Z)
+
+### Session summary
+
+Reproduced the third-party report through the real `PermissionManager` + `PermissionResolver` + `describePathGate`, with Pi 1.0.0's real `resolveReadPath`/`resolveToCwd` imported from the pinned `dist/`.
+Measured bypasses: `file://` URLs (percent-encoded too), Unicode spaces, the curly-quote and AM/PM `read` fallbacks, plus filesystem-level case/NFC aliases on APFS.
+The operator chose to mirror Pi's resolution for the six built-in tools and split the filesystem-alias class into #1016 (recorded out of scope for Phase 15).
+The plan has 11 steps: six preparatory `refactor:`/`test:` steps, four `fix:` steps, and a docs step.
+
+### Observations
+
+- Pi's resolvers are not reachable at runtime, because the package `exports` map publishes only `.`.
+  Tests can still import them by relative `node_modules/…/dist` path, and `tsc` resolves the sibling `.d.ts`.
+  That makes a parity oracle against the real upstream functions cheap, so it is the plan's drift guard.
+- The trigger was the input spelling alone.
+  Pi rewrites it in `normalizePath` (all six tools) and `resolveReadPath` (`read` only) after our gate has already matched the typed spelling.
+- A second defect turned up in the same mechanism.
+  `describeExternalDirectoryGate` decides "outside cwd" from the raw string, so `file:///outside/x` is judged inside cwd and never asks.
+  The plan fixes it as its own step (8), moving the decision onto the `AccessPath` boundary value.
+- Mirroring is exact, not a union.
+  The typed spelling is dropped as an alias when Pi rewrites it, because under last-match-wins a later allow on the typed spelling could beat a deny on the target.
+  One consequence: `$HOME/…`, quoted, and whitespace-padded tool paths now match the literal path Pi opens rather than our expanded form.
+  This is noted under Risks.
+- The `existsSync` probe intentionally differs from `entryExists` (`lstat`).
+  Pi's `access F_OK` follows symlinks, so a dangling symlink at the typed spelling makes Pi try the variants.
+- The tidy-first assessor recommended exporting the cwd-relative alias helper and porting the `isOutsideWorkingDirectory` tests ahead of the method's removal.
+  Both became steps 1–2.
+- Considered and rejected: floor-to-ask on divergence (it would prompt on legitimate macOS screenshot reads), and union aliases (they reopen the bypass in the other direction).
+
+#### Deferred tidyings
+
+- `src/presentation/tool-ask-payload.ts`: the per-tool ask payload discloses no resolved target.
+  Left as an Open Question rather than a tidying.
