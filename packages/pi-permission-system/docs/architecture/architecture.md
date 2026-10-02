@@ -1309,6 +1309,8 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   A fully denied direct MCP tool stays declared for the first prompt because `builtin:mcp` registers it after the exposure pass; the gate still denies it, and nothing in it touches this phase's bash token-role work.
 - [#1014] — filed by [#1001]'s planning; deferred to a later phase.
   It is the MCP permission model itself (one call identity, Pi's built-in MCP first, the proxy as a registered reader) and the leading candidate for the phase after this one, gathering [#946], [#952]'s MCP half, [#1002], and [#1001]'s residuals; none of it shares this phase's bash token-role spine.
+- [#1016] — filed by [#997]'s planning; out of scope for the roadmap.
+  A case- or Unicode-normalization variant the filesystem opens as the same file misses a `path` deny on every surface, a canonicalization defect that shares no mechanism with this phase's bash token-role work.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1866,5 +1868,7 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1001]: https://github.com/gotgenes/pi-packages/issues/1001
 [#1002]: https://github.com/gotgenes/pi-packages/issues/1002
 [#1014]: https://github.com/gotgenes/pi-packages/issues/1014
+[#997]: https://github.com/gotgenes/pi-packages/issues/997
+[#1016]: https://github.com/gotgenes/pi-packages/issues/1016
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
