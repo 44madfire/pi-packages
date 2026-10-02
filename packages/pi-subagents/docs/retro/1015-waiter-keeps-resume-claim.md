@@ -49,3 +49,16 @@ Check, lint, the full test suite, and `fallow dead-code` are green.
   Reviewer warnings: (1) the plan's repro evidence is a synthetic-trigger spike (disclosed in the plan); (2) the double-resume case (ordinal moved by two or more, record inactive) falls through to `settled`, would mark consumed, and would report a later run's outcome.
   The plan classifies it as unreachable, and no test pins it.
   The reviewer also noted, as cosmetic, that a resumed run settling before the waiter continues leaves the "running again" line stale.
+
+## Stage: Sync (worktree) (2026-10-02T22:00:36Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` passed.
+The plan's marker is `**Release:** ship independently`; no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1015--/2026-10-02T21-27-54-321Z_01a0fe84-3cd0-70ea-959d-641f2544117a.jsonl` — read with `read_session_file` for message-level verification at land/retro time.
+
+### Observations
+
+The pre-completion reviewer's WARN (the unpinned double-resume fall-through) stands as recorded in the TDD stage entry.
