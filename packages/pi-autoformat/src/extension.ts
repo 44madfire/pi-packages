@@ -40,7 +40,7 @@ import {
 const execFileAsync = promisify(execFile);
 const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
-type NotificationType = "info" | "warning" | "error";
+type NotificationType = "warning" | "error";
 
 /**
  * Narrowed view of Pi's real `ExtensionContext`, restricted to the surface
@@ -279,13 +279,7 @@ function reportMessage(
     return;
   }
 
-  const output = `[${AUTOFORMAT_EXTENSION_ID}] ${message}`;
-  if (type === "error" || type === "warning") {
-    console.warn(output);
-    return;
-  }
-
-  console.log(output);
+  console.warn(`[${AUTOFORMAT_EXTENSION_ID}] ${message}`);
 }
 
 type FailureSummary = {
