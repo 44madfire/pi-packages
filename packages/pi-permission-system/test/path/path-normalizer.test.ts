@@ -489,4 +489,53 @@ describe("PathNormalizer", () => {
       expect(win32Normalizer.entryExists(join(root, "nope.txt"))).toBe(false);
     });
   });
+
+  describe("forToolPath", () => {
+    // Real filesystem: `read`'s variant spellings are tried by existence.
+    const tmp = createTmpFixture();
+    let root: string;
+    let normalizer: PathNormalizer;
+
+    beforeEach(() => {
+      root = tmp.dir("pi-perm-tool-path-");
+      normalizer = new PathNormalizer(posixPathFlavor, root);
+    });
+
+    afterEach(() => {
+      tmp.cleanup();
+    });
+
+    test("read opens the curly-quote file a straight quote names", () => {
+      const curly = tmp.file(root, "d\u2019x.txt");
+      expect(normalizer.forToolPath("read", "d'x.txt").value()).toBe(curly);
+    });
+
+    test("write tries no variant spelling", () => {
+      tmp.file(root, "d\u2019x.txt");
+      expect(normalizer.forToolPath("write", "d'x.txt").value()).toBe(
+        join(root, "d'x.txt"),
+      );
+    });
+
+    test("read follows a dangling symlink to the variant Pi opens", () => {
+      tmp.symlink(root, "dang'x.txt", join(root, "gone.txt"));
+      const curly = tmp.file(root, "dang\u2019x.txt");
+      expect(normalizer.forToolPath("read", "dang'x.txt").value()).toBe(curly);
+    });
+
+    test("every built-in tool reads a file URL as the file it names", () => {
+      const file = tmp.file(root, "secret.txt");
+      for (const tool of ["read", "write", "edit", "ls", "find", "grep"]) {
+        expect(normalizer.forToolPath(tool, `file://${file}`).value()).toBe(
+          file,
+        );
+      }
+    });
+
+    test("an extension tool keeps forPath's resolution", () => {
+      expect(normalizer.forToolPath("my-ext", "$HOME/x")).toEqual(
+        normalizer.forPath("$HOME/x"),
+      );
+    });
+  });
 });

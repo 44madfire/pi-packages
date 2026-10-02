@@ -1,11 +1,13 @@
-import { lstatSync } from "node:fs";
+import { existsSync, lstatSync } from "node:fs";
 import { AccessPath } from "#src/access-intent/access-path";
 import {
   canonicalNormalizePathForComparison,
   normalizePathForComparison,
   normalizePathPolicyLiteral,
 } from "#src/access-intent/path-normalization";
+import { classifyToolKind } from "#src/access-intent/tool-kind";
 import { deriveApprovalPattern } from "./approval-pattern";
+import { resolveNativeToolTarget } from "./native-tool-target";
 import { isPathOutsideWorkingDirectory } from "./path-containment";
 import type { PathFlavor } from "./path-flavor";
 import { isPiInfrastructureRead } from "./pi-infrastructure-read";
@@ -56,6 +58,33 @@ export class PathNormalizer {
     return AccessPath.forPath(pathValue, {
       cwd: this.cwd,
       resolveBase: options?.resolveBase,
+      flavor: this.flavor,
+    });
+  }
+
+  /**
+   * Build an AccessPath for a tool call's path argument.
+   *
+   * A built-in file tool (`read`/`write`/`edit`/`ls`/`find`/`grep`) resolves
+   * the argument through Pi's own resolver, which rewrites some spellings and,
+   * for `read`, tries variant spellings that exist; the AccessPath is the file
+   * the tool opens ({@link resolveNativeToolTarget}). Every other tool's path
+   * is its own to interpret, so it keeps {@link forPath}.
+   *
+   * The variant probe is `existsSync` (`access(F_OK)`, following symlinks),
+   * matching Pi's; unlike {@link entryExists}'s `lstat`, a dangling symlink
+   * at the typed spelling does not count, so Pi tries the variants and so do we.
+   */
+  forToolPath(toolName: string, rawPath: string): AccessPath {
+    if (classifyToolKind(toolName) !== "path") return this.forPath(rawPath);
+    const native = resolveNativeToolTarget(rawPath, {
+      cwd: this.cwd,
+      flavor: this.flavor,
+      readFallbacks: toolName.trim() === "read",
+      exists: (absolutePath) => existsSync(absolutePath),
+    });
+    return AccessPath.forNativeTarget(native, {
+      cwd: this.cwd,
       flavor: this.flavor,
     });
   }
