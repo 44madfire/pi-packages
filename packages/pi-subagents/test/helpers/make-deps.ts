@@ -92,6 +92,24 @@ export function mockResumeRefusal(deps: AgentToolFixture, reason: ResumeRefusalR
 }
 
 /**
+ * Point the fixture's `manager.startResume` at a record built from `overrides`,
+ * and return that record so the test can assert on it.
+ */
+export function mockResumeStart(
+	deps: AgentToolFixture,
+	overrides: TestSubagentOptions = {},
+): Subagent {
+	const record = createTestSubagent(overrides);
+	deps.manager.startResume = vi.fn().mockReturnValue({ kind: "started", record });
+	return record;
+}
+
+/** Point the fixture's `manager.startResume` at a refusal. */
+export function mockResumeStartRefusal(deps: AgentToolFixture, reason: ResumeRefusalReason): void {
+	deps.manager.startResume = vi.fn().mockReturnValue({ kind: "refused", reason });
+}
+
+/**
  * Build a tool fixture whose named built-in default agents are disabled.
  * Overlays a same-named user config with `enabled: false` onto each default,
  * so the registry keeps the name but excludes it from the enabled surface.
