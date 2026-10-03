@@ -108,6 +108,11 @@ export type ResumeResult =
 export interface SpawnOptions {
   description?: string;
   model?: string;
+  /**
+   * Turn ceiling for the run. A value below 2 runs with 2: the result is the
+   * child's final response, so it needs one turn to work and one to answer.
+   * Omit for the agent's own limit, then the operator's default; 0 means unlimited.
+   */
   maxTurns?: number;
   thinkingLevel?: string;
   inheritContext?: boolean;

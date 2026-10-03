@@ -482,10 +482,12 @@ describe("SettingsManager", () => {
       expect(sm.defaultMaxTurns).toBeUndefined();
     });
 
-    it("clamps values below 1 (but not 0) to 1", () => {
+    it("raises values below 2 (but not 0) to the minimum of 2", () => {
       const sm = new SettingsManager({ emit: vi.fn(), cwd: "/tmp", agentDir: "/nonexistent" });
       sm.defaultMaxTurns = -5;
-      expect(sm.defaultMaxTurns).toBe(1);
+      expect(sm.defaultMaxTurns).toBe(2);
+      sm.defaultMaxTurns = 1;
+      expect(sm.defaultMaxTurns).toBe(2);
     });
   });
 
@@ -593,6 +595,38 @@ describe("SettingsManager", () => {
       const sm = new SettingsManager({ emit: vi.fn(), cwd: projectDir, agentDir: globalDir });
       sm.load();
       expect(sm.abortAllOnInterrupt).toBe(true);
+    });
+
+    it("warns that graceTurns was removed, and neither applies, emits, nor persists it", () => {
+      mkdirSync(join(projectDir, ".pi"), { recursive: true });
+      writeFileSync(join(projectDir, ".pi", "subagents.json"), JSON.stringify({ graceTurns: 5, maxConcurrent: 6 }));
+      const emit = vi.fn();
+      const sm = new SettingsManager({ emit, cwd: projectDir, agentDir: globalDir });
+      const warnings = captureWarn(() => {
+        expect(sm.load()).toEqual({ maxConcurrent: 6 });
+      });
+      expect(warnings).toEqual([
+        "[pi-subagents] graceTurns was removed; set wrapUpTurns (turns left when a subagent is warned, default 2) instead.",
+      ]);
+      expect(emit).toHaveBeenCalledWith("subagents:settings_loaded", { settings: { maxConcurrent: 6 } });
+      expect(sm.wrapUpTurns).toBe(2);
+      expect(sm.snapshot()).not.toHaveProperty("graceTurns");
+    });
+
+    it("warns about a defaultMaxTurns below the minimum and runs with 2", () => {
+      mkdirSync(join(projectDir, ".pi"), { recursive: true });
+      writeFileSync(join(projectDir, ".pi", "subagents.json"), JSON.stringify({ defaultMaxTurns: 1 }));
+      const sm = new SettingsManager({ emit: vi.fn(), cwd: projectDir, agentDir: globalDir });
+      const warnings = captureWarn(() => sm.load());
+      expect(warnings).toEqual(["[pi-subagents] defaultMaxTurns 1 is below the minimum of 2; using 2."]);
+      expect(sm.defaultMaxTurns).toBe(2);
+    });
+
+    it("does not warn for settings within range", () => {
+      mkdirSync(join(projectDir, ".pi"), { recursive: true });
+      writeFileSync(join(projectDir, ".pi", "subagents.json"), JSON.stringify({ defaultMaxTurns: 2, wrapUpTurns: 3 }));
+      const sm = new SettingsManager({ emit: vi.fn(), cwd: projectDir, agentDir: globalDir });
+      expect(captureWarn(() => sm.load())).toEqual([]);
     });
 
     it("emits subagents:settings_loaded with merged settings", () => {

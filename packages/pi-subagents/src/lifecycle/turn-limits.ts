@@ -115,8 +115,19 @@ export function wrappedUpAtTurnLimit(outcome: { status: string; turnBudget?: Tur
   return outcome.status === "completed" && outcome.turnBudget?.phase === "warned";
 }
 
-/** Normalize max turns. undefined or 0 = unlimited, otherwise minimum 1. */
+/**
+ * The fewest turns a run may have: a subagent's result is its final response,
+ * so it needs one turn to work and one to answer.
+ */
+export const MIN_MAX_TURNS = 2;
+
+/** Normalize max turns. undefined or 0 = unlimited, otherwise at least MIN_MAX_TURNS. */
 export function normalizeMaxTurns(n: number | undefined): number | undefined {
   if (n == null || n === 0) return undefined;
-  return Math.max(1, n);
+  return Math.max(MIN_MAX_TURNS, n);
+}
+
+/** Whether a configured limit is a real one below the minimum, which normalizeMaxTurns raises. */
+export function isBelowMinimumTurns(n: number | undefined): n is number {
+  return n != null && n !== 0 && n < MIN_MAX_TURNS;
 }

@@ -5,6 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type LayeredSettingsSource, loadLayeredSettings } from "#src/layered-settings";
+import { isBelowMinimumTurns, MIN_MAX_TURNS } from "#src/lifecycle/turn-limits";
 import type { PromptInheritance } from "#src/types";
 export interface SubagentsSettings {
   maxConcurrent?: number;
@@ -14,7 +15,13 @@ export interface SubagentsSettings {
    * `/agents` → Settings input prompt explicitly says "0 = unlimited".
    */
   defaultMaxTurns?: number;
+  /** Turns left when a subagent is warned about its budget. */
   wrapUpTurns?: number;
+  /**
+   * Load-only marker: a settings file still names the removed `graceTurns`.
+   * `load()` warns and strips it, so it is never applied, emitted, or saved.
+   */
+  legacyGraceTurns?: true;
   /** Minutes a consumed agent's session is retained after its last relevance event. */
   consumedSessionRetentionMinutes?: number;
   /** Minutes an unconsumed agent's session is retained (safety cap). */
@@ -107,7 +114,7 @@ export class SettingsManager {
     this.onMaxConcurrentChanged = deps.onMaxConcurrentChanged;
   }
 
-  // ── defaultMaxTurns: 0 or undefined → unlimited (undefined); else max(1, n) ──
+  // ── defaultMaxTurns: 0 or undefined → unlimited (undefined); else at least MIN_MAX_TURNS ──
 
   get defaultMaxTurns(): number | undefined {
     return this._defaultMaxTurns;
@@ -117,7 +124,7 @@ export class SettingsManager {
     if (n == null || n === 0) {
       this._defaultMaxTurns = undefined;
     } else {
-      this._defaultMaxTurns = Math.max(1, n);
+      this._defaultMaxTurns = Math.max(MIN_MAX_TURNS, n);
     }
   }
 
@@ -192,7 +199,8 @@ export class SettingsManager {
    * Returns the raw loaded settings object.
    */
   load(): SubagentsSettings {
-    const settings = loadSettings(this.agentDir, this.cwd);
+    const { legacyGraceTurns, ...settings } = loadSettings(this.agentDir, this.cwd);
+    warnAboutRetiredSettings(settings, legacyGraceTurns === true);
     if (typeof settings.maxConcurrent === "number") this.maxConcurrent = settings.maxConcurrent;
     if (typeof settings.defaultMaxTurns === "number") this.defaultMaxTurns = settings.defaultMaxTurns;
     if (typeof settings.wrapUpTurns === "number") this.wrapUpTurns = settings.wrapUpTurns;
@@ -330,6 +338,23 @@ function isRetentionMinutes(n: unknown): n is number {
   return Number.isInteger(n) && (n as number) >= 1 && (n as number) <= RETENTION_MINUTES_CEILING;
 }
 
+/**
+ * Tell the operator about settings this version reads differently, so a value
+ * that stopped meaning what they wrote does not change behavior silently.
+ */
+function warnAboutRetiredSettings(settings: SubagentsSettings, hasGraceTurns: boolean): void {
+  if (hasGraceTurns) {
+    console.warn(
+      `[pi-subagents] graceTurns was removed; set wrapUpTurns (turns left when a subagent is warned, default ${DEFAULT_WRAP_UP_TURNS}) instead.`,
+    );
+  }
+  if (isBelowMinimumTurns(settings.defaultMaxTurns)) {
+    console.warn(
+      `[pi-subagents] defaultMaxTurns ${settings.defaultMaxTurns} is below the minimum of ${MIN_MAX_TURNS}; using ${MIN_MAX_TURNS}.`,
+    );
+  }
+}
+
 /** Drop fields that don't match the expected shape. Silent — garbage becomes absent. */
 function sanitize(raw: unknown): SubagentsSettings {
   if (!raw || typeof raw !== "object") return {};
@@ -355,6 +380,9 @@ function sanitize(raw: unknown): SubagentsSettings {
     (r.wrapUpTurns as number) <= WRAP_UP_TURNS_CEILING
   ) {
     out.wrapUpTurns = r.wrapUpTurns as number;
+  }
+  if ("graceTurns" in r) {
+    out.legacyGraceTurns = true;
   }
   if (isRetentionMinutes(r.consumedSessionRetentionMinutes)) {
     out.consumedSessionRetentionMinutes = r.consumedSessionRetentionMinutes;

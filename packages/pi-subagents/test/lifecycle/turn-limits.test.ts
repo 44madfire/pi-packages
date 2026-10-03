@@ -29,12 +29,16 @@ describe("normalizeMaxTurns", () => {
     expect(normalizeMaxTurns(7)).toBe(7);
   });
 
-  it("clamps negative values to 1", () => {
-    expect(normalizeMaxTurns(-3)).toBe(1);
+  it("raises negative values to the minimum of 2", () => {
+    expect(normalizeMaxTurns(-3)).toBe(2);
   });
 
-  it("accepts boundary value 1", () => {
-    expect(normalizeMaxTurns(1)).toBe(1);
+  it("raises 1 to the minimum of 2: one turn to work, one to answer", () => {
+    expect(normalizeMaxTurns(1)).toBe(2);
+  });
+
+  it("accepts boundary value 2", () => {
+    expect(normalizeMaxTurns(2)).toBe(2);
   });
 
   it("handles large values unchanged", () => {
