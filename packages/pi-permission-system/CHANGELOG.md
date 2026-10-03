@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.0.3](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.2...pi-permission-system-v39.0.3) (2026-10-03)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** match a home-prefixed bash rule against a command typed with ~ or $HOME ([af2d24a](https://github.com/gotgenes/pi-packages/commit/af2d24af90e77156cc7a58b5a75d70d1154cce3c)), closes [#981](https://github.com/gotgenes/pi-packages/issues/981)
+
+### Documentation
+
+* **pi-permission-system:** document bash command spellings ([e6cd84f](https://github.com/gotgenes/pi-packages/commit/e6cd84fe1ff5fa3ab7938f576ace1e574cc46409)), closes [#981](https://github.com/gotgenes/pi-packages/issues/981)
+* **pi-permission-system:** accept the HOME-rebinding residual for bash command spellings ([3c787e4](https://github.com/gotgenes/pi-packages/commit/3c787e43e79400fd132cbb6597c51c0448e2b39a)), closes [#981](https://github.com/gotgenes/pi-packages/issues/981)
+
 ## [39.0.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.1...pi-permission-system-v39.0.2) (2026-10-03)
 
 
