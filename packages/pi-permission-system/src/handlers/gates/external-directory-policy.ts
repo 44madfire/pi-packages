@@ -16,8 +16,8 @@ export interface UncoveredExternalPath {
   check: PermissionCheckResult;
 }
 
-/** The uncovered external paths plus the most restrictive check among them. */
-export interface UncoveredExternalPaths {
+/** How a set of external paths resolved: the uncovered ones and the worst among them. */
+export interface ExternalPathCoverage {
   uncovered: UncoveredExternalPath[];
   /** Worst check among uncovered paths; `undefined` only when none are uncovered. */
   worstCheck: PermissionCheckResult | undefined;
@@ -66,7 +66,7 @@ export function selectUncoveredExternalPaths(
   accesses: readonly BashExternalPath[],
   resolver: ScopedPermissionResolver,
   agentName: string | undefined,
-): UncoveredExternalPaths {
+): ExternalPathCoverage {
   const uncovered: UncoveredExternalPath[] = [];
   for (const { path, effect } of accesses) {
     const surface = capabilitySurfaceForEffect(
