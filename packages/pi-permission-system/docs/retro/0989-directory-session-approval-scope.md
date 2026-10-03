@@ -80,4 +80,54 @@ The plan's marker is `**Release:** ship independently`; there are no follow-ups 
 
 The pre-completion reviewer's two WARN findings (the glob-metacharacter label, the unreachable joined label) are recorded in the TDD stage entry and need no action at land time.
 
+## Stage: Final Retrospective (2026-10-03T03:41:11Z)
+
+### Session summary
+
+The peer worktree session planned, implemented, and synced the fix; the root session fast-forward-merged it, passed CI, closed the issue, and released `pi-permission-system` 39.0.1.
+A directory's session approval now records `D` and `D/*` instead of the parent glob, and a path ask with no proven direction names its scope.
+The lifecycle ran end to end with no operator correction after the planning gate.
+
+### Observations
+
+#### What went well
+
+- The planning spike drove the real `PathNormalizer` with a throwaway test file before the gate (peer turn 20).
+  It showed the defect was not specific to `add_directory`: built-in `ls`/`find` and a trailing-slash spelling hit it too.
+  That widened the fix to all five path gates before any design was settled.
+- Every TDD step backed up the green file, applied the plan's named mutations, and confirmed the tests went red before restoring with `cmp`.
+  No probe leaked into a commit.
+- The ship ran without a stop: the ff-merge prediction, root gates, CI, and release each passed on the first attempt.
+
+#### What caused friction (agent side)
+
+- `missing-context` — the plan's step 4 did not check that `makeDedupWiring`'s tool registry knew `ls` or `add_directory`, so the end-to-end tests first failed with "`ls` is not registered".
+  Impact: one throwaway spike test (peer turn 91) and a fixture edit; no rework of production code.
+- `missing-context` — the plan's step 5 predicted one affected test and missed the non-forwarded mixed-direction case in `local-user-authorizer.test.ts`.
+  Impact: one unplanned test edit; the behavior change was intended.
+- `other` — two commits failed silently behind `>/dev/null 2>&1` on a pre-commit reformat (Biome on peer turn 78, `rumdl` on turn 116).
+  The agent caught each with `git log --oneline -1` and recommitted.
+  Impact: one retry each, no rework.
+- `other` — three planning calls errored on `fallow guard` given a package-relative path after `cd packages/pi-permission-system` (peer turns 26, 32, 33).
+  Impact: three wasted calls.
+- `instruction-violation` (self-identified) — at ship, the close comment was not re-resolved with `git rev-parse` / `git merge-base --is-ancestor` before `issue_close`, as `/ship`'s close step requires.
+  The SHAs were pasted as full 40-character values from `git log` output, so none was fabricated.
+  Impact: none; the report flagged the skip.
+- `other` — the ship session ran `head -0` twice ("illegal line count").
+  Impact: harmless noise.
+
+#### What caused friction (user side)
+
+- Nothing noted; the operator's only intervention was the planning gate, and its three choices (narrow and label, the `"D/*"` rendering, non-breaking `fix:`) held through implementation.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5`, which suits the design and mutation work; sync ran on `claude-sonnet-5-5`, which suits a mechanical step.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5`, per their transcripts; the reviewer's re-derivation that no input widens a grant was sound.
+- **Feedback-loop gap analysis** — the TDD stage ran targeted `vitest` after each step and `pnpm run check`/`lint` at steps 2–5, so verification was incremental, not end-loaded.
+
+### Changes made
+
+1. None beyond this retro entry; no prompt, skill, or `AGENTS.md` change was justified.
+
 [#604]: https://github.com/gotgenes/pi-packages/issues/604
