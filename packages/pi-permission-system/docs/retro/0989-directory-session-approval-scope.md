@@ -67,4 +67,17 @@ The pi-permission-system test count went from 5334 to 5362 (+28).
     It is still no wider than the old `/r/*`, and the same class already applies to files today.
   - The joined multi-target label in `suggestPathSessionPattern` is unreachable today.
 
+## Stage: Sync (worktree) (2026-10-03T03:26:41Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` passed.
+The plan's marker is `**Release:** ship independently`; there are no follow-ups or deferred work.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-989--/2026-10-03T02-00-43-343Z_01a0ff7e-024f-775b-bae5-f0fbc58e32df.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The pre-completion reviewer's two WARN findings (the glob-metacharacter label, the unreachable joined label) are recorded in the TDD stage entry and need no action at land time.
+
 [#604]: https://github.com/gotgenes/pi-packages/issues/604
