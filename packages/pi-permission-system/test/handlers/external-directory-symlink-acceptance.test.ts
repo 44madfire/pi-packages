@@ -17,7 +17,6 @@ import { BashProgram } from "#src/access-intent/bash/program";
 import { describeBashExternalDirectoryGate } from "#src/handlers/gates/bash-external-directory";
 import {
   type GateDescriptor,
-  isGateBypass,
   isGateDescriptor,
 } from "#src/handlers/gates/descriptor";
 import { describeExternalDirectoryGate } from "#src/handlers/gates/external-directory";
@@ -165,8 +164,8 @@ describe("external_directory symlink acceptance (#418)", () => {
         resolver,
         normalizer,
       );
-      // All external paths are covered by the allow → bypass, no prompt.
-      expect(isGateBypass(result)).toBe(true);
+      // Covered by a config allow → no gate, no prompt, no session entry.
+      expect(result).toBeNull();
     } finally {
       cleanup();
     }
