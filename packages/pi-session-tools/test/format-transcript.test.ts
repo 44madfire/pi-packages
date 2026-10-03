@@ -1082,3 +1082,144 @@ describe("context edits", () => {
     expect(formatTranscript(entries)).toBe("");
   });
 });
+
+/** Shaped after Pi's `SystemMessage` as persisted in real sessions (content `""`). */
+function makeSystemEntry(
+  id: string,
+  fields: {
+    content?: unknown;
+    sections?: Record<string, string | null>;
+    toolsAdded?: { name: string }[];
+    toolsRemoved?: { name: string }[];
+  },
+) {
+  return {
+    type: "message",
+    id,
+    parentId: null,
+    timestamp: "t",
+    message: { role: "system", content: "", timestamp: 0, ...fields },
+  };
+}
+
+function sectionsNamed(...names: string[]): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [name, `<${name}>`]));
+}
+
+function toolsNamed(...names: string[]): { name: string }[] {
+  return names.map((name) => ({ name }));
+}
+
+describe("system messages", () => {
+  const leadingSections = sectionsNamed(
+    "preamble",
+    "tools",
+    "rules",
+    "docs",
+    "addendum",
+    "project_context",
+    "skills",
+    "cwd",
+  );
+  const leadingTools = toolsNamed(
+    ...Array.from({ length: 21 }, (_, i) => `tool${i}`),
+  );
+
+  describe("the first system message, the prompt", () => {
+    it("renders section and tool counts", () => {
+      const entries = [
+        makeSystemEntry("s1", {
+          sections: leadingSections,
+          toolsAdded: leadingTools,
+        }),
+      ];
+      expect(formatTranscript(entries)).toBe(
+        "[system] prompt: 8 sections, 21 tools",
+      );
+    });
+
+    it("uses the singular for one section and one tool", () => {
+      const entries = [
+        makeSystemEntry("s1", {
+          sections: sectionsNamed("preamble"),
+          toolsAdded: toolsNamed("read"),
+        }),
+      ];
+      expect(formatTranscript(entries)).toBe(
+        "[system] prompt: 1 section, 1 tool",
+      );
+    });
+
+    it("counts instruction text by characters", () => {
+      const entries = [
+        makeSystemEntry("s1", {
+          content: [{ type: "text", text: "Be terse." }],
+          sections: sectionsNamed("cwd"),
+        }),
+      ];
+      expect(formatTranscript(entries)).toBe(
+        "[system] prompt: 9 chars, 1 section",
+      );
+    });
+
+    it("renders an empty prompt as empty", () => {
+      expect(formatTranscript([makeSystemEntry("s1", {})])).toBe(
+        "[system] prompt: empty",
+      );
+    });
+
+    it("consumes no turn number", () => {
+      const entries = [
+        makeSystemEntry("s1", { sections: sectionsNamed("cwd") }),
+        makeUserEntry("hello", "u1"),
+      ];
+      expect(formatTranscript(entries)).toBe(
+        "[system] prompt: 1 section\n\n---\n\n1. user\nhello",
+      );
+    });
+  });
+
+  describe("a later system message, an update", () => {
+    const prompt = makeSystemEntry("s1", {
+      sections: leadingSections,
+      toolsAdded: leadingTools,
+    });
+
+    function renderUpdate(update: ReturnType<typeof makeSystemEntry>): string {
+      return formatTranscript([prompt, update]).split("\n\n---\n\n")[1] ?? "";
+    }
+
+    it("names the sections and tools it changes", () => {
+      const update = makeSystemEntry("s2", {
+        sections: sectionsNamed("project_context", "skills"),
+        toolsAdded: toolsNamed("subagent"),
+        toolsRemoved: toolsNamed("subagent"),
+      });
+      expect(renderUpdate(update)).toBe(
+        "[system] update — sections: project_context, skills; tools added: subagent; tools removed: subagent",
+      );
+    });
+
+    it("lists null-valued sections as removed", () => {
+      const update = makeSystemEntry("s2", {
+        sections: { skills: "<skills>", docs: null },
+      });
+      expect(renderUpdate(update)).toBe(
+        "[system] update — sections: skills; sections removed: docs",
+      );
+    });
+
+    it("counts added instruction text by characters", () => {
+      const update = makeSystemEntry("s2", { content: "Stop early." });
+      expect(renderUpdate(update)).toBe(
+        "[system] update — instructions: 11 chars",
+      );
+    });
+
+    it("renders an update with nothing in it as no changes", () => {
+      expect(renderUpdate(makeSystemEntry("s2", {}))).toBe(
+        "[system] update — no changes",
+      );
+    });
+  });
+});

@@ -286,6 +286,85 @@ function formatBranchMarker(marker: Record<string, unknown>): string | null {
   }
 }
 
+/**
+ * Format the leading system message as counts: its instruction text, sections,
+ * and tools are the whole prompt, which no reader wants verbatim.
+ */
+function formatSystemPrompt(message: Record<string, unknown>): string {
+  const { instructionChars, sections, toolsAdded } = readSystemMessage(message);
+  const counts = [
+    instructionChars > 0 ? `${instructionChars} chars` : "",
+    countOf(sections.length, "section"),
+    countOf(toolsAdded.length, "tool"),
+  ].filter(Boolean);
+  return `[system] prompt: ${counts.length > 0 ? counts.join(", ") : "empty"}`;
+}
+
+/** Format a later system message by naming what it changes. */
+function formatSystemUpdate(message: Record<string, unknown>): string {
+  const {
+    instructionChars,
+    sections,
+    sectionsRemoved,
+    toolsAdded,
+    toolsRemoved,
+  } = readSystemMessage(message);
+  const clauses = [
+    instructionChars > 0 ? `instructions: ${instructionChars} chars` : "",
+    namedClause("sections", sections),
+    namedClause("sections removed", sectionsRemoved),
+    namedClause("tools added", toolsAdded),
+    namedClause("tools removed", toolsRemoved),
+  ].filter(Boolean);
+  return `[system] update \u2014 ${clauses.length > 0 ? clauses.join("; ") : "no changes"}`;
+}
+
+interface SystemMessageSummary {
+  instructionChars: number;
+  /** Sections set by this message. */
+  sections: string[];
+  /** Sections this message removes (`null`-valued). */
+  sectionsRemoved: string[];
+  toolsAdded: string[];
+  toolsRemoved: string[];
+}
+
+function readSystemMessage(
+  message: Record<string, unknown>,
+): SystemMessageSummary {
+  const rawSections =
+    typeof message.sections === "object" && message.sections !== null
+      ? Object.entries(message.sections as Record<string, unknown>)
+      : [];
+  return {
+    instructionChars: extractTextContent(message.content).length,
+    sections: rawSections.filter(([, v]) => v !== null).map(([k]) => k),
+    sectionsRemoved: rawSections.filter(([, v]) => v === null).map(([k]) => k),
+    toolsAdded: toolNamesOf(message.toolsAdded),
+    toolsRemoved: toolNamesOf(message.toolsRemoved),
+  };
+}
+
+function toolNamesOf(tools: unknown): string[] {
+  if (!Array.isArray(tools)) return [];
+  return tools
+    .map((tool) =>
+      typeof tool === "object" && tool !== null
+        ? (tool as Record<string, unknown>).name
+        : undefined,
+    )
+    .filter((name): name is string => typeof name === "string");
+}
+
+function countOf(count: number, noun: string): string {
+  if (count === 0) return "";
+  return count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
+}
+
+function namedClause(label: string, names: string[]): string {
+  return names.length > 0 ? `${label}: ${names.join(", ")}` : "";
+}
+
 /** Format a bashExecution message entry (command + exit code, no output). */
 function formatBashMessage(message: Record<string, unknown>): string {
   const command = typeof message.command === "string" ? message.command : "";
@@ -314,6 +393,8 @@ export function formatTranscript(
 
   const parts: string[] = [];
   const ledger = new TurnLedger();
+  // The first system message is the prompt; later ones update it.
+  let promptSeen = false;
 
   for (const entry of entries) {
     if (entry.type !== "message") {
@@ -354,6 +435,11 @@ export function formatTranscript(
       }
     } else if (role === "bashExecution") {
       parts.push(formatBashMessage(message));
+    } else if (role === "system") {
+      parts.push(
+        promptSeen ? formatSystemUpdate(message) : formatSystemPrompt(message),
+      );
+      promptSeen = true;
     }
     // custom, compactionSummary, branchSummary message roles: omitted
   }
