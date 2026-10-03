@@ -422,6 +422,13 @@ describe("SubagentState — turn budget", () => {
 		expect(state.turnBudget).toEqual(EXHAUSTED);
 	});
 
+	it("a stop during the grace turns keeps stopped and still records the budget the loop reached", () => {
+		const state = new SubagentState({ status: "stopped", completedAt: 500 });
+		state.markAborted("partial", 2000, EXHAUSTED);
+		expect(state.status).toBe("stopped");
+		expect(state.turnBudget).toEqual(EXHAUSTED);
+	});
+
 	it("resetForResume clears the budget, which belongs to the run that produced it", () => {
 		const state = new SubagentState({ status: "completed", turnBudget: WARNED });
 		state.resetForResume(9000);
