@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.0.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.1...pi-permission-system-v39.0.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** stop logging config- and default-allowed bash external paths as session approvals ([1e597c0](https://github.com/gotgenes/pi-packages/commit/1e597c033c58843f298d9fd0f01cf227dc649e60)), closes [#1011](https://github.com/gotgenes/pi-packages/issues/1011)
+
+### Documentation
+
+* **pi-permission-system:** say what external_directory does when the key is absent ([7319277](https://github.com/gotgenes/pi-packages/commit/7319277d338665225d59af21c43b463e94bda6e6)), closes [#1011](https://github.com/gotgenes/pi-packages/issues/1011)
+
 ## [39.0.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.0...pi-permission-system-v39.0.1) (2026-10-03)
 
 
