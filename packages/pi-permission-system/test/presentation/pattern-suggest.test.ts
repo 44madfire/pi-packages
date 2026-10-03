@@ -225,6 +225,24 @@ describe("describeGrantTarget", () => {
       ]),
     ).toBe("3 paths");
   });
+
+  it("quotes the shared glob when several grants derive the same pattern", () => {
+    expect(
+      describeGrantTarget([
+        { surface: "external_directory_read", pattern: "/outside/a/*" },
+        { surface: "external_directory_read", pattern: "/outside/a/*" },
+      ]),
+    ).toBe('"/outside/a/*"');
+  });
+
+  it("names a directory approval by its contents glob", () => {
+    expect(
+      describeGrantTarget([
+        { surface: "external_directory", pattern: "/outside/a" },
+        { surface: "external_directory", pattern: "/outside/a/*" },
+      ]),
+    ).toBe('"/outside/a/*"');
+  });
 });
 
 describe("buildDirectionalSessionLabels", () => {

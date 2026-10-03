@@ -7,7 +7,7 @@ import {
   PATH_BEARING_TOOLS,
   surfaceFamilyOf,
 } from "#src/access-intent/path-surfaces";
-import type { ApprovalGrant } from "#src/session/approval-grant";
+import { type ApprovalGrant, grantTargets } from "#src/session/approval-grant";
 
 /** The suggestion returned for a "Yes, for this session" dialog option. */
 export interface SessionApprovalSuggestion {
@@ -80,15 +80,16 @@ export interface ForwardedScopeLabels {
 /**
  * What an approval's grants cover, as one phrase.
  *
- * A single grant names its pattern; several name their count, because only the
- * external-directory gate aggregates an ask over many paths and there is no
- * pattern that describes them all. Requires at least one grant — an approval
+ * A single target names its pattern; several name their count, because only
+ * the external-directory gate aggregates an ask over many paths and there is
+ * no pattern that describes them all. Targets, not grants: a directory's
+ * two-grant approval and two paths sharing one glob each count once
+ * ({@link grantTargets}). Requires at least one grant — an approval
  * with none is never offered as a session option.
  */
 export function describeGrantTarget(grants: readonly ApprovalGrant[]): string {
-  return grants.length === 1
-    ? `"${grants[0].pattern}"`
-    : `${grants.length} paths`;
+  const targets = grantTargets(grants);
+  return targets.length === 1 ? `"${targets[0]}"` : `${targets.length} paths`;
 }
 
 /** The two session-option labels for an ask whose grants prove one direction. */
