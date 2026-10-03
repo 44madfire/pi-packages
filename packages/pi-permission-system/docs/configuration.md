@@ -1129,6 +1129,8 @@ Three limits apply:
 
 - On Windows, a home-anchored `bash` pattern is compiled with backslash separators, so it matches only a command typed with the backslashed absolute path ([issue #1020](https://github.com/gotgenes/pi-packages/issues/1020)).
 - A command that reassigns `HOME` earlier in the same invocation (`HOME=/tmp/x; ~/bin/tool`, or a `HOME=/tmp/x` prefix) is matched only as typed, because its `~` no longer names your home directory.
+  A reassignment the parser cannot see, such as one through a variable holding the name (`n=HOME; read $n`), is not detected, so the command still matches your home-anchored rules.
+  Writing a command that way takes deliberate effort to evade a rule; run an agent you would not trust with that inside a sandbox rather than relying on command patterns.
 - A home prefix later in the command, in argument position, is matched as typed: a pattern `cat ~/notes` matches the command `cat ~/notes` but not `cat /Users/me/notes`.
   Gate file access by any spelling on the `path` and `external_directory` surfaces instead.
 
