@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [22.0.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.4...pi-subagents-v22.0.0) (2026-10-03)
+
+
+### Features
+
+* **pi-subagents:** **breaking:** require Pi 1.0.0 or later ([e93ec7c](https://github.com/gotgenes/pi-packages/commit/e93ec7cead9f1a82b7cfc34d0dbadb3dd21125d9)), closes [#1004](https://github.com/gotgenes/pi-packages/issues/1004)
+* **pi-subagents:** load codemode, tool_search, and MCP in a child whose tools: names them ([c9a30d7](https://github.com/gotgenes/pi-packages/commit/c9a30d779fc08f5330f17d67177b28ba3f71a861)), closes [#1006](https://github.com/gotgenes/pi-packages/issues/1006)
+* **pi-subagents:** let tools: name a whole MCP server with mcp__<server>__* ([9f9b0f3](https://github.com/gotgenes/pi-packages/commit/9f9b0f3d3323a1a65eb01089395a8bd155bae457)), closes [#1006](https://github.com/gotgenes/pi-packages/issues/1006)
+
+### Documentation
+
+* **pi-subagents:** document codemode, tool_search, and MCP tools in children ([d8d68c2](https://github.com/gotgenes/pi-packages/commit/d8d68c2b960bfe88d6bd4ff26d93475899f879a7)), closes [#1006](https://github.com/gotgenes/pi-packages/issues/1006)
+* **pi-subagents:** correct the peer scope and MCP details the review flagged ([9dd71ab](https://github.com/gotgenes/pi-packages/commit/9dd71abeb98faf89241fac1d00c7e379c18c4282)), closes [#1006](https://github.com/gotgenes/pi-packages/issues/1006)
+
 ## [21.9.4](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v21.9.3...pi-subagents-v21.9.4) (2026-10-02)
 
 
