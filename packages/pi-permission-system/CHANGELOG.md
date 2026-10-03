@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.0.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.0...pi-permission-system-v39.0.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** label two paths that share one session glob by that glob ([3ebe54f](https://github.com/gotgenes/pi-packages/commit/3ebe54fc5dd1d7900dfe4927f923e0f223dcb65c)), closes [#989](https://github.com/gotgenes/pi-packages/issues/989)
+* **pi-permission-system:** scope a directory's session approval to that directory, not its parent ([a0bcf97](https://github.com/gotgenes/pi-packages/commit/a0bcf979e1e4bdb8b0c1cf9575432cc6e3ce4525)), closes [#989](https://github.com/gotgenes/pi-packages/issues/989)
+* **pi-permission-system:** name the session-approval scope in a path ask that proves no direction ([483a1ef](https://github.com/gotgenes/pi-packages/commit/483a1ef951dc8c4677a9e02e94c5ce7487535cdf)), closes [#989](https://github.com/gotgenes/pi-packages/issues/989)
+
+### Documentation
+
+* **pi-permission-system:** document directory-scoped session approvals ([402cdf7](https://github.com/gotgenes/pi-packages/commit/402cdf721eb628a4eea926e3310acf1f1e07c8df)), closes [#989](https://github.com/gotgenes/pi-packages/issues/989)
+
 ## [39.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v38.0.2...pi-permission-system-v39.0.0) (2026-10-03)
 
 
