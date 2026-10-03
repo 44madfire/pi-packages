@@ -97,7 +97,7 @@ export function describeExternalDirectoryGate(
 
   // ── Build descriptor for permission check ───────────────────────────────
   const resolvedAlias = accessPath.resolvedAlias();
-  const pattern = normalizer.approvalPatternFor(accessPath);
+  const patterns = normalizer.approvalPatternsFor(accessPath);
 
   const payload = buildExternalDirectoryAskPayload({
     toolName: tcc.toolName,
@@ -114,7 +114,7 @@ export function describeExternalDirectoryGate(
     input: {},
     preCheck,
     payload,
-    sessionApproval: SessionApproval.single(surface, pattern),
+    sessionApproval: SessionApproval.forPatterns(surface, patterns),
     promptDetails: buildPathGatePromptDetails(
       tcc,
       externalDirectoryPath,

@@ -131,7 +131,7 @@ export class PathNormalizer {
   }
 
   /**
-   * The session-approval glob for an accessed path: its directory scope plus
+   * The session-approval globs for an accessed path: its directory scope plus
    * `*`, derived through the baked flavor.
    *
    * Takes the already-built {@link AccessPath} — the lexical form is what a
@@ -140,8 +140,8 @@ export class PathNormalizer {
    * than at each gate keeps the platform's separator alphabet with the object
    * that owns the flavor, instead of an ambient `node:path` read (#655).
    */
-  approvalPatternFor(accessPath: AccessPath): string {
-    return deriveApprovalPattern(accessPath.value(), this.flavor);
+  approvalPatternsFor(accessPath: AccessPath): readonly string[] {
+    return [deriveApprovalPattern(accessPath.value(), this.flavor)];
   }
 
   /** Platform-aware absoluteness (`win32` vs `posix` rules). */

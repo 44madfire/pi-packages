@@ -58,9 +58,9 @@ export function describePathGate(
   // "path" key should not trigger path-level prompts (#58).
   if (check.matchedPattern === undefined) return null;
 
-  // Derive the approval pattern from the lexical absolute form so it matches
+  // Derive the approval patterns from the lexical absolute form so they match
   // the policy values a later call produces.
-  const pattern = normalizer.approvalPatternFor(accessPath);
+  const patterns = normalizer.approvalPatternsFor(accessPath);
 
   const payload = buildPathAskPayload({
     toolName: tcc.toolName,
@@ -75,7 +75,7 @@ export function describePathGate(
     surface,
     input: { path: filePath },
     payload,
-    sessionApproval: SessionApproval.single(surface, pattern),
+    sessionApproval: SessionApproval.forPatterns(surface, patterns),
     promptDetails: buildPathGatePromptDetails(
       tcc,
       filePath,

@@ -57,7 +57,7 @@ function pathAccessFor(
   n: PathNormalizer = normalizer,
 ): ToolPathAccess {
   const path = n.forPath(pathValue);
-  return { path, approvalPattern: n.approvalPatternFor(path) };
+  return { path, approvalPatterns: n.approvalPatternsFor(path) };
 }
 
 // ── tests ──────────────────────────────────────────────────────────────────

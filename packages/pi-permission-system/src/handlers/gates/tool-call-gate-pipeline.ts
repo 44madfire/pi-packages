@@ -210,7 +210,7 @@ export class ToolCallGatePipeline {
       return {
         pathAccess: {
           path: accessPath,
-          approvalPattern: normalizer.approvalPatternFor(accessPath),
+          approvalPatterns: normalizer.approvalPatternsFor(accessPath),
         },
         toolCheck: this.resolver.resolve({
           kind: "access-path",

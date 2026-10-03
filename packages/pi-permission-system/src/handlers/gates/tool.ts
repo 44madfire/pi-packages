@@ -34,7 +34,7 @@ import type { ToolCallContext } from "./types";
  */
 export interface ToolPathAccess {
   readonly path: AccessPath;
-  readonly approvalPattern: string;
+  readonly approvalPatterns: readonly string[];
 }
 
 /**
@@ -42,7 +42,7 @@ export interface ToolPathAccess {
  *
  * Bash → command string; MCP → qualified target; everything else → catch-all
  * wildcard. A path-bearing tool that resolved a path never reaches here — its
- * suggestion comes from the already-derived {@link ToolPathAccess} pattern.
+ * suggestion comes from the already-derived {@link ToolPathAccess} patterns.
  */
 function deriveSuggestionValue(
   toolName: string,
@@ -74,6 +74,40 @@ function gateSurfaceOf(
   if (shell) return "bash";
   if (classifyToolKind(toolName) === "mcp-tool") return "mcp";
   return toolName;
+}
+
+/** A session option: the approval to record and the label offering it. */
+interface SessionOption {
+  readonly approval: SessionApproval;
+  readonly label: string;
+}
+
+/** The session option for a path-bearing tool, from its derived patterns. */
+function pathSessionOption(
+  gateSurface: string,
+  approvalPatterns: readonly string[],
+): SessionOption {
+  const suggestion = suggestPathSessionPattern(gateSurface, approvalPatterns);
+  return {
+    approval: SessionApproval.forPatterns(
+      suggestion.surface,
+      suggestion.patterns,
+    ),
+    label: suggestion.label,
+  };
+}
+
+/** The session option for a gate whose value is not a path. */
+function valueSessionOption(
+  toolName: string,
+  gateSurface: string,
+  check: PermissionCheckResult,
+): SessionOption {
+  const suggestion = suggestValueSessionPattern(toolName, gateSurface, check);
+  return {
+    approval: SessionApproval.single(suggestion.surface, suggestion.pattern),
+    label: suggestion.label,
+  };
 }
 
 /**
@@ -118,10 +152,10 @@ export function describeToolGate(
     PATH_BEARING_TOOLS,
   );
 
-  // Compute session approval suggestion for the "for this session" option.
-  const suggestion = pathAccess
-    ? suggestPathSessionPattern(gateSurface, pathAccess.approvalPattern)
-    : suggestValueSessionPattern(tcc.toolName, gateSurface, check);
+  // The session approval and label for the "for this session" option.
+  const sessionOption = pathAccess
+    ? pathSessionOption(gateSurface, pathAccess.approvalPatterns)
+    : valueSessionOption(tcc.toolName, gateSurface, check);
 
   const payload = buildToolAskPayload({
     check,
@@ -148,16 +182,13 @@ export function describeToolGate(
     surface: gateSurface,
     input: tcc.input,
     payload,
-    sessionApproval: SessionApproval.single(
-      suggestion.surface,
-      suggestion.pattern,
-    ),
+    sessionApproval: sessionOption.approval,
     promptDetails: {
       source: "tool_call",
       agentName: tcc.agentName,
       toolCallId: tcc.toolCallId,
       toolName: tcc.toolName,
-      sessionLabel: suggestion.label,
+      sessionLabel: sessionOption.label,
       accessIntent,
       ...permissionLogContext,
     },

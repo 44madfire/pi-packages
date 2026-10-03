@@ -186,10 +186,18 @@ describe("suggestSessionPattern", () => {
 });
 
 describe("suggestPathSessionPattern", () => {
+  it("records every pattern and labels a directory pair by its contents glob", () => {
+    expect(suggestPathSessionPattern("ls", ["/r/a", "/r/a/*"])).toEqual({
+      surface: "ls",
+      patterns: ["/r/a", "/r/a/*"],
+      label: 'Yes, allow ls "/r/a/*" for this session',
+    });
+  });
+
   it("passes the caller-derived pattern through unchanged", () => {
-    expect(suggestPathSessionPattern("edit", "/outside/project/*")).toEqual({
+    expect(suggestPathSessionPattern("edit", ["/outside/project/*"])).toEqual({
       surface: "edit",
-      pattern: "/outside/project/*",
+      patterns: ["/outside/project/*"],
       label: 'Yes, allow edit "/outside/project/*" for this session',
     });
   });
@@ -198,10 +206,10 @@ describe("suggestPathSessionPattern", () => {
     // The derivation belongs to the caller's PathNormalizer (#655); this
     // module must not re-interpret the separators it is handed.
     expect(
-      suggestPathSessionPattern("read", "c:\\projects\\app\\src\\*"),
+      suggestPathSessionPattern("read", ["c:\\projects\\app\\src\\*"]),
     ).toEqual({
       surface: "read",
-      pattern: "c:\\projects\\app\\src\\*",
+      patterns: ["c:\\projects\\app\\src\\*"],
       label: 'Yes, allow read "c:\\projects\\app\\src\\*" for this session',
     });
   });

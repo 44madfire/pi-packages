@@ -222,19 +222,37 @@ export function suggestSessionPattern(
   return { surface, pattern, label: buildLabel(pattern, surface) };
 }
 
+/** The suggestion for a path surface: every pattern to record, one label. */
+export interface PathSessionSuggestion {
+  /** The permission surface this approval applies to. */
+  surface: string;
+  /** The wildcard patterns to store as session rules. */
+  patterns: readonly string[];
+  /** Human-readable label for the "for session" dialog option. */
+  label: string;
+}
+
 /**
- * Build the suggestion for a path surface from a pattern the caller already
+ * Build the suggestion for a path surface from patterns the caller already
  * derived through its `PathNormalizer` (#655).
  *
  * The derivation belongs to the normalizer, which owns the session's
  * `PathFlavor`; this module labels the result and must not re-interpret the
- * separators it is handed.
+ * separators it is handed. The label names the approval's target
+ * ({@link grantTargets}), so a directory's pair reads as its contents glob.
  */
 export function suggestPathSessionPattern(
   surface: string,
-  approvalPattern: string,
-): SessionApprovalSuggestion {
-  return suggestExactSessionPattern(surface, approvalPattern);
+  approvalPatterns: readonly string[],
+): PathSessionSuggestion {
+  const targets = grantTargets(
+    approvalPatterns.map((pattern) => ({ surface, pattern })),
+  );
+  return {
+    surface,
+    patterns: approvalPatterns,
+    label: buildLabel(targets.join('", "'), surface),
+  };
 }
 
 /**
