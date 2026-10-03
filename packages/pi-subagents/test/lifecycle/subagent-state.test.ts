@@ -41,7 +41,6 @@ describe("SubagentState — constructor", () => {
 
 	it("defaults live-activity fields", () => {
 		const state = new SubagentState();
-		expect(state.turnCount).toBe(1);
 		expect(state.responseText).toBe("");
 		expect(state.activeTools.size).toBe(0);
 	});
@@ -90,11 +89,9 @@ describe("SubagentState — constructor full-value seeding", () => {
 
 	it("seeds live-activity fields", () => {
 		const state = new SubagentState({
-			turnCount: 3,
 			activeTools: ["read", "bash"],
 			responseText: "partial output",
 		});
-		expect(state.turnCount).toBe(3);
 		expect([...state.activeTools.values()]).toEqual(["read", "bash"]);
 		expect(state.responseText).toBe("partial output");
 	});
@@ -591,21 +588,6 @@ describe("SubagentState — carrier claim", () => {
 		state.resetForResume(7000);
 		expect(state.claimed).toBe(true);
 		expect(state.consumedAt).toBeUndefined();
-	});
-});
-
-describe("SubagentState — turnCount", () => {
-	it("defaults to 1", () => {
-		const state = new SubagentState();
-		expect(state.turnCount).toBe(1);
-	});
-
-	it("increments by 1 on each incrementTurnCount call", () => {
-		const state = new SubagentState();
-		state.incrementTurnCount();
-		expect(state.turnCount).toBe(2);
-		state.incrementTurnCount();
-		expect(state.turnCount).toBe(3);
 	});
 });
 

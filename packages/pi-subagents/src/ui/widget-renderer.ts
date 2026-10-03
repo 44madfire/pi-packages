@@ -20,7 +20,7 @@ import {
 	formatModel,
 	formatMs,
 	formatSessionTokens,
-	formatTurns,
+	formatTurnBudget,
 	getDisplayName,
 	getPromptModeLabel,
 	type ModelIdentity,
@@ -43,9 +43,7 @@ export interface WidgetAgent {
 	readonly lifetimeUsage?: Readonly<LifetimeUsage>;
 	readonly compactionCount: number;
 	// Live activity (folded from the former WidgetActivity — precomputed by AgentWidget)
-	readonly turnCount: number;
-	readonly maxTurns?: number;
-	/** The finished run's turn limit and its use; absent when no limit applied. */
+	/** The run's turn budget; absent until its turn loop starts. */
 	readonly turnBudget?: TurnBudget;
 	readonly activeTools: ReadonlyMap<string, string>;
 	readonly responseText: string;
@@ -89,7 +87,7 @@ export function renderFinishedLine(
 	}
 
 	const parts: string[] = [];
-	parts.push(formatTurns(agent.turnCount, agent.maxTurns));
+	if (agent.turnBudget) parts.push(formatTurnBudget(agent.turnBudget));
 	if (agent.toolUses > 0) parts.push(`${agent.toolUses} tool use${agent.toolUses === 1 ? "" : "s"}`);
 	parts.push(duration);
 
@@ -113,7 +111,7 @@ export function renderRunningLines(
 	const tokenText = tokens > 0 ? formatSessionTokens(tokens, agent.contextPercent, theme, agent.compactionCount) : "";
 
 	const parts: string[] = [];
-	parts.push(formatTurns(agent.turnCount, agent.maxTurns));
+	if (agent.turnBudget) parts.push(renderRunningTurns(agent.turnBudget, theme));
 	if (agent.toolUses > 0) parts.push(`${agent.toolUses} tool use${agent.toolUses === 1 ? "" : "s"}`);
 	if (tokenText) parts.push(tokenText);
 	parts.push(elapsed);
@@ -126,6 +124,12 @@ export function renderRunningLines(
 	const activityLine = theme.fg("dim", `  ${GLYPHS.subLine}  ${activityText}`);
 
 	return [header, activityLine];
+}
+
+/** A running agent's turns, in the warning color once the harness has warned it about its budget. */
+function renderRunningTurns(budget: TurnBudget, theme: Theme): string {
+	const turns = formatTurnBudget(budget);
+	return budget.phase === "warned" ? theme.fg("warning", turns) : turns;
 }
 
 /** ` [provider/id]` after the agent's name, or nothing while the model is unknown. */

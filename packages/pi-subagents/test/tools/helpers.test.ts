@@ -254,19 +254,8 @@ describe("buildDetails", () => {
     expect(details.agentId).toBe("agent-42");
   });
 
-  it("reads turnCount and maxTurns from the record", () => {
-    // Use createTestSubagent to get a record with the live-activity getters
-    const recordWithActivity = createTestSubagent({ turnCount: 7, maxTurns: 10 });
-    const details = buildDetails(base, recordWithActivity);
-    expect(details.turnCount).toBe(7);
-    expect(details.maxTurns).toBe(10);
-  });
-
-  it("leaves turnCount/maxTurns undefined when the record has no such fields", () => {
-    // Plain object — optional fields absent → undefined in details
-    const details = buildDetails(base, record);
-    expect(details.turnCount).toBeUndefined();
-    expect(details.maxTurns).toBeUndefined();
+  it("leaves the turn budget undefined when the record has none", () => {
+    expect(buildDetails(base, record).turnBudget).toBeUndefined();
   });
 
   it("carries the record's turn budget", () => {

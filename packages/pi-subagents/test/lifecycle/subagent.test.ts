@@ -122,11 +122,6 @@ describe("Subagent — constructor", () => {
 
 describe("convenience getters", () => {
 	describe("live-activity getters", () => {
-		it("turnCount defaults to 1 (delegates to SubagentState)", () => {
-			const record = makeSubagent();
-			expect(record.turnCount).toBe(1);
-		});
-
 		it("activeTools defaults to an empty map (delegates to SubagentState)", () => {
 			const record = makeSubagent();
 			expect(record.activeTools.size).toBe(0);
@@ -137,21 +132,11 @@ describe("convenience getters", () => {
 			expect(record.responseText).toBe("");
 		});
 
-		it("maxTurns returns execution.maxTurns", () => {
-			const record = makeSubagent({ execution: makeStubExecution({ maxTurns: 10 }) });
-			expect(record.maxTurns).toBe(10);
-		});
-
-		it("maxTurns returns undefined when execution.maxTurns is not set", () => {
-			const record = makeSubagent();
-			expect(record.maxTurns).toBeUndefined();
-		});
-
-		it("turnCount reflects state mutations via incrementTurnCount", () => {
+		it("turnBudget reflects state mutations via setTurnBudget", () => {
 			const state = new SubagentState();
 			const record = makeSubagent({ state });
-			state.incrementTurnCount();
-			expect(record.turnCount).toBe(2);
+			state.setTurnBudget({ maxTurns: 10, used: 2, phase: "within" });
+			expect(record.turnBudget).toEqual({ maxTurns: 10, used: 2, phase: "within" });
 		});
 
 		it("activeTools reflects state mutations via addActiveTool", () => {

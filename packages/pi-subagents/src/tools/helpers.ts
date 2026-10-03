@@ -14,9 +14,6 @@ export function buildDetails(
     error?: string;
     id?: string;
     lifetimeUsage: LifetimeUsage;
-    /** Live-activity counters — exposed as getters on Subagent (Phase 18 Step 2). */
-    turnCount?: number;
-    maxTurns?: number;
     /** The model the agent runs; unknown for an inherited model until its session exists. */
     model?: ModelIdentity;
     turnBudget?: TurnBudget;
@@ -28,8 +25,6 @@ export function buildDetails(
     modelName: modelLabel(record.model) ?? base.modelName,
     toolUses: record.toolUses,
     tokens: formatLifetimeTokens(record),
-    turnCount: record.turnCount,
-    maxTurns: record.maxTurns,
     durationMs: (record.completedAt ?? Date.now()) - record.startedAt,
     status: record.status as AgentDetails["status"],
     agentId: record.id,

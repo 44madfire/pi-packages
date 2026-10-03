@@ -64,11 +64,11 @@ export interface SubagentRecord {
   pendingQuestion?: string;
   error?: string;
   toolUses: number;
-  /** Turns consumed so far; starts at 1. */
-  turnCount: number;
-  /** Turn ceiling for this run, when one was set. */
-  maxTurns?: number;
-  /** The finished run's turn limit and its use; absent when no limit applied. */
+  /**
+   * The current run's turn budget: successful turns used, the ceiling (absent
+   * when unlimited), and whether the harness has warned or stopped the run.
+   * Live while the run is going; absent until its turn loop starts.
+   */
   turnBudget?: TurnBudget;
   startedAt: number;
   completedAt?: number;

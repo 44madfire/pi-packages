@@ -165,17 +165,6 @@ describe("buildNotificationDetails", () => {
     expect(details.resultPreview).toBe("Done.");
   });
 
-  it("reads turnCount and maxTurns from the record", () => {
-    const record = createTestSubagent({
-      description: "Test", result: "Done.", toolUses: 2,
-      completedAt: 3000, lifetimeUsage: { input: 100, output: 200, cacheWrite: 0 },
-      turnCount: 7, maxTurns: 10,
-    });
-    const details = buildNotificationDetails(record, 500);
-    expect(details.turnCount).toBe(7);
-    expect(details.maxTurns).toBe(10);
-  });
-
   it("carries the run's turn budget", () => {
     const record = createTestSubagent({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
     expect(buildNotificationDetails(record, 500).turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "warned" });

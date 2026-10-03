@@ -7,7 +7,7 @@ import type {
   UpdateDetails,
   WorkspaceNoticeDetails,
 } from "#src/observation/notification";
-import { formatMs, formatTokens, formatTurns } from "#src/ui/display";
+import { formatMs, formatTokens, formatTurnBudget } from "#src/ui/display";
 import { GLYPHS } from "#src/ui/glyphs";
 
 /** Narrow theme interface — only the methods the renderer actually calls. */
@@ -58,13 +58,13 @@ export function resolveStatusPresentation(
 /** Fields `buildStatsParts` reads from a `NotificationDetails`. */
 type StatsSource = Pick<
   NotificationDetails,
-  "turnCount" | "maxTurns" | "toolUses" | "totalTokens" | "durationMs"
+  "turnBudget" | "toolUses" | "totalTokens" | "durationMs"
 >;
 
 /** Assemble the stats-line parts (turns, tool uses, tokens, duration), omitting zero fields. */
 export function buildStatsParts(d: StatsSource): string[] {
   const parts: string[] = [];
-  if (d.turnCount > 0) parts.push(formatTurns(d.turnCount, d.maxTurns));
+  if (d.turnBudget) parts.push(formatTurnBudget(d.turnBudget));
   if (d.toolUses > 0) parts.push(`${d.toolUses} tool use${d.toolUses === 1 ? "" : "s"}`);
   if (d.totalTokens > 0) parts.push(formatTokens(d.totalTokens));
   if (d.durationMs > 0) parts.push(formatMs(d.durationMs));

@@ -41,13 +41,9 @@ export interface AgentDetails {
   modelName?: string;
   /** Notable config tags (e.g. ["thinking: high", "inherit context"]). */
   tags?: string[];
-  /** Current turn count. */
-  turnCount?: number;
-  /** Effective max turns (undefined = unlimited). */
-  maxTurns?: number;
   agentId?: string;
   error?: string;
-  /** The run's turn limit and its use; absent when no limit applied. */
+  /** The run's turn budget; absent until its turn loop starts. */
   turnBudget?: TurnBudget;
 }
 
@@ -106,11 +102,11 @@ export function formatSessionTokens(
   return `${tokenStr} ${theme.fg("dim", "(")}${annot.join(sep)}${theme.fg("dim", ")")}`;
 }
 
-/** Format turn count with optional max limit: "↻5≤30" or "↻5". */
-export function formatTurns(turnCount: number, maxTurns?: number | null): string {
-  return maxTurns != null
-    ? `${GLYPHS.turns}${turnCount}≤${maxTurns}`
-    : `${GLYPHS.turns}${turnCount}`;
+/** Format a turn budget as turns used against the ceiling: "↻5≤30", or "↻5" when unlimited. */
+export function formatTurnBudget(budget: TurnBudget): string {
+  return budget.maxTurns != null
+    ? `${GLYPHS.turns}${budget.used}≤${budget.maxTurns}`
+    : `${GLYPHS.turns}${budget.used}`;
 }
 
 /** Format milliseconds as human-readable duration. */

@@ -16,14 +16,12 @@ export interface NotificationDetails {
   description: string;
   status: SubagentStatus;
   toolUses: number;
-  turnCount: number;
-  maxTurns?: number;
   totalTokens: number;
   durationMs: number;
   outputFile?: string;
   error?: string;
   resultPreview: string;
-  /** The run's turn limit and its use; absent when no limit applied. */
+  /** The run's turn budget; absent until its turn loop starts. */
   turnBudget?: TurnBudget;
 }
 
@@ -146,8 +144,6 @@ export function buildNotificationDetails(
     description: record.description,
     status: record.status,
     toolUses: record.toolUses,
-    turnCount: record.turnCount,
-    maxTurns: record.maxTurns,
     totalTokens,
     durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
     outputFile: record.outputFile,

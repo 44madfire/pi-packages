@@ -55,23 +55,18 @@ describe("renderStats", () => {
 		expect(result).toContain("[dim:inherit context]");
 	});
 
-	it("includes turn count with max turns", () => {
-		const details = makeDetails({ turnCount: 5, maxTurns: 30 });
+	it("includes the turns used against the ceiling", () => {
+		const details = makeDetails({ turnBudget: { maxTurns: 30, used: 5, phase: "within" } });
 		expect(renderStats(details, theme)).toContain("[dim:↻5≤30]");
 	});
 
-	it("includes turn count without max turns", () => {
-		const details = makeDetails({ turnCount: 5 });
+	it("includes an unlimited run's turns without a ceiling", () => {
+		const details = makeDetails({ turnBudget: { used: 5, phase: "within" } });
 		expect(renderStats(details, theme)).toContain("[dim:↻5]");
 	});
 
-	it("excludes turn count when turnCount is 0", () => {
-		const details = makeDetails({ turnCount: 0 });
-		expect(renderStats(details, theme)).not.toContain("↻");
-	});
-
-	it("excludes turn count when turnCount is undefined", () => {
-		const details = makeDetails({ turnCount: undefined });
+	it("excludes turns when the run has no turn budget yet", () => {
+		const details = makeDetails({ turnBudget: undefined });
 		expect(renderStats(details, theme)).not.toContain("↻");
 	});
 

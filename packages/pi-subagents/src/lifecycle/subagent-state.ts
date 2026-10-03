@@ -3,10 +3,10 @@
  *
  * Owns the passive, readable state of a subagent — status, result, error,
  * timestamps, stats (toolUses, lifetimeUsage, compactionCount), and live-activity
- * fields (turnCount, activeTools, responseText) — together with the transition
+ * fields (activeTools, responseText) and the live turn budget — together with the transition
  * methods (markRunning, markCompleted, …), accumulation methods
  * (incrementToolUses, addUsage, incrementCompactions), and live-activity
- * transition methods (incrementTurnCount, addActiveTool, removeActiveTool,
+ * transition methods (setTurnBudget, addActiveTool, removeActiveTool,
  * resetResponseText, appendResponseText) that mutate them.
  *
  * State is encapsulated behind getters; external code reads through them but
@@ -100,7 +100,6 @@ export interface SubagentStateInit {
 	lifetimeUsage?: LifetimeUsage;
 	compactionCount?: number;
 	// Live activity — activeTools is seeded by name (each entry calls addActiveTool)
-	turnCount?: number;
 	activeTools?: string[];
 	responseText?: string;
 }
@@ -198,9 +197,6 @@ export class SubagentState {
 	get compactionCount(): number { return this._compactionCount; }
 
 	// Live activity — accumulated via transition methods, readable via getters
-	private _turnCount: number;
-	get turnCount(): number { return this._turnCount; }
-
 	private _activeTools = new Map<string, string>();
 	get activeTools(): ReadonlyMap<string, string> { return this._activeTools; }
 
@@ -226,7 +222,6 @@ export class SubagentState {
 			? { ...init.lifetimeUsage }
 			: { input: 0, output: 0, cacheWrite: 0 };
 		this._compactionCount = init.compactionCount ?? 0;
-		this._turnCount = init.turnCount ?? 1;
 		this._responseText = init.responseText ?? "";
 		for (const name of init.activeTools ?? []) {
 			this.addActiveTool(name);
@@ -266,11 +261,6 @@ export class SubagentState {
 	/** Increment compaction count. Called by record-observer on compaction_end. */
 	incrementCompactions(): void {
 		this._compactionCount++;
-	}
-
-	/** Record a turn boundary. Called by record-observer on turn_end. */
-	incrementTurnCount(): void {
-		this._turnCount++;
 	}
 
 	/** Record a tool starting. Called by record-observer on tool_execution_start. */

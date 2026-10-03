@@ -9,7 +9,7 @@
 import type { SubagentStatus } from "#src/lifecycle/subagent-state";
 import { type TurnBudget, wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limits";
 import type { AgentDetails, Theme } from "#src/ui/display";
-import { formatMs, formatTurns } from "#src/ui/display";
+import { formatMs, formatTurnBudget } from "#src/ui/display";
 import { GLYPHS, SPINNER } from "#src/ui/glyphs";
 
 // ---- Dispatcher ----
@@ -157,8 +157,8 @@ export function renderStats(details: AgentDetails, theme: Theme): string {
 	const parts: string[] = [];
 	if (details.modelName) parts.push(details.modelName);
 	if (details.tags) parts.push(...details.tags);
-	if (details.turnCount != null && details.turnCount > 0) {
-		parts.push(formatTurns(details.turnCount, details.maxTurns));
+	if (details.turnBudget) {
+		parts.push(formatTurnBudget(details.turnBudget));
 	}
 	if (details.toolUses > 0)
 		parts.push(`${details.toolUses} tool use${details.toolUses === 1 ? "" : "s"}`);
