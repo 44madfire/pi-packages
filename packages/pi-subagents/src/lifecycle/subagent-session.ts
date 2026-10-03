@@ -50,6 +50,13 @@ export interface TurnLoopOptions {
   onTurnBudget?: (budget: TurnBudget) => void;
 }
 
+/** Per-call options for a resumed run's turn loop. */
+export interface ResumeTurnLoopOptions {
+  signal?: AbortSignal;
+  /** Receives the resumed run's budget at the start and after every turn boundary that changes it. */
+  onTurnBudget?: (budget: TurnBudget) => void;
+}
+
 /** Session-level facts known at creation, supplied by the factory. */
 export interface SubagentSessionMeta {
   /** Path to the persisted session JSONL file, if the session was persisted. */
@@ -71,6 +78,12 @@ export interface SubagentSessionMeta {
  */
 export class SubagentSession {
   private disposed = false;
+
+  /**
+   * The limits the initial run resolved, kept so every resume runs under the
+   * same ceiling. Unlimited until the initial run starts.
+   */
+  private turnLimits: { maxTurns?: number; wrapUpTurns: number } = { wrapUpTurns: DEFAULT_WRAP_UP_TURNS };
 
   /**
    * How the session's last assistant turn ended, tracked for the session's
@@ -115,10 +128,11 @@ export class SubagentSession {
   /** Drive the initial run's turn loop; emits `completed` on success. */
   async runTurnLoop(prompt: string, opts: TurnLoopOptions): Promise<TurnLoopResult> {
     const session = this._session;
-    const tracker = new TurnBudgetTracker({
+    this.turnLimits = {
       maxTurns: normalizeMaxTurns(opts.maxTurns ?? this.meta.agentMaxTurns ?? opts.defaultMaxTurns),
       wrapUpTurns: opts.wrapUpTurns ?? DEFAULT_WRAP_UP_TURNS,
-    });
+    };
+    const tracker = new TurnBudgetTracker(this.turnLimits);
     const unsubTurns = this.enforceTurnBudget(tracker, opts.onTurnBudget);
     const collector = collectResponseText(session);
     const cleanupAbort = forwardAbortSignal(session, opts.signal);
@@ -193,13 +207,18 @@ export class SubagentSession {
     );
   }
 
-  /** Re-prompt the same session (resume); does not emit `completed`. */
-  async resumeTurnLoop(prompt: string, signal?: AbortSignal): Promise<TurnLoopResult> {
+  /**
+   * Re-prompt the same session (resume); does not emit `completed`.
+   *
+   * The resumed run gets a fresh budget under the initial run's limits: the
+   * parent asked for more work, and an exhausted run's remainder would be none.
+   */
+  async resumeTurnLoop(prompt: string, opts: ResumeTurnLoopOptions): Promise<TurnLoopResult> {
     const session = this._session;
-    const tracker = new TurnBudgetTracker({ wrapUpTurns: DEFAULT_WRAP_UP_TURNS });
-    const unsubTurns = this.enforceTurnBudget(tracker, undefined);
+    const tracker = new TurnBudgetTracker(this.turnLimits);
+    const unsubTurns = this.enforceTurnBudget(tracker, opts.onTurnBudget);
     const collector = collectResponseText(session);
-    const cleanupAbort = forwardAbortSignal(session, signal);
+    const cleanupAbort = forwardAbortSignal(session, opts.signal);
 
     try {
       await session.prompt(prompt);

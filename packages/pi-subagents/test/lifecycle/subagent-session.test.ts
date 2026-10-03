@@ -595,7 +595,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
   it("re-prompts the session and returns the final assistant text", async () => {
     const { session } = createSession("RESUMED");
     const { sub } = makeSubagentSession(session);
-    const result = await sub.resumeTurnLoop("Continue");
+    const result = await sub.resumeTurnLoop("Continue", {});
     expect(session.prompt).toHaveBeenCalledWith("Continue");
     expect(result).toEqual({ responseText: "RESUMED", turnBudget: { used: 0, phase: "within" } });
   });
@@ -603,7 +603,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
   it("does not emit completed or disposed", async () => {
     const { session } = createSession("RESUMED");
     const { sub } = makeSubagentSession(session, { lifecycle });
-    await sub.resumeTurnLoop("Continue");
+    await sub.resumeTurnLoop("Continue", {});
     expect(lifecycle.completed).not.toHaveBeenCalled();
     expect(lifecycle.disposed).not.toHaveBeenCalled();
   });
@@ -615,7 +615,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
     const { session, listeners } = createSession("unused");
     programMessages(session, listeners, [providerErrorMessage("401 invalid api key")]);
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).rejects.toThrow("401 invalid api key");
+    await expect(sub.resumeTurnLoop("Continue", {})).rejects.toThrow("401 invalid api key");
   });
 
   it("does not report an earlier turn's text as the resumed answer", async () => {
@@ -627,7 +627,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
     });
     programMessages(session, listeners, [providerErrorMessage("stream disconnected")]);
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).rejects.toThrow("stream disconnected");
+    await expect(sub.resumeTurnLoop("Continue", {})).rejects.toThrow("stream disconnected");
   });
 
   it("rejects when overflow recovery stripped the resumed turn's error", async () => {
@@ -639,7 +639,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
     });
     programStrippedFailure(session, listeners, "503 upstream unavailable");
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).rejects.toThrow("503 upstream unavailable");
+    await expect(sub.resumeTurnLoop("Continue", {})).rejects.toThrow("503 upstream unavailable");
   });
 
   // `AgentSession.prompt()` resolves without running a turn when an extension
@@ -652,7 +652,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
     session.messages.push(providerErrorMessage("429 rate limit exceeded"));
     session.prompt = vi.fn(async () => {});
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("/skill:audit go")).rejects.toThrow(
+    await expect(sub.resumeTurnLoop("/skill:audit go", {})).rejects.toThrow(
       "429 rate limit exceeded",
     );
   });
@@ -673,7 +673,7 @@ describe("SubagentSession — resumeTurnLoop", () => {
     await expect(sub.runTurnLoop("go", {})).rejects.toThrow("prompt is too long");
 
     session.prompt = vi.fn(async () => {});
-    await expect(sub.resumeTurnLoop("/skill:audit go")).rejects.toThrow("prompt is too long");
+    await expect(sub.resumeTurnLoop("/skill:audit go", {})).rejects.toThrow("prompt is too long");
   });
 
   it("resolves when the resume's own turn succeeded after an earlier failure", async () => {
@@ -683,13 +683,43 @@ describe("SubagentSession — resumeTurnLoop", () => {
       { role: "assistant", content: [{ type: "text", text: "the second answer" }], stopReason: "stop" },
     ]);
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).resolves.toEqual({ responseText: "the second answer", turnBudget: { used: 0, phase: "within" } });
+    await expect(sub.resumeTurnLoop("Continue", {})).resolves.toEqual({ responseText: "the second answer", turnBudget: { used: 0, phase: "within" } });
   });
 
   it("resolves normally when the resumed turn did not error", async () => {
     const { session } = createSession("RESUMED");
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).resolves.toEqual({ responseText: "RESUMED", turnBudget: { used: 0, phase: "within" } });
+    await expect(sub.resumeTurnLoop("Continue", {})).resolves.toEqual({ responseText: "RESUMED", turnBudget: { used: 0, phase: "within" } });
+  });
+});
+
+describe("SubagentSession — resumeTurnLoop turn budget", () => {
+  it("gives a resume a fresh budget with the original run's ceiling", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 5);
+    const { sub } = makeSubagentSession(session);
+    const first = await sub.runTurnLoop("go", { maxTurns: 3, wrapUpTurns: 1 });
+    expect(first.turnBudget.phase).toBe("exhausted");
+
+    session.abort.mockClear();
+    programTurns(session, listeners, [{}, { stopReason: "stop", toolResults: 0 }]);
+    const reports: unknown[] = [];
+    const resumed = await sub.resumeTurnLoop("Continue", { onTurnBudget: (budget) => reports.push(budget) });
+    expect(reports[0]).toEqual({ maxTurns: 3, used: 0, phase: "within" });
+    expect(resumed.turnBudget).toEqual({ maxTurns: 3, used: 2, phase: "within" });
+    expect(session.abort).not.toHaveBeenCalled();
+  });
+
+  it("stops a resume at the original run's ceiling", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 1);
+    const { sub } = makeSubagentSession(session);
+    await sub.runTurnLoop("go", { maxTurns: 2, wrapUpTurns: 1 });
+
+    programTurns(session, listeners, 4);
+    const resumed = await sub.resumeTurnLoop("Continue", {});
+    expect(session.abort).toHaveBeenCalledOnce();
+    expect(resumed.turnBudget).toEqual({ maxTurns: 2, used: 2, phase: "exhausted" });
   });
 });
 

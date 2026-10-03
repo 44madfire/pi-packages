@@ -541,7 +541,10 @@ export class Subagent {
 		}));
 
 		try {
-			this.completeResume(await subagentSession.resumeTurnLoop(prompt, this.abortController.signal));
+			this.completeResume(await subagentSession.resumeTurnLoop(prompt, {
+				signal: this.abortController.signal,
+				onTurnBudget: (budget) => { this.state.setTurnBudget(budget); },
+			}));
 		} catch (err) {
 			this.failResume(err);
 		}
@@ -549,12 +552,17 @@ export class Subagent {
 
 	/** Terminate a resume as completed: mark, dispose or hold the workspace, release listeners, notify observer. */
 	completeResume(result: TurnLoopResult): void {
+		// The harness ending the resume at its turn limit ends the run for good,
+		// as it does for an initial run.
+		const exhausted = result.turnBudget.phase === "exhausted";
+		const finalStatus: SubagentStatus = exhausted ? "aborted" : "completed";
 		// A child answering one question may need to ask another, which holds the
 		// workspace for the next resume the same way the original run did.
-		const finalResult = this.pendingQuestion !== undefined
+		const finalResult = !exhausted && this.pendingQuestion !== undefined
 			? result.responseText
-			: result.responseText + this.workspaceBracket.dispose({ status: "completed", description: this.description });
-		this.markCompleted(finalResult);
+			: result.responseText + this.workspaceBracket.dispose({ status: finalStatus, description: this.description });
+		if (exhausted) this.markAborted(finalResult);
+		else this.markCompleted(finalResult);
 		this.listeners.release();
 		this.execution.observer?.onResumeFinished?.(this);
 	}

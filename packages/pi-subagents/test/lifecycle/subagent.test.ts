@@ -958,6 +958,20 @@ describe("Subagent — disposing a held workspace", () => {
 		expect(agent.pendingQuestion).toBe("And the fallback?");
 	});
 
+	it("disposes as aborted when the resumed child asks again but exhausts its budget", async () => {
+		const { agent, workspace, stub, ask } = await heldWorkspaceAgent();
+		stub.resumeTurnLoop.mockImplementation(() => {
+			ask("And the fallback?");
+			return Promise.resolve(turnLoopResult({ responseText: "Partway.", turnBudget: EXHAUSTED }));
+		});
+
+		await agent.resume("The project one.");
+
+		expect(agent.status).toBe("aborted");
+		expect(workspace.dispose).toHaveBeenCalledWith({ status: "aborted", description: "run test" });
+		expect(agent.result).toBe(`Partway.${ADDENDUM}`);
+	});
+
 	it("disposes best-effort when the resume throws", async () => {
 		const { agent, workspace, stub } = await heldWorkspaceAgent();
 		stub.resumeTurnLoop.mockRejectedValue(new Error("resume exploded"));
@@ -1645,7 +1659,7 @@ describe("Subagent — ask-back", () => {
 
 		await agent.resume("The project one.");
 
-		expect(stub.resumeTurnLoop).toHaveBeenCalledWith("The project one.", agent.abortController.signal);
+		expect(stub.resumeTurnLoop).toHaveBeenCalledWith("The project one.", expect.objectContaining({ signal: agent.abortController.signal }));
 		expect(agent.status).toBe("completed");
 		expect(agent.result).toBe("Used the project config. Done.");
 		// The question was answered, so it no longer stands.
@@ -1682,14 +1696,41 @@ describe("Subagent.resume() — happy path", () => {
 		expect(stub.resumeTurnLoop.mock.calls[0][0]).toBe("continue");
 		// The caller's signal is wired through abort(); the loop runs under the
 		// record's own lever, so abort(id) reaches it too.
-		expect(stub.resumeTurnLoop.mock.calls[0][1]).toBe(agent.abortController.signal);
-		expect(stub.resumeTurnLoop.mock.calls[0][1]).not.toBe(callerSignal);
+		expect(stub.resumeTurnLoop.mock.calls[0][1].signal).toBe(agent.abortController.signal);
+		expect(stub.resumeTurnLoop.mock.calls[0][1].signal).not.toBe(callerSignal);
 	});
 
 	it("resets transition state before resuming", async () => {
 		const { agent } = createResumableAgent();
 		await agent.resume("continue");
 		expect(agent.error).toBeUndefined();
+	});
+});
+
+describe("Subagent.resume() — turn budget", () => {
+	it("shows the budget the resumed turn loop reports while the resume is going", async () => {
+		const { agent, stub } = createResumableAgent();
+		const fresh: TurnBudget = { maxTurns: 5, used: 0, phase: "within" };
+		const gate = Promise.withResolvers<TurnLoopResult>();
+		stub.resumeTurnLoop.mockImplementation((_prompt: string, { onTurnBudget }: { onTurnBudget?: (budget: TurnBudget) => void }) => {
+			onTurnBudget?.(fresh);
+			return gate.promise;
+		});
+		const resumed = agent.resume("continue");
+		await vi.waitFor(() => expect(stub.resumeTurnLoop).toHaveBeenCalled());
+		expect(agent.turnBudget).toEqual(fresh);
+		gate.resolve(turnLoopResult({ turnBudget: fresh }));
+		await resumed;
+	});
+
+	it("ends aborted, and notifies the observer, when the resume exhausts its budget", async () => {
+		const onResumeFinished = vi.fn();
+		const { agent, stub } = createResumableAgent({ observer: { onResumeFinished } });
+		stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "partial", turnBudget: EXHAUSTED }));
+		await agent.resume("continue");
+		expect(agent.status).toBe("aborted");
+		expect(agent.result).toBe("partial");
+		expect(onResumeFinished).toHaveBeenCalledOnce();
 	});
 });
 
@@ -1701,7 +1742,7 @@ describe("Subagent.resume() — cancellation", () => {
 	function parkResumeUntilSignalled(stub: ReturnType<typeof createSubagentSessionStub>) {
 		const gate = Promise.withResolvers<TurnLoopResult>();
 		const loop: { signal?: AbortSignal; abortedAtEntry?: boolean; signalled: boolean } = { signalled: false };
-		stub.resumeTurnLoop.mockImplementation((_prompt: string, signal?: AbortSignal) => {
+		stub.resumeTurnLoop.mockImplementation((_prompt: string, { signal }: { signal?: AbortSignal }) => {
 			loop.signal = signal;
 			loop.abortedAtEntry = signal?.aborted;
 			signal?.addEventListener("abort", () => {

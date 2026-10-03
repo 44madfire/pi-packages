@@ -1576,7 +1576,7 @@ describe("SubagentManager", () => {
 
         // The caller's signal is wired through the record's abort(), so the loop
         // runs under the one lever abort(id) can also pull.
-        expect(stub.resumeTurnLoop).toHaveBeenCalledWith("continue", manager.getRecord(id)!.abortController.signal);
+        expect(stub.resumeTurnLoop).toHaveBeenCalledWith("continue", expect.objectContaining({ signal: manager.getRecord(id)!.abortController.signal }));
       });
 
       it("stops an in-flight resume when the caller aborts it by id", async () => {
@@ -1586,7 +1586,7 @@ describe("SubagentManager", () => {
         await manager.getRecord(id)!.promise;
         const gate = Promise.withResolvers<TurnLoopResult>();
         let signalled = false;
-        stub.resumeTurnLoop.mockImplementation((_prompt: string, signal?: AbortSignal) => {
+        stub.resumeTurnLoop.mockImplementation((_prompt: string, { signal }: { signal?: AbortSignal }) => {
           signal?.addEventListener("abort", () => {
             signalled = true;
             gate.resolve(turnLoopResult({ responseText: "partial answer" }));

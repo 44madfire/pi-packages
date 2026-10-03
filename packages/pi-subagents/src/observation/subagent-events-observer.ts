@@ -70,8 +70,8 @@ export class SubagentEventsObserver implements SubagentManagerObserver {
 	}
 
 	onSubagentResumed(record: Subagent): void {
-		// A resumed run terminates only as completed or error; a single distinct
-		// channel carries both — the payload's status/error discriminate. Existing
+		// A resumed run terminates in any terminal status; a single distinct
+		// channel carries them all — the payload's status/error discriminate. Existing
 		// subagents:completed/failed subscribers keep their once-per-run semantics.
 		this.emit("subagents:resumed", buildEventData(record));
 		this.persistAndNotify(record);
