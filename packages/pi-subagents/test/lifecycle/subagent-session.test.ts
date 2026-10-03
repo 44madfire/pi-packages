@@ -33,6 +33,7 @@ function createSession(finalText: string) {
     }),
     abort: vi.fn(),
     steer: vi.fn().mockResolvedValue(undefined),
+    sendCustomMessage: vi.fn((_message: unknown, _options?: { triggerTurn?: boolean }): Promise<void> => Promise.resolve()),
     dispose: vi.fn(() => {
       calls.push("dispose");
     }),
@@ -59,23 +60,49 @@ function emit(listeners: Array<(e: any) => void>, event: unknown) {
   for (const l of listeners) l(event);
 }
 
-function emitTurnEnd(listeners: Array<(e: any) => void>) {
-  emit(listeners, { type: "turn_end" });
+/**
+ * How one turn ended, as Pi's `turn_end` reports it: the assistant message's
+ * `stopReason` and how many tool results the turn produced. The default is a
+ * successful turn that ran a tool, so the agent loop would continue.
+ */
+interface TurnSpec {
+  stopReason?: string;
+  toolResults?: number;
+}
+
+function emitTurnStart(listeners: Array<(e: any) => void>) {
+  emit(listeners, { type: "turn_start" });
+}
+
+function emitTurnEnd(listeners: Array<(e: any) => void>, { stopReason = "toolUse", toolResults = 1 }: TurnSpec = {}) {
+  emit(listeners, {
+    type: "turn_end",
+    message: { role: "assistant", stopReason },
+    toolResults: Array.from({ length: toolResults }, () => ({ role: "toolResult" })),
+  });
 }
 
 /**
- * Program session.prompt to emit `turns` turn_end events, then settle the run
- * with a final assistant message. The turn count is the meaningful input that
- * drives the steer/abort boundary each turn-limit test asserts on.
+ * Program session.prompt to run turns, each a `turn_start` then a `turn_end`,
+ * then settle the run with a final assistant message. A number runs that many
+ * default turns; an array spells out how each turn ended. The turns are the
+ * meaningful input that drives the boundary each turn-limit test asserts on.
+ *
+ * A session abort ends the run the way Pi's does: no further turn completes.
  */
 function programTurns(
   session: ReturnType<typeof createSession>["session"],
   listeners: ReturnType<typeof createSession>["listeners"],
-  turns: number,
+  turns: number | TurnSpec[],
   finalText = "done",
 ) {
+  const specs = typeof turns === "number" ? Array.from({ length: turns }, (): TurnSpec => ({})) : turns;
   session.prompt = vi.fn(async () => {
-    for (let i = 0; i < turns; i++) emitTurnEnd(listeners);
+    for (const spec of specs) {
+      if (session.abort.mock.calls.length > 0) break;
+      emitTurnStart(listeners);
+      emitTurnEnd(listeners, spec);
+    }
     session.messages.push({ role: "assistant", content: [{ type: "text", text: finalText }] });
   });
 }
