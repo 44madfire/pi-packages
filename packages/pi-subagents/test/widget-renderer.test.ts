@@ -153,7 +153,7 @@ describe("renderFinishedLine", () => {
 		const line = renderFinishedLine(agent, testRegistry, theme);
 
 		expect(line).toContain("[warning:\u2713]");
-		expect(line).toContain("[warning: (turn limit)]");
+		expect(line).toContain("[warning: (budget warning)]");
 	});
 
 	it("renders stopped status with dim icon and text", () => {

@@ -175,10 +175,10 @@ describe("renderCompleted", () => {
 		expect(renderCompleted(details, "", false, theme)).toContain("[dim:  \u23BF  Done]");
 	});
 
-	it("collapsed view shows 'Wrapped up (turn limit)' for a completed run the harness warned", () => {
+	it("collapsed view shows 'Wrapped up (budget warning)' for a completed run the harness warned", () => {
 		const details = makeDetails({ status: "completed", durationMs: 2000, turnBudget: WARNED });
 		expect(renderCompleted(details, "", false, theme)).toContain(
-			"[dim:  \u23BF  Wrapped up (turn limit)]",
+			"[dim:  \u23BF  Wrapped up (budget warning)]",
 		);
 	});
 
@@ -247,7 +247,7 @@ describe("renderFailed", () => {
 	it("shows aborted message with warning color for aborted status", () => {
 		const details = makeDetails({ status: "aborted" });
 		expect(renderFailed(details, theme)).toContain(
-			"[warning:  \u23BF  Aborted (max turns exceeded)]",
+			"[warning:  \u23BF  Aborted (turn limit reached)]",
 		);
 	});
 });
@@ -295,7 +295,7 @@ describe("renderAgentResult", () => {
 	it("dispatches to renderFailed for aborted status", () => {
 		const details = makeDetails({ status: "aborted" });
 		expect(renderAgentResult(details, "", false, false, theme)).toContain(
-			"[warning:  \u23BF  Aborted (max turns exceeded)]",
+			"[warning:  \u23BF  Aborted (turn limit reached)]",
 		);
 	});
 });

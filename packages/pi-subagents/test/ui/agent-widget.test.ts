@@ -297,7 +297,7 @@ describe("AgentWidget — projection reads activity off Subagent records", () =>
 		widget.update();
 
 		expect(renderFn).toBeDefined();
-		expect(renderFn!(stubTui(), stubTheme()).render().join("\n")).toContain("(turn limit)");
+		expect(renderFn!(stubTui(), stubTheme()).render().join("\n")).toContain("(budget warning)");
 	});
 });
 

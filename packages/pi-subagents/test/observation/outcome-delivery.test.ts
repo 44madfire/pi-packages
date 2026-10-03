@@ -29,15 +29,15 @@ describe("status vocabulary", () => {
 
 	// One case, spelled out, before the status table below generalizes the rest.
 	it("renders a completed run the harness warned as wrapped up, in both presentations", () => {
-		expect(renderStatusLabel({ status: "completed", turnBudget: warned })).toBe("Wrapped up (reached turn limit)");
+		expect(renderStatusLabel({ status: "completed", turnBudget: warned })).toBe("Wrapped up (after turn-budget warning)");
 		expect(renderStatusNote({ status: "completed", turnBudget: warned })).toBe(
-			" (wrapped up \u2014 reached turn limit)",
+			" (wrapped up \u2014 after turn-budget warning)",
 		);
 	});
 
 	it("renders an aborted run by its status, not its budget", () => {
 		expect(renderStatusLabel({ status: "aborted", turnBudget: exhausted })).toBe(
-			"Aborted (max turns exceeded, output may be incomplete)",
+			"Aborted (turn limit reached, output may be incomplete)",
 		);
 	});
 
@@ -50,8 +50,8 @@ describe("status vocabulary", () => {
 	const rows: { status: SubagentStatus; label: string; note: string }[] = [
 		{
 			status: "aborted",
-			label: "Aborted (max turns exceeded, output may be incomplete)",
-			note: " (aborted \u2014 max turns exceeded, output may be incomplete)",
+			label: "Aborted (turn limit reached, output may be incomplete)",
+			note: " (aborted \u2014 turn limit reached, output may be incomplete)",
 		},
 		{ status: "stopped", label: "Stopped (user request)", note: " (stopped \u2014 user request)" },
 		{ status: "completed", label: "Done", note: "" },

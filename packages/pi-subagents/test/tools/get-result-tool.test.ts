@@ -549,7 +549,7 @@ describe("GetResultTool — TUI rendering", () => {
 			const result = await execute(makeManager(records), { agent_id: "agent-1" });
 
 			expect(result.details?.turnBudget).toEqual(turnBudget);
-			expect(result.content[0].text).toContain("Status: completed (wrapped up \u2014 reached turn limit) |");
+			expect(result.content[0].text).toContain("Status: completed (wrapped up \u2014 after turn-budget warning) |");
 		});
 
 		it("carries a preview bounded well below the result it summarises", async () => {

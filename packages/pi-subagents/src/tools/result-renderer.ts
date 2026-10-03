@@ -76,7 +76,7 @@ export function renderCompleted(
 			}
 		}
 	} else {
-		const doneText = wrappedUp ? "Wrapped up (turn limit)" : "Done";
+		const doneText = wrappedUp ? "Wrapped up (budget warning)" : "Done";
 		line += "\n" + theme.fg("dim", `  ${GLYPHS.subLine}  ${doneText}`);
 	}
 	return line;
@@ -102,7 +102,7 @@ export function renderFailed(details: AgentDetails, theme: Theme): string {
 	} else {
 		line +=
 			"\n" +
-			theme.fg("warning", `  ${GLYPHS.subLine}  Aborted (max turns exceeded)`);
+			theme.fg("warning", `  ${GLYPHS.subLine}  Aborted (turn limit reached)`);
 	}
 	return line;
 }

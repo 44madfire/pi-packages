@@ -71,7 +71,7 @@ export function renderFinishedLine(
 	let statusText: string;
 	if (wrappedUpAtTurnLimit(agent)) {
 		icon = theme.fg("warning", GLYPHS.success);
-		statusText = theme.fg("warning", " (turn limit)");
+		statusText = theme.fg("warning", " (budget warning)");
 	} else if (agent.status === "completed") {
 		icon = theme.fg("success", GLYPHS.success);
 		statusText = "";

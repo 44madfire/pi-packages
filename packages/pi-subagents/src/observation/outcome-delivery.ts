@@ -44,19 +44,19 @@ import { type TurnBudget, wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limit
 interface StatusMeaning {
 	/** Sentence-initial label, e.g. "Wrapped up". */
 	label: string;
-	/** Why, without terminal punctuation, e.g. "reached turn limit". */
+	/** Why, without terminal punctuation, e.g. "after turn-budget warning". */
 	detail: string;
 }
 
 const STATUS_MEANINGS: Partial<Record<SubagentStatus, StatusMeaning>> = {
-	aborted: { label: "Aborted", detail: "max turns exceeded, output may be incomplete" },
+	aborted: { label: "Aborted", detail: "turn limit reached, output may be incomplete" },
 	// "user request" rather than "stopped by user": the detail must stand on its
 	// own after the label, which both presentations already supply.
 	stopped: { label: "Stopped", detail: "user request" },
 };
 
 /** A run that finished on its own after the harness warned it about its turn limit. */
-const WRAPPED_UP: StatusMeaning = { label: "Wrapped up", detail: "reached turn limit" };
+const WRAPPED_UP: StatusMeaning = { label: "Wrapped up", detail: "after turn-budget warning" };
 
 /**
  * Only what the status presentations read: the status, the error an error
@@ -92,7 +92,7 @@ const RESUME_REFUSAL_CLAUSES: Record<Exclude<ResumeRefusal, "still-running">, st
 };
 
 /**
- * Standalone label form, e.g. "Wrapped up (reached turn limit)".
+ * Standalone label form, e.g. "Wrapped up (after turn-budget warning)".
  *
  * An error reports its message instead: the status alone does not say what
  * went wrong.
@@ -104,7 +104,7 @@ export function renderStatusLabel(outcome: StatusOutcome): string {
 }
 
 /**
- * Parenthetical suffix form, e.g. " (wrapped up — reached turn limit)", for a
+ * Parenthetical suffix form, e.g. " (wrapped up — after turn-budget warning)", for a
  * carrier appending to its own sentence. Empty when the status is unremarkable
  * or when the body already carries the explanation, as an error's does.
  */
