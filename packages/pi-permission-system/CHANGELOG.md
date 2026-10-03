@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v38.0.2...pi-permission-system-v39.0.0) (2026-10-03)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** **breaking:** a targeted external_directory deny now blocks a Pi infrastructure read ([5c9dc88](https://github.com/gotgenes/pi-packages/commit/5c9dc88f57a68fe87ade2da50ad613b9b9fdcb82)), closes [#955](https://github.com/gotgenes/pi-packages/issues/955)
+* **pi-permission-system:** **breaking:** the Pi infrastructure read bypass no longer covers the permission logs ([0ad3434](https://github.com/gotgenes/pi-packages/commit/0ad34344fb035211adc29317201d6f00cd8c7a76)), closes [#955](https://github.com/gotgenes/pi-packages/issues/955)
+* **pi-permission-system:** **breaking:** the Pi infrastructure read bypass covers only Pi's harness entries, not all of ~/.pi/agent ([7826794](https://github.com/gotgenes/pi-packages/commit/7826794820b0a93257597b4cd14cd36de4193e84)), closes [#955](https://github.com/gotgenes/pi-packages/issues/955)
+
+### Documentation
+
+* **pi-permission-system:** document the narrowed Pi infrastructure read bypass ([7cdfb8f](https://github.com/gotgenes/pi-packages/commit/7cdfb8fb9222bc8917aaa057cc0106d5c6806030)), closes [#955](https://github.com/gotgenes/pi-packages/issues/955)
+
 ## [38.0.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v38.0.1...pi-permission-system-v38.0.2) (2026-10-02)
 
 
