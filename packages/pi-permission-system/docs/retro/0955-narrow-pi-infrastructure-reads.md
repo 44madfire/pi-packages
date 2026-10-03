@@ -60,3 +60,17 @@ The package suite went from 5312 to 5334 tests, all green, and every named killi
 - Scripting trap, twice: an `Edit` body typed `\u2500`/`\u2026` as literal escapes in a comment and a JSDoc.
   Both were caught by grep and rewritten with the real character or plain words.
 - A placement slip: inserting the `AGENT_DIR_INFRASTRUCTURE_ENTRIES` constant before `export function` split the function's JSDoc from its declaration, and a scripted move fixed it.
+
+## Stage: Sync (worktree) (2026-10-03T01:44:48Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass on the branch.
+The plan's marker is `**Release:** ship independently`; all three behavior commits are breaking, so the release is a major.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-955--/2026-10-02T22-41-22-018Z_01a0fec7-7e61-7011-96e4-701e4a6dc9fe.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- Follow-ups already filed: #1018 (infra list not canonicalized; carries the review's logs-exclusion comment).
+- #956 (the bash bypass) stays unblocked by this change but is untouched.
