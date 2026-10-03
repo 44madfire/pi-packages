@@ -86,3 +86,11 @@ The reviewer's indirect-`HOME`-rebinding WARN from the TDD stage is **still unde
 
 Follow-ups #1019 and #1020 are filed and dispositioned out of scope against Phase 15.
 Consider a comment on PR #917 at ship time, pointing at the `bash-command` intent as the seam for its argument spellings.
+
+2026-10-03T17:03:13Z: `/ship` stopped on the open WARN.
+The operator **accepted the HOME-rebinding residual**: an agent that would compose such commands belongs in a sandbox.
+It is recorded in the ADR 0009 amendment and `configuration.md` by the `docs(pi-permission-system): accept the HOME-rebinding residual for bash command spellings` commit.
+Probing for that amendment found two forms the scan misses that ADR 0009 had not named: `(( $n = 5 ))` and `[[ 1 -eq HOME=7 ]]`.
+Both were verified to rebind `HOME` in `/bin/bash`, and both escape the path projection as well.
+They were added to the residual list rather than filed.
+Re-sync: root `lint` and `fallow dead-code` pass.
