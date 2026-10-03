@@ -71,3 +71,18 @@ The `pi-permission-system` suite went from 5370 to 5418 tests; `check`, root `li
   The literal and operator forms (`printf -v HOME`, `read ${x:-HOME}`) are caught by the scan and still ask.
   The exposure needs the rebinding statement's own units to be allowed by explicit rules under a non-`allow` catch-all.
   The operator decides between recording it as an accepted residual and adding a conservative guard before `/ship`.
+
+## Stage: Sync (worktree) (2026-10-03T15:50:30Z)
+
+### Session summary
+
+Root `lint` and `fallow dead-code` pass on the branch.
+The plan's marker is `**Release:** ship independently`.
+The reviewer's indirect-`HOME`-rebinding WARN from the TDD stage is **still undecided** (guard it, or record it as an accepted residual in the ADR 0009 amendment and `configuration.md`); settle it before `/ship`.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-981--/2026-10-03T05-09-41-512Z_01a1002b-0408-7392-9683-724d129c9b81.jsonl` — read with `read_session_file({ path: "<path>" })`.
+
+### Observations
+
+Follow-ups #1019 and #1020 are filed and dispositioned out of scope against Phase 15.
+Consider a comment on PR #917 at ship time, pointing at the `bash-command` intent as the seam for its argument spellings.
