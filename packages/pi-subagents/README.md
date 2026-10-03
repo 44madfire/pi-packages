@@ -201,9 +201,13 @@ Instead of hard-aborting at the turn limit, agents get a graceful shutdown:
 | Status      | Meaning                       | Icon       |
 | ----------- | ----------------------------- | ---------- |
 | `completed` | Finished naturally            | `✓` green  |
-| `steered`   | Hit limit, wrapped up in time | `✓` yellow |
+| `completed` | Hit limit, wrapped up in time | `✓` yellow |
 | `aborted`   | Grace period exceeded         | `✗` red    |
 | `stopped`   | User-initiated abort          | `■` dim    |
+
+A run that hits its limit and wraps up in time still ends `completed`; the turn-limit fact is a separate `turnBudget` field (`{ maxTurns, used, phase }`) on the subagent record, tool-result details, notifications, and the terminal events.
+Its `phase` is `within` when the limit was never reached, `warned` once the wrap-up message was sent, and `exhausted` when the grace period ran out (always paired with `aborted`).
+`turnBudget` is absent when no turn limit applies.
 
 ## Concurrency
 
@@ -241,18 +245,18 @@ Before this behavior existed, children fired `session_start` with no matching sh
 
 Agent lifecycle events are emitted via `pi.events.emit()` so other extensions can react:
 
-| Event                        | When                                                    | Key fields                                                                                                           |
-| ---------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `subagents:created`          | Background agent registered                             | `id`, `type`, `description`, `isBackground`                                                                          |
-| `subagents:started`          | Agent transitions to running (including queued→running) | `id`, `type`, `description`                                                                                          |
-| `subagents:completed`        | Agent finished successfully                             | `id`, `type`, `durationMs`, `tokens` (lifetime `{ input, output, total }`), `toolUses`, `result`                     |
-| `subagents:failed`           | Agent errored, stopped, or aborted                      | same as completed + `error`, `status`                                                                                |
-| `subagents:resuming`         | Resume started, from either front door                  | `id`, `type`, `description`                                                                                          |
-| `subagents:resumed`          | Resumed run reached a terminal state (completed/error)  | same as completed + `error`, `status` (`buildEventData` shape) — `status`/`error` discriminate                       |
-| `subagents:steered`          | Steering message sent                                   | `id`, `message`                                                                                                      |
-| `subagents:compacted`        | Agent's session successfully compacted                  | `id`, `type`, `description`, `reason` (`"manual"` / `"threshold"` / `"overflow"`), `tokensBefore`, `compactionCount` |
-| `subagents:settings_loaded`  | Persisted settings applied at extension init            | `settings` (merged global + project)                                                                                 |
-| `subagents:settings_changed` | `/subagents:settings` mutation was applied              | `settings`, `persisted` (`boolean` — `false` on write failure)                                                       |
+| Event                        | When                                                    | Key fields                                                                                                               |
+| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `subagents:created`          | Background agent registered                             | `id`, `type`, `description`, `isBackground`                                                                              |
+| `subagents:started`          | Agent transitions to running (including queued→running) | `id`, `type`, `description`                                                                                              |
+| `subagents:completed`        | Agent finished successfully                             | `id`, `type`, `status`, `turnBudget`, `durationMs`, `tokens` (lifetime `{ input, output, total }`), `toolUses`, `result` |
+| `subagents:failed`           | Agent errored, stopped, or aborted                      | same as completed + `error`, `status`                                                                                    |
+| `subagents:resuming`         | Resume started, from either front door                  | `id`, `type`, `description`                                                                                              |
+| `subagents:resumed`          | Resumed run reached a terminal state (completed/error)  | same as completed + `error`, `status` (`buildEventData` shape) — `status`/`error` discriminate                           |
+| `subagents:steered`          | Steering message sent                                   | `id`, `message`                                                                                                          |
+| `subagents:compacted`        | Agent's session successfully compacted                  | `id`, `type`, `description`, `reason` (`"manual"` / `"threshold"` / `"overflow"`), `tokensBefore`, `compactionCount`     |
+| `subagents:settings_loaded`  | Persisted settings applied at extension init            | `settings` (merged global + project)                                                                                     |
+| `subagents:settings_changed` | `/subagents:settings` mutation was applied              | `settings`, `persisted` (`boolean` — `false` on write failure)                                                           |
 
 `tokens.total` = `input + output + cacheWrite`.
 `cacheRead` is excluded — each turn's `cacheRead` is the cumulative cached prefix re-read on that one API call, so summing per-message would over-count it.

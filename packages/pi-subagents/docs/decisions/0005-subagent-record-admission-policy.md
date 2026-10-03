@@ -81,6 +81,7 @@ This was true of every field except `lifetimeUsage`, which was assigned by refer
 | `isBackground`                                 | admitted, required                   | resolved spawn fact, known from the choke point onward ([#724]) |
 | `turnCount`                                    | admitted, required                   | cumulative metric; parity with `toolUses` and `compactionCount` |
 | `maxTurns`                                     | admitted, optional                   | spawn-time configuration; genuinely absent when unset           |
+| `turnBudget`                                   | admitted, optional                   | terminal fact like `status`; absent when no turn limit applied  |
 | `outputFile`                                   | admitted, optional                   | pointer to the child's durable session transcript               |
 | `activeTools`                                  | declined                             | rule 2 — momentary set, and a `Map` on the live record          |
 | `responseText`                                 | declined                             | rule 2 — momentary and unbounded in size                        |

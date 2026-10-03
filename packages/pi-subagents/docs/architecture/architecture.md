@@ -261,12 +261,10 @@ stateDiagram-v2
     [*] --> running : spawn (foreground or under limit)
     queued --> running : capacity available
     queued --> stopped : stopQueued() — never started
-    running --> completed : all turns finished
+    running --> completed : agent finished, including after the turn-limit wrap-up
     running --> error : unhandled exception
-    running --> aborted : max turns reached
+    running --> aborted : harness stop after max turns plus grace turns
     running --> stopped : abort() called
-    running --> steered : steer message injected
-    steered --> running : continues with message
     completed --> running : resetForResume
     stopped --> running : resetForResume
     error --> running : resetForResume
@@ -278,10 +276,13 @@ stateDiagram-v2
 
     note right of running
         markCompleted, markAborted,
-        markSteered, and markError
+        and markError
         are no-ops when status is stopped
     end note
 ```
+
+A steer (`steer_subagent`, `SubagentsService.steer()`) redirects a running agent and changes no status.
+Whether a run reached its turn limit is not a status: `completeRun` records it as the outcome's `turnBudget` (`{ maxTurns, used, phase }`), where `phase` is `warned` once the wrap-up message was sent and `exhausted` when the harness stopped the run — the one case that ends `aborted`.
 
 Note: `markStopped` always succeeds regardless of current status.
 Other terminal transitions guard against overwriting `stopped` — once an agent is stopped, only `resetForResume` can return it to `running`.
@@ -579,16 +580,16 @@ If Pi gains a native service registry ([earendil-works/pi#4207]), these accessor
 
 The core emits events on `pi.events` that any extension can observe:
 
-| Channel               | Payload                                                                             | When                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `subagents:started`   | `{ id, type, description }`                                                         | Agent begins running                                                                      |
-| `subagents:completed` | `{ id, type, description, status, result?, error?, toolUses, durationMs, tokens? }` | Agent finishes successfully                                                               |
-| `subagents:failed`    | same as `completed` (`buildEventData` shape)                                        | Agent ends in `error`/`stopped`/`aborted`                                                 |
-| `subagents:resuming`  | `{ id, type, description }`                                                         | A resume starts, from either front door                                                   |
-| `subagents:resumed`   | same as `completed` (`buildEventData` shape)                                        | Resumed run reaches a terminal state (`completed`/`error`); `status`/`error` discriminate |
-| `subagents:compacted` | `{ id, type, description, reason, tokensBefore, compactionCount }`                  | Child session compacts                                                                    |
-| `subagents:created`   | `{ id, type, description, isBackground }`                                           | Background agent created (pre-admission)                                                  |
-| `subagents:steered`   | `{ id, message }`                                                                   | Steering message delivered to a running agent                                             |
+| Channel               | Payload                                                                                          | When                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `subagents:started`   | `{ id, type, description }`                                                                      | Agent begins running                                                                      |
+| `subagents:completed` | `{ id, type, description, status, turnBudget?, result?, error?, toolUses, durationMs, tokens? }` | Agent finishes successfully                                                               |
+| `subagents:failed`    | same as `completed` (`buildEventData` shape)                                                     | Agent ends in `error`/`stopped`/`aborted`                                                 |
+| `subagents:resuming`  | `{ id, type, description }`                                                                      | A resume starts, from either front door                                                   |
+| `subagents:resumed`   | same as `completed` (`buildEventData` shape)                                                     | Resumed run reaches a terminal state (`completed`/`error`); `status`/`error` discriminate |
+| `subagents:compacted` | `{ id, type, description, reason, tokensBefore, compactionCount }`                               | Child session compacts                                                                    |
+| `subagents:created`   | `{ id, type, description, isBackground }`                                                        | Background agent created (pre-admission)                                                  |
+| `subagents:steered`   | `{ id, message }`                                                                                | Steering message delivered to a running agent                                             |
 
 These are fire-and-forget broadcast events — no request IDs, no reply channels.
 
