@@ -61,6 +61,60 @@ function makeAssistantEntry(
   };
 }
 
+function makeBashCallEntry(id: string, callId: string, command: string) {
+  return {
+    type: "message",
+    id,
+    parentId: null,
+    timestamp: "t",
+    message: {
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: callId, name: "bash", arguments: { command } },
+      ],
+      provider: "p",
+      model: "m",
+    },
+  };
+}
+
+function makeToolResultEntry(
+  id: string,
+  toolCallId: string,
+  toolName: string,
+  isError = false,
+) {
+  return {
+    type: "message",
+    id,
+    parentId: null,
+    timestamp: "t",
+    message: {
+      role: "toolResult",
+      toolCallId,
+      toolName,
+      content: [{ type: "text", text: "output" }],
+      isError,
+    },
+  };
+}
+
+/** Shaped after Pi's `ContextEditEntry`: `replacement: null` omits the target. */
+function makeContextEditEntry(
+  id: string,
+  targetId: string,
+  replacement: { content: unknown } | null,
+) {
+  return {
+    type: "context_edit",
+    id,
+    parentId: null,
+    timestamp: "t",
+    targetId,
+    replacement,
+  };
+}
+
 describe("formatTranscript — tool calls and result folding", () => {
   it("formats an assistant message with a single tool call and correlated result", () => {
     const entries = [
@@ -937,5 +991,94 @@ describe("branch markers", () => {
     expect(formatTranscript([unknownVariant, makeUserEntry("hello")])).toBe(
       "1. user\nhello",
     );
+  });
+});
+
+describe("context edits", () => {
+  it("marks an omitted user turn where the edit happened, without renumbering", () => {
+    const entries = [
+      makeUserEntry("first question", "u1"),
+      makeAssistantEntry("first answer", "p", "m", "a1"),
+      makeContextEditEntry("e1", "u1", null),
+      makeUserEntry("second question", "u2"),
+    ];
+    expect(formatTranscript(entries)).toBe(
+      [
+        "1. user\nfirst question",
+        "2. assistant [p/m]\nfirst answer",
+        "[context edit] turn 1 (user) omitted from context",
+        "3. user\nsecond question",
+      ].join("\n\n---\n\n"),
+    );
+  });
+
+  it("marks a replaced turn as replaced", () => {
+    const entries = [
+      makeUserEntry("q", "u1"),
+      makeAssistantEntry("long answer", "p", "m", "a1"),
+      makeContextEditEntry("e1", "a1", { content: "short answer" }),
+    ];
+    expect(formatTranscript(entries).split("\n\n---\n\n").at(-1)).toBe(
+      "[context edit] turn 2 (assistant) replaced in context",
+    );
+  });
+
+  it("names a tool-result target by its tool and its call's turn", () => {
+    const entries = [
+      makeUserEntry("build it", "u1"),
+      makeBashCallEntry("a1", "call-1", "make"),
+      makeToolResultEntry("r1", "call-1", "bash", true),
+      makeContextEditEntry("e1", "a1", null),
+      makeContextEditEntry("e2", "r1", null),
+    ];
+    expect(formatTranscript(entries)).toBe(
+      [
+        "1. user\nbuild it",
+        "2. assistant [p/m]\n  [tool] bash — command: make → error",
+        "[context edit] turn 2 (assistant) omitted from context",
+        "[context edit] bash result from turn 2 omitted from context",
+      ].join("\n\n---\n\n"),
+    );
+  });
+
+  it("names a target outside the rendered entries by its id", () => {
+    const entries = [makeContextEditEntry("e1", "abc123", null)];
+    expect(formatTranscript(entries)).toBe(
+      "[context edit] entry abc123 (outside this transcript) omitted from context",
+    );
+  });
+
+  it("names a custom-message target", () => {
+    const entries = [
+      {
+        type: "custom_message",
+        id: "c1",
+        parentId: null,
+        timestamp: "t",
+        customType: "my-ext",
+        content: "injected",
+        display: false,
+      },
+      makeContextEditEntry("e1", "c1", null),
+    ];
+    expect(formatTranscript(entries)).toBe(
+      "[context edit] custom message omitted from context",
+    );
+  });
+
+  it("keeps usage entries silent", () => {
+    const entries = [
+      {
+        type: "usage",
+        id: "1",
+        parentId: null,
+        timestamp: "t",
+        kind: "cache_warm",
+        provider: "p",
+        model: "m",
+        usage: { input: 1, output: 0 },
+      },
+    ];
+    expect(formatTranscript(entries)).toBe("");
   });
 });

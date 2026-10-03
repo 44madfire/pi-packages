@@ -144,6 +144,11 @@ function messageOf(
     : undefined;
 }
 
+/** An entry's `id`, unguarded: the ledger records only string ids. */
+function idOf(entry: TranscriptEntry): unknown {
+  return (entry as unknown as Record<string, unknown>).id;
+}
+
 /** The ids of the `toolCall` parts in a message's content array. */
 function toolCallIdsOf(message: Record<string, unknown>): string[] {
   const content = message.content;
@@ -198,8 +203,14 @@ function formatAssistantMessage(
 
 const BRANCH_SUMMARY_SNIPPET_LENGTH = 100;
 
-/** Format a non-message session entry (compaction, model change, etc.). */
-function formatMetadataEntry(entry: TranscriptEntry): string | null {
+/**
+ * Format a non-message session entry (compaction, model change, etc.).
+ * `ledger` names a context edit's target in transcript terms.
+ */
+function formatMetadataEntry(
+  entry: TranscriptEntry,
+  ledger: TurnLedger,
+): string | null {
   // Cast once to access all non-type fields through runtime guards.
   const e = entry as unknown as Record<string, unknown>;
   switch (entry.type) {
@@ -231,10 +242,26 @@ function formatMetadataEntry(entry: TranscriptEntry): string | null {
         summary.length > BRANCH_SUMMARY_SNIPPET_LENGTH ? "..." : "";
       return `[branch] ${snippet}${ellipsis}`;
     }
+    case "context_edit":
+      return formatContextEdit(e, ledger);
     default:
-      // custom, label, custom_message: omitted
+      // custom, label, custom_message, usage: omitted
       return null;
   }
+}
+
+/**
+ * Format a context edit: which earlier entry it changed, and whether that
+ * entry was dropped from model context (`replacement: null`) or rewritten.
+ */
+function formatContextEdit(
+  edit: Record<string, unknown>,
+  ledger: TurnLedger,
+): string {
+  const targetId = typeof edit.targetId === "string" ? edit.targetId : "";
+  const effect =
+    edit.replacement === null ? "omitted from context" : "replaced in context";
+  return `[context edit] ${ledger.describe(targetId)} ${effect}`;
 }
 
 /**
@@ -290,7 +317,10 @@ export function formatTranscript(
 
   for (const entry of entries) {
     if (entry.type !== "message") {
-      const formatted = formatMetadataEntry(entry);
+      if (entry.type === "custom_message") {
+        ledger.recordCustomMessage(idOf(entry));
+      }
+      const formatted = formatMetadataEntry(entry, ledger);
       if (formatted !== null) parts.push(formatted);
       continue;
     }
@@ -299,7 +329,7 @@ export function formatTranscript(
     if (!message) continue;
 
     const role = message.role;
-    const entryId = (entry as unknown as Record<string, unknown>).id;
+    const entryId = idOf(entry);
 
     if (role === "user") {
       const turn = ledger.numberTurn(entryId, "user", []);
@@ -314,10 +344,11 @@ export function formatTranscript(
     } else if (role === "toolResult") {
       const toolCallId =
         typeof message.toolCallId === "string" ? message.toolCallId : "";
+      const toolName =
+        typeof message.toolName === "string" ? message.toolName : "unknown";
+      ledger.recordToolResult(entryId, toolCallId, toolName);
       // Render only orphan results (not folded into an assistant message)
       if (!assistantToolCallIds.has(toolCallId)) {
-        const toolName =
-          typeof message.toolName === "string" ? message.toolName : "unknown";
         const status = message.isError === true ? "error" : "completed";
         parts.push(`  [result] ${toolName} \u2192 ${status}`);
       }
