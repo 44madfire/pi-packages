@@ -303,6 +303,40 @@ describe("SubagentSession — runTurnLoop turn limits", () => {
   });
 });
 
+describe("SubagentSession — runTurnLoop turn budget", () => {
+  it("reports no budget when no turn limit resolves", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 4);
+    const { sub } = makeSubagentSession(session);
+    const result = await sub.runTurnLoop("go", {});
+    expect(result.turnBudget).toBeUndefined();
+  });
+
+  it("reports within, with the turns run, when the agent finishes before the limit", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 2);
+    const { sub } = makeSubagentSession(session);
+    const result = await sub.runTurnLoop("go", { maxTurns: 5, graceTurns: 1 });
+    expect(result.turnBudget).toEqual({ maxTurns: 5, used: 2, phase: "within" });
+  });
+
+  it("reports warned when the agent finishes after the wrap-up steer", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 3);
+    const { sub } = makeSubagentSession(session);
+    const result = await sub.runTurnLoop("go", { maxTurns: 2, graceTurns: 5 });
+    expect(result.turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "warned" });
+  });
+
+  it("reports exhausted when the harness aborts after the grace turns", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 3);
+    const { sub } = makeSubagentSession(session);
+    const result = await sub.runTurnLoop("go", { maxTurns: 2, graceTurns: 1 });
+    expect(result.turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "exhausted" });
+  });
+});
+
 describe("SubagentSession — runTurnLoop parent abort signal", () => {
   it("aborts the session when the parent signal fires mid-prompt", async () => {
     const controller = new AbortController();

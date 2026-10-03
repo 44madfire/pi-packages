@@ -18,7 +18,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { ChildLifecyclePublisher } from "#src/lifecycle/child-lifecycle";
 import { emitChildSessionShutdown } from "#src/lifecycle/child-shutdown";
-import { normalizeMaxTurns } from "#src/lifecycle/turn-limits";
+import { normalizeMaxTurns, type TurnBudget } from "#src/lifecycle/turn-limits";
 import { getSessionContextPercent, type SessionStatsLike } from "#src/lifecycle/usage";
 import { extractText } from "#src/session/context";
 import { getAgentConversation } from "#src/session/conversation";
@@ -31,6 +31,8 @@ export interface TurnLoopResult {
   aborted: boolean;
   /** True if the agent was steered to wrap up (soft turn limit) but finished in time. */
   steered: boolean;
+  /** The run's turn limit and its use; absent when no limit resolved. */
+  turnBudget?: TurnBudget;
 }
 
 /** Per-call options for the initial run's turn loop. */
@@ -159,7 +161,9 @@ export class SubagentSession {
     }
 
     const responseText = collector.getText().trim() || getLastAssistantText(session);
-    return { responseText, aborted, steered: softLimitReached };
+    const turnBudget =
+      maxTurns == null ? undefined : buildTurnBudget(maxTurns, turnCount, softLimitReached, aborted);
+    return { responseText, aborted, steered: softLimitReached, turnBudget };
   }
 
   /** Re-prompt the same session (resume); does not emit `completed`. */
@@ -308,6 +312,19 @@ function readLastTurnFailure(session: AgentSession): string | undefined {
     return msg.errorMessage || PROVIDER_ERROR_WITHOUT_MESSAGE;
   }
   return undefined;
+}
+
+/**
+ * The budget a turn loop reports. Takes the loop's flags as parameters because
+ * the turn listener sets them, which control-flow narrowing cannot see.
+ */
+function buildTurnBudget(
+  maxTurns: number,
+  used: number,
+  warned: boolean,
+  exhausted: boolean,
+): TurnBudget {
+  return { maxTurns, used, phase: exhausted ? "exhausted" : warned ? "warned" : "within" };
 }
 
 /**
