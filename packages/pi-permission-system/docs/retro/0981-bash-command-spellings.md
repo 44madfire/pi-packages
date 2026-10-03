@@ -37,3 +37,37 @@ Filed #1019 and #1020 as follow-ups, both recorded out of scope against Phase 15
 #### Deferred tidyings
 
 - `src/access-intent/bash/command-enumeration.ts` — `makeUnit` chains one `{ ...x, key }` spread per optional field (6 after this change); the assessor rated it optional.
+
+## Stage: Implementation (TDD) (2026-10-03T07:01:39Z)
+
+### Session summary
+
+All six TDD steps landed as planned: fixture prep, `normalizeBashCommand`, the `bash-command` intent, the `ShellVariables.spellHomeAtStart` producer, the gate wiring (the one `fix:`), and docs.
+The docs cover `configuration.md`, the architecture entries, an ADR 0009 amendment, and the package skill.
+The `pi-permission-system` suite went from 5370 to 5418 tests; `check`, root `lint`, and `fallow dead-code` are clean.
+
+### Observations
+
+- Deviations from the plan:
+  - `BashCommandAccessIntent.surface` is typed `string`, not `"bash"`: the resolver's family-fold spread failed `tsc` exactly as the plan's risk predicted, and the plan's fallback was taken.
+    `permission-resolver.ts` is unchanged.
+  - `makeUnit`'s `WrapperFacts` bag was renamed `UnitFacts`, as the plan allowed.
+  - A third cast-based bash reader (`resolverByCommand` in `bash-command.test.ts`) escaped step 1's grep because it destructured `.input`; step 5 migrated it to `bashCommandOf`.
+  - Step 5's commit was amended once, for a Biome `noTemplateCurlyInString` warning on a `"${HOME}/..."` literal.
+- The plan's whole-string mutation (pass the first unit's spellings) **survived** the named tests: every migrated whole-string assertion has zero units, so there was nothing to leak.
+  A salvaged-only pin (`resolves the whole command of a salvaged-only parse with no spellings`) was added, and it kills that mutation.
+- Every other named mutation killed what the plan predicted.
+  The "does not spell" pins (`echo ~/x`, quoted, `sudo ~/bin/x`) and the rebound-`HOME` row stay green under all of them, by design: they pin the leading-prefix boundary.
+- Literal `\u2014` escapes typed into `Edit` bodies landed as escape text three times (two test `describe` names, one comment), and each was caught by re-reading and replaced.
+
+#### Reviewer warnings
+
+- Pre-completion reviewer: **WARN**.
+- **Indirect rebinding.**
+  ADR 0009 declares a residual: a name the program builds at run time.
+  It now also opens on the command surface.
+  The scan misses `n=HOME; read $n`, `printf -v $n`, `declare $n=…`, and a builtin reached through `builtin`/`command`/`time`, so the later `~/bin/tool` unit still gets the startup-home spelling.
+  Verified with a disposable spike (real parse, manager, and resolver) using `{"*": "ask", "n=*": "allow", "read *": "allow", "~/bin/tool": "allow"}`: `n=HOME; read $n <<< /tmp/x; ~/bin/tool` resolves `allow`; before this change it asked.
+  The literal and operator forms (`printf -v HOME`, `read ${x:-HOME}`) are caught by the scan and still ask.
+  The exposure needs the rebinding statement's own units to be allowed by explicit rules under a non-`allow` catch-all.
+  The operator decides between recording it as an accepted residual and adding a conservative guard before `/ship`.
