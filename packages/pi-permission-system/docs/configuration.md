@@ -789,6 +789,9 @@ Use a pattern map to allow specific directories without opening all external acc
 For example, `read: "allow"` can permit ordinary reads while `external_directory: "ask"` still requires confirmation before reading `../outside.txt` or an absolute path outside `ctx.cwd`.
 Optional-path search tools (`find`, `grep`, `ls`) skip this check when no `path` is provided.
 
+When no `external_directory` key is present, the universal fallback (`permission["*"]`) applies.
+So `"*": "allow"` lets every outside-CWD access through with no prompt and, like any policy allow, no review-log entry; the examples on this page set `"*": "ask"` inside `external_directory` so the boundary asks regardless of the fallback.
+
 #### Allow an outside-CWD cache directory
 
 When an agent keeps reading a local cache outside the working tree — `~/.cargo/registry`, `~/.npm`, `~/go/pkg/mod` — and you want to stop confirming it every time, allow that directory on the `external_directory` surface:
