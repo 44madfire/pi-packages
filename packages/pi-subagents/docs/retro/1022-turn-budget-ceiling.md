@@ -26,5 +26,26 @@ Filed [#1025] for event/channel consolidation.
 - No open improvement phase, so `roadmap-fit` exited for [#1025].
 - Third-party PR #1024 edits the widget files this plan touches; whichever lands second rebases.
 
+## Stage: Implementation — TDD (2026-10-03T22:54:00Z)
+
+### Session summary
+
+All 10 plan steps landed as separate commits: two Tidy-First preparations (`resumeTurnLoop` returning a `TurnLoopResult`, realistic turn-event fixtures), the `TurnBudgetTracker`, the breaking ceiling plus `graceTurns` → `wrapUpTurns`, the wording, the live budget, the fresh resume budget, the removal of `turnCount`/`maxTurns`, the minimum of 2 with warnings, and docs.
+The pi-subagents suite went from 2003 to 2030 tests; `check`, root `lint`, `fallow dead-code`, and `verify:public-types` are green.
+
+### Observations
+
+- Deviation (step 9): no load-time `console.warn` for agent-frontmatter `max_turns: 1`.
+  `AgentTypeRegistry.reload()` re-runs `loadCustomAgents` on every spawn (`agent-tool.ts`), so a loader warning would repeat on every spawn of any agent; the spawn note (`buildMinimumTurnsNote`) reads the resolved value, so it covers a frontmatter-sourced 1 on the tool path.
+- Deviation (step 7): `completeResume` tears the workspace down for an exhausted resume even when the child asked another question, mirroring `completeRun`'s `aborted` handling; pinned by a test added beyond the plan.
+- Deviation (step 5): the aborted detail reads "turn limit reached, output may be incomplete" (matching the tool result's "Aborted (turn limit reached)") instead of the plan's "stopped at its turn limit".
+- Deviation (step 9): the `SpawnOptions.maxTurns` JSDoc first said 0 falls back to the agent's limit; `runTurnLoop` uses `??`, so 0 means unlimited, and the JSDoc was corrected before commit.
+- Step 5's wording mutation killed 3 tests, not one per carrier: the wording is pinned at the shared renderer (`outcome-delivery.test.ts`, both presentations) and the pull carrier; the nudge and foreground carriers call the same renderer.
+- Mutations beyond the plan, each killed: the `turnOutcome` `failed`/`ranTools` mappings (step 4), the relocated foreground `turnBudget` read (step 8, new test), the resume's stored limits (step 7), and the two state tests whose red came only from the missing `setTurnBudget` (step 6).
+- One test expectation I wrote was wrong (step 7): a resume whose second turn answered without tools stays `within`, because the tracker defers the warning past a no-tools turn; the code was right.
+- The `config/` fallow zone may not import `lifecycle/`, which also ruled out sharing `MIN_MAX_TURNS` with the frontmatter loader.
+- Pre-completion reviewer: WARN.
+  Reviewer warnings: a service-spawned agent whose frontmatter sets `max_turns: 1` is raised to 2 with no signal (the spawn note is tool-path only), short of the plan's "warning at every source" goal; also noted, harmless: a warned, completed resume with a question holds its workspace, where `completeRun` would tear a warned run down.
+
 [#1021]: https://github.com/gotgenes/pi-packages/issues/1021
 [#1025]: https://github.com/gotgenes/pi-packages/issues/1025
