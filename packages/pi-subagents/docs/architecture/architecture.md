@@ -261,9 +261,9 @@ stateDiagram-v2
     [*] --> running : spawn (foreground or under limit)
     queued --> running : capacity available
     queued --> stopped : stopQueued() — never started
-    running --> completed : agent finished, including after the turn-limit wrap-up
+    running --> completed : agent finished, including after the turn-budget warning
     running --> error : unhandled exception
-    running --> aborted : harness stop after max turns plus grace turns
+    running --> aborted : harness stop at the turn ceiling
     running --> stopped : abort() called
     completed --> running : resetForResume
     stopped --> running : resetForResume
@@ -282,7 +282,10 @@ stateDiagram-v2
 ```
 
 A steer (`steer_subagent`, `SubagentsService.steer()`) redirects a running agent and changes no status.
-Whether a run reached its turn limit is not a status: `completeRun` records it as the outcome's `turnBudget` (`{ maxTurns, used, phase }`), where `phase` is `warned` once the wrap-up message was sent and `exhausted` when the harness stopped the run — the one case that ends `aborted`.
+The turn budget is not a status either: it is the live `turnBudget` (`{ used, maxTurns, phase }`) the turn loop reports to the record before the first turn and after each turn boundary.
+A `TurnBudgetTracker` (`turn-limits.ts`) counts successful turns and decides when `SubagentSession` warns the child (a context-only custom message once `wrapUpTurns` turns remain, which forces no turn) and when it stops the run (after a ceiling turn that ran tools, or as a turn starts past the ceiling).
+`phase` is `warned` once the warning went out and `exhausted` when the harness stopped the run: the one case `completeRun` and `completeResume` end `aborted`.
+A resume runs a fresh tracker under the initial run's limits.
 
 Note: `markStopped` always succeeds regardless of current status.
 Other terminal transitions guard against overwriting `stopped` — once an agent is stopped, only `resetForResume` can return it to `running`.
@@ -373,7 +376,7 @@ src/
 │   ├── subagent-manager.ts         collection manager + observer wiring + session-retention sweep (consumption-aware; an unanswered question holds the safety cap); the resume choke point, refusing from the record's own predicate and reporting a discriminated outcome, so every front door declines the same resumes; a door that returns before the resumed run ends starts one synchronously, and each resume's caller decides whether its outcome is claimed
 │   ├── create-subagent-session.ts  assembly factory: MCP pattern expansion, Pi built-in selection, session creation, spawn-tool denylist, core child-tool install, binding
 │   ├── subagent-session.ts         born-complete child session: turn loop, steer, shutdown-then-dispose teardown
-│   ├── turn-limits.ts              normalizeMaxTurns (turn-count policy)
+│   ├── turn-limits.ts              turn-budget policy: TurnBudget, the TurnBudgetTracker that decides warnings and stops, normalizeMaxTurns (minimum 2)
 │   ├── subagent.ts                 owns full execution lifecycle (run, resume, abort, steer, wait-until-settled); a teardown with no result text to carry its addendum records it as a notice and announces one produced after delivery; answers why a resume would be refused (resumeRefusal, including a live run), which the resume choke point and every result carrier read rather than re-deriving; reports a resume's start as well as its end; wait-until-settled reports whether the waited run settled, has not, or was replaced by a resume (carrying what it ended with)
 │   ├── subagent-state.ts           lifecycle status + metrics + result-delivery value object (transitions, accumulators, classification predicates); delivery carries a revocable claim per carrier (each releases only its own handle), a one-way consumption latch, and a per-run update ledger that renders only what no announcement delivered; numbers its runs and keeps the outcome of the run the latest resume replaced
 │   ├── run-listeners.ts            per-run observer-unsub and signal-detach handles
@@ -430,8 +433,9 @@ src/
 
 ### Observation model
 
-Record statistics (tool uses, token usage, compaction counts) and live activity (active tools, response text, turn counts) are updated by `record-observer.ts`, which subscribes directly to session events.
-This is the single per-child session subscription — all run state lives on the `Subagent` record.
+Record statistics (tool uses, token usage, compaction counts) and live activity (active tools, response text) are updated by `record-observer.ts`, which subscribes directly to session events.
+The turn budget is the exception: the turn loop owns the count it enforces, and reports each change to the record through its `onTurnBudget` option.
+All run state still lives on the `Subagent` record.
 
 The widget reads agent state by polling the records exposed via `SubagentManager.listAgents()` every 250 ms; that poll loop is driven by the manager's lifecycle notifications (the widget subscribes as a `SubagentManagerObserver` fanned out through `CompositeSubagentObserver`), not by inbound calls from the spawn tools.
 It runs if and only if a subagent is running, since a finished agent's line carries a fixed duration and the queued line is a count, so animating either would ask Pi to re-render its whole component tree for a byte-identical result.
