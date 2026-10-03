@@ -27,3 +27,24 @@ The plan has three steps: a type rename, the `fix:` with tests, and docs.
 #### Deferred tidyings
 
 - `test/handlers/gates/bash-external-directory.test.ts` / `external-directory-policy.test.ts`: duplicated local `makeCheckResult` helpers could lift into `test/helpers/gate-fixtures.ts`.
+
+## Stage: Implementation — TDD (2026-10-03T04:26:38Z)
+
+### Session summary
+
+All three plan steps landed: the `ExternalPathCoverage` rename, the `fix:` (a `sessionCovered` output on the selector, and the gate returning `null` when no session grant covered a path), and the docs.
+The `pi-permission-system` suite went from 5362 to 5370 tests (+8: 4 selector, 2 gate unit, 2 real-resolver).
+
+### Observations
+
+- Each planned killing mutation produced the predicted reds.
+  Dropping the `source === "session"` test killed 8 tests.
+  Deleting the `null` return killed 4.
+  Building `externalPaths` from all accesses killed the mixed-coverage test.
+- The real-resolver session test was already green during Red, as a pin.
+  Making the `null` branch unconditional killed it, along with the two other bypass tests.
+- The first `fix:` commit was rejected by ESLint (`no-unnecessary-condition` / `prefer-nullish-coalescing` on a `Record` lookup in the new selector test).
+  Switching to a `Map` fixed it.
+  That attempt also used `git commit -F -` with a heredoc, which AGENTS.md lists as a permission deny rule; the retry used repeated `-m` arguments.
+- No deviations from the plan.
+- Pre-completion reviewer: PASS.
