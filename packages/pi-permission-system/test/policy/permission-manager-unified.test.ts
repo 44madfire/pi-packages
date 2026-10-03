@@ -835,7 +835,11 @@ describe("checkPermission — rule origin provenance", () => {
 // In-memory PolicyLoader stub tests — no filesystem required
 // ---------------------------------------------------------------------------
 
-import type { PermissionCheckResult, ScopeConfig } from "#src/types";
+import type {
+  PermissionCheckResult,
+  PermissionState,
+  ScopeConfig,
+} from "#src/types";
 
 describe("PermissionManager with in-memory PolicyLoader", () => {
   describe("universal fallback", () => {
@@ -4039,5 +4043,84 @@ describe("a forwarded mcp request resolves its own target", () => {
     const result = serve(["danger_wipe"]);
     expect(result.state).toBe("ask");
     expect(result.target).toBe("danger_wipe");
+  });
+});
+
+describe("check — a bash command evaluated with its spellings", () => {
+  const home = homedir();
+
+  function checkCommand(
+    bash: Record<string, PermissionState>,
+    command: string,
+    spellings: readonly string[],
+    sessionRules?: Ruleset,
+  ): PermissionCheckResult {
+    const manager = createInMemoryManager({
+      global: { permission: { bash } },
+    });
+    return manager.check(
+      { kind: "bash-command", surface: "bash", command, spellings },
+      sessionRules,
+    );
+  }
+
+  it("matches a home-anchored rule through the spelling, reporting the command as typed", () => {
+    const result = checkCommand({ "*": "ask", "~/bin/x": "allow" }, "~/bin/x", [
+      `${home}/bin/x`,
+    ]);
+    expect(result.state).toBe("allow");
+    expect(result.matchedPattern).toBe("~/bin/x");
+    expect(result.command).toBe("~/bin/x");
+  });
+
+  it("matches only the typed text when there are no spellings", () => {
+    const result = checkCommand(
+      { "*": "ask", "~/bin/x": "allow" },
+      "~/bin/x",
+      [],
+    );
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe("*");
+  });
+
+  it("lets rule position decide, not which spelling a rule matched", () => {
+    const result = checkCommand({ "~/bin/x": "allow", "*": "ask" }, "~/bin/x", [
+      `${home}/bin/x`,
+    ]);
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe("*");
+  });
+
+  it("lets a later rule matching only the spelling override an earlier one matching only the typed text", () => {
+    // `?/bin/x` matches the typed `~/bin/x` and not the spelling, so a
+    // first-value-wins evaluation would stop at its allow.
+    const result = checkCommand(
+      { "*": "ask", "?/bin/x": "allow", "~/bin/x": "deny" },
+      "~/bin/x",
+      [`${home}/bin/x`],
+    );
+    expect(result.state).toBe("deny");
+    expect(result.matchedPattern).toBe("~/bin/x");
+  });
+
+  it("reaches a home-anchored deny through the spelling", () => {
+    const result = checkCommand(
+      { "*": "allow", "~/bin/danger *": "deny" },
+      "~/bin/danger --now",
+      [`${home}/bin/danger --now`],
+    );
+    expect(result.state).toBe("deny");
+    expect(result.matchedPattern).toBe("~/bin/danger *");
+  });
+
+  it("matches a session grant recorded for the typed command", () => {
+    const result = checkCommand(
+      { "*": "ask" },
+      "~/bin/x",
+      [`${home}/bin/x`],
+      [sessionRule("bash", "~/bin/x")],
+    );
+    expect(result.state).toBe("allow");
+    expect(result.source).toBe("session");
   });
 });

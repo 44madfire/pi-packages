@@ -38,6 +38,8 @@ export function bashCommandOf(intent: AccessIntent): string | undefined {
       return intent.surface === "bash"
         ? ((intent.input as { command?: string }).command ?? "")
         : undefined;
+    case "bash-command":
+      return intent.command;
     case "access-path":
       return undefined;
     default:
@@ -240,6 +242,8 @@ export function makePathDispatchResolver(
         }
         return defaultResult;
       }
+      case "bash-command":
+        return defaultResult;
       case "access-path": {
         const values = intent.path.matchValues();
         for (const value of values) {

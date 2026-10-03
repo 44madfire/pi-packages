@@ -363,6 +363,13 @@ export function makeHandler(overrides?: {
               intent.agentName,
               sessionRules,
             );
+          case "bash-command":
+            return surfaceCheck(
+              "bash",
+              { command: intent.command },
+              intent.agentName,
+              sessionRules,
+            );
           default:
             return unhandledIntent(intent);
         }

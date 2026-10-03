@@ -1,6 +1,9 @@
 import { join } from "node:path";
 import type { ResolvedAccessIntent } from "#src/access-intent/access-intent";
-import { normalizeInput } from "#src/access-intent/input-normalizer";
+import {
+  normalizeBashCommand,
+  normalizeInput,
+} from "#src/access-intent/input-normalizer";
 import { surfaceFamilyOf } from "#src/access-intent/path-surfaces";
 import { classifyToolKind } from "#src/access-intent/tool-kind";
 import {
@@ -321,9 +324,11 @@ export class PermissionManager implements ScopedPermissionManager {
    * extension surfaces). Path-bearing surfaces arrive as `"path-values"` via
    * the access-path gate (#502) or service/RPC builder (#503).
    * `"path-values"` → evaluates the precomputed values directly.
+   * `"bash-command"` → evaluates a bash command unit and its spellings as
+   * aliases through `normalizeBashCommand`.
    *
    * The manager stays string-based by design: it consumes `ResolvedAccessIntent`
-   * (`tool | path-values`) and never imports `AccessPath`. This deliberate
+   * (`tool | path-values | bash-command`) and never imports `AccessPath`. This deliberate
    * boundary is formalized in ADR-0002
    * (`docs/decisions/0002-path-values-string-boundary.md`) and guarded by a
    * `no-restricted-imports` lint rule on this file.
@@ -352,6 +357,22 @@ export class PermissionManager implements ScopedPermissionManager {
         {},
         intent.surface,
         intent.surface,
+        fullRules,
+        this.flavor,
+      );
+    }
+
+    if (intent.kind === "bash-command") {
+      const { surface, values, resultExtras } = normalizeBashCommand(
+        intent.command,
+        intent.spellings,
+      );
+      return buildCheckResult(
+        surface,
+        values,
+        resultExtras,
+        surface,
+        surface,
         fullRules,
         this.flavor,
       );
