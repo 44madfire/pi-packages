@@ -38,3 +38,16 @@ Tests stayed at 69 (no delta).
 - Pre-completion reviewer: PASS.
   It re-derived the 1.0.0 red/green with its own scratch bump and left the tree clean.
   It noted it did not run `fallow decision-surface` for this test-only diff.
+
+## Stage: Sync (worktree) (2026-10-03T03:13:28Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` passed on the branch.
+The plan's `**Release:**` marker is `ship independently`, but the change is test-only, so `/ship` should find nothing to release for this package.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1005--/2026-10-03T02-04-57-400Z_01a0ff81-e2b7-7202-ab59-2b32eb0209ac.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- No deferred work or follow-ups; the sibling fixture issue #1004 (`pi-subagents`) is separate.
