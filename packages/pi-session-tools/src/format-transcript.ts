@@ -108,10 +108,7 @@ function buildToolResultMap(
 ): Map<string, ToolResultInfo> {
   const map = new Map<string, ToolResultInfo>();
   for (const entry of entries) {
-    if (entry.type !== "message") continue;
-    const msg = (entry as unknown as Record<string, unknown>).message as
-      | Record<string, unknown>
-      | undefined;
+    const msg = messageOf(entry);
     if (msg?.role !== "toolResult") continue;
     const toolCallId = typeof msg.toolCallId === "string" ? msg.toolCallId : "";
     if (!toolCallId) continue;
@@ -127,20 +124,33 @@ function buildToolResultMap(
 function collectAssistantToolCallIds(entries: TranscriptEntry[]): Set<string> {
   const ids = new Set<string>();
   for (const entry of entries) {
-    if (entry.type !== "message") continue;
-    const msg = (entry as unknown as Record<string, unknown>).message as
-      | Record<string, unknown>
-      | undefined;
+    const msg = messageOf(entry);
     if (msg?.role !== "assistant") continue;
-    const content = msg.content;
-    if (!Array.isArray(content)) continue;
-    for (const part of content) {
-      if (typeof part !== "object" || part === null) continue;
-      const p = part as Record<string, unknown>;
-      if (p.type === "toolCall" && typeof p.id === "string") {
-        ids.add(p.id);
-      }
-    }
+    for (const id of toolCallIdsOf(msg)) ids.add(id);
+  }
+  return ids;
+}
+
+/** The message a `message` entry carries, or `undefined` for any other entry. */
+function messageOf(
+  entry: TranscriptEntry,
+): Record<string, unknown> | undefined {
+  if (entry.type !== "message") return undefined;
+  const message = (entry as unknown as Record<string, unknown>).message;
+  return typeof message === "object" && message !== null
+    ? (message as Record<string, unknown>)
+    : undefined;
+}
+
+/** The ids of the `toolCall` parts in a message's content array. */
+function toolCallIdsOf(message: Record<string, unknown>): string[] {
+  const content = message.content;
+  if (!Array.isArray(content)) return [];
+  const ids: string[] = [];
+  for (const part of content) {
+    if (typeof part !== "object" || part === null) continue;
+    const p = part as Record<string, unknown>;
+    if (p.type === "toolCall" && typeof p.id === "string") ids.push(p.id);
   }
   return ids;
 }
@@ -283,10 +293,8 @@ export function formatTranscript(
       continue;
     }
 
-    const message = (entry as unknown as Record<string, unknown>).message as
-      | Record<string, unknown>
-      | undefined;
-    if (!message || typeof message !== "object") continue;
+    const message = messageOf(entry);
+    if (!message) continue;
 
     const role = message.role;
 
