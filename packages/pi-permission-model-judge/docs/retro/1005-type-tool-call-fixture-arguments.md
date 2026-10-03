@@ -21,3 +21,20 @@ A reverted spike (scratch bump to Pi 1.0.0) measured the result: `tsc` is clean 
 - The Tidy-First assessor recommended no preparatory commits.
   It rejected `Parameters<typeof assistantToolCall>[0]` and a shared alias as indirection over two uses.
 - Test-only `test:` commit, so `next-version.sh` should print nothing for this package at ship time.
+
+## Stage: Implementation — TDD (2026-10-03T02:42:25Z)
+
+### Session summary
+
+Completed the plan's single TDD cycle, `test(pi-permission-model-judge): type tool-call fixture arguments as ToolCall["arguments"] (#1005)`.
+Red and green ran under a scratch bump to Pi 1.0.0, which was then reverted.
+Tests stayed at 69 (no delta).
+
+### Observations
+
+- Killing mutation confirmed: reverting `completeReporting` to `Record<string, unknown>` reports `TS2345` at `model-review.test.ts(33,46)`.
+  The plan says line 29, but `pi-autoformat` reflowed the three-name import onto multiple lines.
+- After the revert: `pi-ai` back at 0.84.4, `check` clean, 69 tests passed, and `git status` listed only the two test files.
+- Pre-completion reviewer: PASS.
+  It re-derived the 1.0.0 red/green with its own scratch bump and left the tree clean.
+  It noted it did not run `fallow decision-surface` for this test-only diff.
