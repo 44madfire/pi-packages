@@ -48,3 +48,16 @@ The `pi-permission-system` suite went from 5362 to 5370 tests (+8: 4 selector, 2
   That attempt also used `git commit -F -` with a heredoc, which AGENTS.md lists as a permission deny rule; the retry used repeated `-m` arguments.
 - No deviations from the plan.
 - Pre-completion reviewer: PASS.
+
+## Stage: Sync (worktree) (2026-10-03T04:35:19Z)
+
+### Session summary
+
+Root `pnpm run lint` and `pnpm fallow dead-code` both passed before the rebase.
+The plan's marker is `**Release:** ship independently`; the `fix:` commit carries the reporter's `Co-authored-by:` trailer, and no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1011--/2026-10-03T03-51-45-770Z_01a0ffe3-ab6a-713d-b07b-e833d5798c43.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+Nothing new beyond the TDD stage note.
