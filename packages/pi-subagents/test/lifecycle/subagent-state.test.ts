@@ -13,7 +13,6 @@ const ALL_STATUSES: SubagentStatus[] = [
 	"queued",
 	"running",
 	"completed",
-	"steered",
 	"aborted",
 	"stopped",
 	"error",
@@ -165,24 +164,6 @@ describe("SubagentState — markAborted", () => {
 		state.markAborted("partial", 2000);
 		expect(state.status).toBe("stopped");
 		expect(state.result).toBe("partial");
-		expect(state.completedAt).toBe(500);
-	});
-});
-
-describe("SubagentState — markSteered", () => {
-	it("sets status to 'steered' with result and completedAt", () => {
-		const state = new SubagentState({ status: "running" });
-		state.markSteered("redirected", 4000);
-		expect(state.status).toBe("steered");
-		expect(state.result).toBe("redirected");
-		expect(state.completedAt).toBe(4000);
-	});
-
-	it("preserves status when already stopped, but still sets result", () => {
-		const state = new SubagentState({ status: "stopped", completedAt: 500 });
-		state.markSteered("redirected", 2000);
-		expect(state.status).toBe("stopped");
-		expect(state.result).toBe("redirected");
 		expect(state.completedAt).toBe(500);
 	});
 });

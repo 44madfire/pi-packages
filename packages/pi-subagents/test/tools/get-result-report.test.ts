@@ -173,12 +173,6 @@ describe("formatAgentReport", () => {
 		expect(text).toContain("Half of the inv");
 	});
 
-	it("names a turn-limit wrap-up", () => {
-		expect(formatAgentReport(makeReport({ status: "steered" }))).toContain(
-			"wrapped up \u2014 reached turn limit",
-		);
-	});
-
 	it("names a turn-limit wrap-up on a completed run the harness warned", () => {
 		const report = makeReport({ status: "completed", turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
 		expect(formatAgentReport(report)).toContain("Status: completed (wrapped up \u2014 reached turn limit) |");

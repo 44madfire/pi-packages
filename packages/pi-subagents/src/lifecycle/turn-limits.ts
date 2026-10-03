@@ -29,8 +29,6 @@ export interface TurnBudget {
  * Takes the two fields it reads, so any outcome-shaped object satisfies it.
  */
 export function wrappedUpAtTurnLimit(outcome: { status: string; turnBudget?: TurnBudget }): boolean {
-  // The legacy status carries the same fact until it is retired.
-  if (outcome.status === "steered") return true;
   return outcome.status === "completed" && outcome.turnBudget?.phase === "warned";
 }
 

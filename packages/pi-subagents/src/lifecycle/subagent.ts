@@ -14,7 +14,7 @@ import type { ParentSnapshot } from "#src/lifecycle/parent-snapshot";
 import { RunListeners } from "#src/lifecycle/run-listeners";
 import type { SubagentSession, TurnLoopResult } from "#src/lifecycle/subagent-session";
 import { type CarrierClaim, type SettledOutcome, SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
-import type { TurnBudget } from "#src/lifecycle/turn-limits";
+import { type TurnBudget, wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limits";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { WorkspaceBracket } from "#src/lifecycle/workspace-bracket";
@@ -589,14 +589,6 @@ export class Subagent {
 	}
 
 	/**
-	 * Transition to steered state.
-	 * Always sets result and completedAt (??=). Only changes status if not stopped.
-	 */
-	markSteered(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
-		this.state.markSteered(result, completedAt, turnBudget);
-	}
-
-	/**
 	 * Transition to error state.
 	 * Always sets error (formatted) and completedAt (??=). Only changes status if not stopped.
 	 */
@@ -692,23 +684,25 @@ export class Subagent {
 	completeRun(result: TurnLoopResult): void {
 		this.listeners.release();
 
-		const finalStatus: SubagentStatus = result.aborted
-			? "aborted"
-			: result.steered
-				? "steered"
-				: "completed";
+		// The harness ending the run at its turn limit is the one way a run that
+		// returned is not complete.
+		const exhausted = result.turnBudget?.phase === "exhausted";
+		const finalStatus: SubagentStatus = exhausted ? "aborted" : "completed";
 		// A completed child that declared a question is inviting a resume, so its
 		// workspace stays live for the resume to re-enter. Every other outcome ends
-		// the run for good and tears it down here. The question was recorded by
-		// ask_parent during the run, so it is already on the record here.
-		const holdForResume = finalStatus === "completed" && this.pendingQuestion !== undefined;
+		// the run for good and tears it down here, including a run that wrapped up
+		// at its turn limit. The question was recorded by ask_parent during the
+		// run, so it is already on the record here.
+		const holdForResume =
+			finalStatus === "completed" &&
+			this.pendingQuestion !== undefined &&
+			!wrappedUpAtTurnLimit({ status: finalStatus, turnBudget: result.turnBudget });
 		const finalResult = holdForResume
 			? result.responseText
 			: result.responseText +
 				this.workspaceBracket.dispose({ status: finalStatus, description: this.description });
 
-		if (result.aborted) this.markAborted(finalResult, undefined, result.turnBudget);
-		else if (result.steered) this.markSteered(finalResult, undefined, result.turnBudget);
+		if (exhausted) this.markAborted(finalResult, undefined, result.turnBudget);
 		else this.markCompleted(finalResult, undefined, result.turnBudget);
 
 		this.execution.observer?.onRunFinished?.(this);
@@ -759,7 +753,7 @@ export class Subagent {
 	 *
 	 * Every carrier renders a pending question as "answer by resuming me", which
 	 * is not the right next action after a failure — and the failure text already
-	 * tells the parent to look. An aborted or steered run keeps its question:
+	 * tells the parent to look. An aborted run keeps its question:
 	 * those reached a terminal transition with an outcome to report.
 	 */
 	private clearPendingQuestion(): void {

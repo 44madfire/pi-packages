@@ -24,16 +24,11 @@ function makeOutcome(overrides: Partial<OutcomeBody> = {}): OutcomeBody {
 }
 
 describe("status vocabulary", () => {
-	// One row, spelled out, before the table below generalizes it.
-	it("renders a steered agent in both presentations from the same meaning", () => {
-		expect(renderStatusLabel({ status: "steered" })).toBe("Wrapped up (reached turn limit)");
-		expect(renderStatusNote({ status: "steered" })).toBe(" (wrapped up \u2014 reached turn limit)");
-	});
-
 	const warned: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
 	const exhausted: TurnBudget = { maxTurns: 2, used: 7, phase: "exhausted" };
 
-	it("renders a completed run the harness warned as wrapped up", () => {
+	// One case, spelled out, before the status table below generalizes the rest.
+	it("renders a completed run the harness warned as wrapped up, in both presentations", () => {
 		expect(renderStatusLabel({ status: "completed", turnBudget: warned })).toBe("Wrapped up (reached turn limit)");
 		expect(renderStatusNote({ status: "completed", turnBudget: warned })).toBe(
 			" (wrapped up \u2014 reached turn limit)",
@@ -57,11 +52,6 @@ describe("status vocabulary", () => {
 			status: "aborted",
 			label: "Aborted (max turns exceeded, output may be incomplete)",
 			note: " (aborted \u2014 max turns exceeded, output may be incomplete)",
-		},
-		{
-			status: "steered",
-			label: "Wrapped up (reached turn limit)",
-			note: " (wrapped up \u2014 reached turn limit)",
 		},
 		{ status: "stopped", label: "Stopped (user request)", note: " (stopped \u2014 user request)" },
 		{ status: "completed", label: "Done", note: "" },

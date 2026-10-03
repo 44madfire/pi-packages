@@ -195,7 +195,6 @@ describe("renderGetResultLines", () => {
 	describe("status glyphs", () => {
 		const cases: ReadonlyArray<[SubagentStatus, string]> = [
 			["completed", "[success:✓]"],
-			["steered", "[warning:✓]"],
 			["stopped", "[dim:■]"],
 			["error", "[error:✗]"],
 			["aborted", "[error:✗]"],

@@ -294,7 +294,7 @@ describe("NotificationManager", () => {
     let askParent: ((question: string) => void) | undefined;
     stub.runTurnLoop.mockImplementation(() => {
       askParent?.("Which config?");
-      return Promise.resolve(turnLoopResult({ responseText: "Got partway.", aborted: true }));
+      return Promise.resolve(turnLoopResult({ responseText: "Got partway.", aborted: true, turnBudget: { maxTurns: 2, used: 7, phase: "exhausted" } }));
     });
     const disposed = createTestSubagent({
       id: "agent-3",

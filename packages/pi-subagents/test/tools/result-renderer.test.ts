@@ -160,11 +160,6 @@ describe("renderCompleted", () => {
 		expect(renderCompleted(details, "", false, theme)).toContain("[success:\u2713]");
 	});
 
-	it("uses warning icon for steered status", () => {
-		const details = makeDetails({ status: "steered", durationMs: 2000 });
-		expect(renderCompleted(details, "", false, theme)).toContain("[warning:\u2713]");
-	});
-
 	it("uses warning icon for a completed run the harness warned", () => {
 		const details = makeDetails({ status: "completed", durationMs: 2000, turnBudget: WARNED });
 		expect(renderCompleted(details, "", false, theme)).toContain("[warning:\u2713]");
@@ -178,13 +173,6 @@ describe("renderCompleted", () => {
 	it("collapsed view shows 'Done' for completed", () => {
 		const details = makeDetails({ status: "completed", durationMs: 2000 });
 		expect(renderCompleted(details, "", false, theme)).toContain("[dim:  \u23BF  Done]");
-	});
-
-	it("collapsed view shows 'Wrapped up (turn limit)' for steered", () => {
-		const details = makeDetails({ status: "steered", durationMs: 2000 });
-		expect(renderCompleted(details, "", false, theme)).toContain(
-			"[dim:  \u23BF  Wrapped up (turn limit)]",
-		);
 	});
 
 	it("collapsed view shows 'Wrapped up (turn limit)' for a completed run the harness warned", () => {
@@ -289,8 +277,8 @@ describe("renderAgentResult", () => {
 		expect(renderAgentResult(details, "", false, false, theme)).toContain("[success:\u2713]");
 	});
 
-	it("dispatches to renderCompleted for steered status", () => {
-		const details = makeDetails({ status: "steered", durationMs: 1000 });
+	it("dispatches to renderCompleted for a completed run the harness warned", () => {
+		const details = makeDetails({ status: "completed", durationMs: 1000, turnBudget: WARNED });
 		expect(renderAgentResult(details, "", false, false, theme)).toContain("[warning:\u2713]");
 	});
 
@@ -317,7 +305,6 @@ describe("renderStatusIcon", () => {
 
 	const cases: ReadonlyArray<[SubagentStatus, string]> = [
 		["completed", "[success:\u2713]"],
-		["steered", "[warning:\u2713]"],
 		["stopped", "[dim:\u25A0]"],
 		["error", "[error:\u2717]"],
 		["aborted", "[error:\u2717]"],
@@ -331,6 +318,6 @@ describe("renderStatusIcon", () => {
 
 	it("gives every status a distinct rendering except the two failure statuses", () => {
 		const rendered = cases.map(([status]) => renderStatusIcon(status, theme));
-		expect(new Set(rendered).size).toBe(6);
+		expect(new Set(rendered).size).toBe(5);
 	});
 });

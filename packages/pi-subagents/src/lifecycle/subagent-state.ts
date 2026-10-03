@@ -26,7 +26,6 @@ export type SubagentStatus =
 	| "queued"
 	| "running"
 	| "completed"
-	| "steered"
 	| "aborted"
 	| "stopped"
 	| "error";
@@ -64,7 +63,7 @@ export function isActiveStatus(status: SubagentStatus): boolean {
 	return status === "running" || status === "queued";
 }
 
-/** Terminated by error, abort, or external stop (excludes the successful `steered`). */
+/** Terminated by error, harness turn-limit abort, or external stop. */
 export function isTerminalErrorStatus(status: SubagentStatus): boolean {
 	return status === "error" || status === "stopped" || status === "aborted";
 }
@@ -238,7 +237,7 @@ export class SubagentState {
 		return isActiveStatus(this._status);
 	}
 
-	/** Terminated by error, abort, or external stop (excludes `steered`). */
+	/** Terminated by error, harness turn-limit abort, or external stop. */
 	isTerminalError(): boolean {
 		return isTerminalErrorStatus(this._status);
 	}
@@ -343,19 +342,6 @@ export class SubagentState {
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "aborted";
-		}
-	}
-
-	/**
-	 * Transition to steered state.
-	 * Always sets result and completedAt (??=). Only changes status if not stopped.
-	 */
-	markSteered(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
-		this._result = result;
-		this._turnBudget = turnBudget;
-		this._completedAt ??= completedAt ?? Date.now();
-		if (this._status !== "stopped") {
-			this._status = "steered";
 		}
 	}
 

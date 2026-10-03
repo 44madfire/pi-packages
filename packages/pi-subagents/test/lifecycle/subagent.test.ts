@@ -3,6 +3,7 @@ import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent
 import { Subagent, type SubagentExecution, type SubagentLifecycleObserver } from "#src/lifecycle/subagent";
 import { SubagentSession, type TurnLoopResult } from "#src/lifecycle/subagent-session";
 import { SubagentState, type SubagentStateInit } from "#src/lifecycle/subagent-state";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { WorkspacePrepareContext, WorkspaceProvider } from "#src/lifecycle/workspace";
 import type { RunConfig } from "#src/runtime";
 import type { CompactionInfo, SubagentType } from "#src/types";
@@ -13,6 +14,9 @@ import { createMockSession, createSubagentSessionStub, emitResumeUsageAndCompact
 import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
 import { createChildLifecycleMock } from "#test/helpers/subagent-session-io";
 import { turnLoopResult } from "#test/helpers/turn-loop-result";
+
+const WARNED: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
+const EXHAUSTED: TurnBudget = { maxTurns: 2, used: 7, phase: "exhausted" };
 
 type SessionFactory = (params: CreateSubagentSessionParams) => Promise<SubagentSession>;
 
@@ -395,16 +399,19 @@ describe("Subagent — completeRun", () => {
 		expect(record.result).toBe("done");
 	});
 
-	it("transitions to aborted when result.aborted is true", () => {
+	it("transitions to aborted, a terminal error, when the harness exhausted the turn budget", () => {
 		const { record } = createCompletionAgent();
-		record.completeRun(turnLoopResult({ aborted: true }));
+		record.completeRun(turnLoopResult({ aborted: true, turnBudget: EXHAUSTED }));
 		expect(record.status).toBe("aborted");
+		expect(record.isTerminalError()).toBe(true);
 	});
 
-	it("transitions to steered when result.steered is true", () => {
+	it("transitions to completed, not a terminal error, when the run wrapped up at its turn limit", () => {
 		const { record } = createCompletionAgent();
-		record.completeRun(turnLoopResult({ steered: true }));
-		expect(record.status).toBe("steered");
+		record.completeRun(turnLoopResult({ steered: true, turnBudget: WARNED }));
+		expect(record.status).toBe("completed");
+		expect(record.isTerminalError()).toBe(false);
+		expect(record.turnBudget).toEqual(WARNED);
 	});
 
 	it("records the turn loop's budget on the agent", () => {
@@ -917,19 +924,22 @@ describe("Subagent — workspace hold for a declared question", () => {
 			responseText: "",
 			question: "Still stuck?",
 			aborted: true,
+			turnBudget: EXHAUSTED,
 		});
 		expect(workspace.dispose).toHaveBeenCalledWith({ status: "aborted", description: "run test" });
 		expect(agent.pendingQuestion).toBe("Still stuck?");
 		expect(agent.result).toBe(ADDENDUM);
 	});
 
-	it("disposes a steered run that declared a question", async () => {
+	it("disposes a run that wrapped up at its turn limit and declared a question", async () => {
 		const { agent, workspace } = await runWithWorkspace({
 			responseText: "Partway.",
 			question: "Which one?",
 			steered: true,
+			turnBudget: WARNED,
 		});
-		expect(workspace.dispose).toHaveBeenCalledWith({ status: "steered", description: "run test" });
+		expect(agent.status).toBe("completed");
+		expect(workspace.dispose).toHaveBeenCalledWith({ status: "completed", description: "run test" });
 		expect(agent.result).toBe(`Partway.${ADDENDUM}`);
 	});
 });
@@ -1613,6 +1623,7 @@ describe("Subagent — ask-back", () => {
 			responseText: "",
 			question: "Still stuck on which?",
 			aborted: true,
+			turnBudget: EXHAUSTED,
 		});
 
 		expect(agent.status).toBe("aborted");

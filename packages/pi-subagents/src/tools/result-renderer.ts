@@ -24,7 +24,7 @@ export function renderAgentResult(
 ): string {
 	if (isPartial || details.status === "running") return renderRunning(details, theme);
 	if (details.status === "background") return renderBackground(details, theme);
-	if (details.status === "completed" || details.status === "steered")
+	if (details.status === "completed")
 		return renderCompleted(details, resultText, expanded, theme);
 	if (details.status === "stopped") return renderStopped(details, theme);
 	return renderFailed(details, theme);
@@ -46,7 +46,7 @@ export function renderBackground(details: AgentDetails, theme: Theme): string {
 	return theme.fg("dim", `  ${GLYPHS.subLine}  Running in background (ID: ${details.agentId})`);
 }
 
-/** Render completed or steered status with optional expanded result text. */
+/** Render completed status, with a turn-limit caveat when it wrapped up, and optional expanded result text. */
 export function renderCompleted(
 	details: AgentDetails,
 	resultText: string,
@@ -137,8 +137,6 @@ export function renderStatusIcon(status: SubagentStatus, theme: Theme): string {
 	switch (status) {
 		case "completed":
 			return theme.fg("success", GLYPHS.success);
-		case "steered":
-			return theme.fg("warning", GLYPHS.success);
 		case "stopped":
 			return theme.fg("dim", GLYPHS.stopped);
 		case "error":

@@ -61,14 +61,6 @@ describe("resolveStatusPresentation", () => {
     });
   });
 
-  it("resolves steered status to completed (wrapped up)", () => {
-    expect(resolveStatusPresentation({ status: "steered" })).toEqual({
-      iconGlyph: "✓",
-      iconStyle: "success",
-      statusText: "completed (wrapped up)",
-    });
-  });
-
   it("resolves error status", () => {
     expect(resolveStatusPresentation({ status: "error" })).toEqual({
       iconGlyph: "✗",
