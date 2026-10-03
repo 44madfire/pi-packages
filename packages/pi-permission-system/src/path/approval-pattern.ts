@@ -21,6 +21,11 @@ export function deriveApprovalPattern(
   pathValue: string,
   flavor: PathFlavor,
 ): string {
+  return parentScopePattern(pathValue, flavor);
+}
+
+/** The value's enclosing directory scope (up to its last separator) plus `*`. */
+function parentScopePattern(pathValue: string, flavor: PathFlavor): string {
   const lastSeparator = flavor.lastSeparatorIndex(pathValue);
   if (lastSeparator < 0) return `.${flavor.impl.sep}*`;
   return `${pathValue.slice(0, lastSeparator + 1)}*`;
