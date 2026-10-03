@@ -27,10 +27,6 @@ import type { SessionMessage, ThinkingLevel } from "#src/types";
 /** Outcome of one turn loop. */
 export interface TurnLoopResult {
   responseText: string;
-  /** True if the agent was hard-aborted (max turns + grace exceeded). */
-  aborted: boolean;
-  /** True if the agent was steered to wrap up (soft turn limit) but finished in time. */
-  steered: boolean;
   /** The run's turn limit and its use; absent when no limit resolved. */
   turnBudget?: TurnBudget;
 }
@@ -145,14 +141,16 @@ export class SubagentSession {
       ? this.meta.parentContext + prompt
       : prompt;
 
+    let turnBudget: TurnBudget | undefined;
     try {
       await session.prompt(effectivePrompt);
       failIfProviderErrored(this.turnFailure.getFailure());
+      turnBudget =
+        maxTurns == null ? undefined : buildTurnBudget(maxTurns, turnCount, softLimitReached, aborted);
       this.meta.lifecycle.completed({
         sessionDir: this.meta.sessionDir,
         agentName: this.meta.agentName,
-        aborted,
-        steered: softLimitReached,
+        turnBudget,
       });
     } finally {
       unsubTurns();
@@ -161,9 +159,7 @@ export class SubagentSession {
     }
 
     const responseText = collector.getText().trim() || getLastAssistantText(session);
-    const turnBudget =
-      maxTurns == null ? undefined : buildTurnBudget(maxTurns, turnCount, softLimitReached, aborted);
-    return { responseText, aborted, steered: softLimitReached, turnBudget };
+    return { responseText, turnBudget };
   }
 
   /** Re-prompt the same session (resume); does not emit `completed`. */

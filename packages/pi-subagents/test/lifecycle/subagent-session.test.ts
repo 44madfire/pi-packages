@@ -261,8 +261,7 @@ describe("SubagentSession — runTurnLoop turn limits", () => {
     const result = await sub.runTurnLoop("go", { maxTurns: 2, graceTurns: 1 });
     expect(session.steer).toHaveBeenCalledWith(expect.stringContaining("turn limit"));
     expect(session.abort).toHaveBeenCalled();
-    expect(result.aborted).toBe(true);
-    expect(result.steered).toBe(true);
+    expect(result.turnBudget?.phase).toBe("exhausted");
   });
 
   it("graceTurns extends the window so a finishing agent is not aborted", async () => {
@@ -270,8 +269,7 @@ describe("SubagentSession — runTurnLoop turn limits", () => {
     programTurns(session, listeners, 3);
     const { sub } = makeSubagentSession(session);
     const result = await sub.runTurnLoop("go", { maxTurns: 1, graceTurns: 3 });
-    expect(result.steered).toBe(true);
-    expect(result.aborted).toBe(false);
+    expect(result.turnBudget?.phase).toBe("warned");
     expect(session.abort).not.toHaveBeenCalled();
   });
 
@@ -290,7 +288,7 @@ describe("SubagentSession — runTurnLoop turn limits", () => {
     const { sub } = makeSubagentSession(session, { agentMaxTurns: 1 });
     const result = await sub.runTurnLoop("go", { defaultMaxTurns: 9 });
     expect(session.steer).toHaveBeenCalledWith(expect.stringContaining("turn limit"));
-    expect(result.steered).toBe(true);
+    expect(result.turnBudget?.phase).toBe("warned");
   });
 
   it("falls back to defaultMaxTurns when neither per-call nor agentMaxTurns is set", async () => {
@@ -299,7 +297,7 @@ describe("SubagentSession — runTurnLoop turn limits", () => {
     const { sub } = makeSubagentSession(session);
     const result = await sub.runTurnLoop("go", { defaultMaxTurns: 1, graceTurns: 5 });
     expect(session.steer).toHaveBeenCalledWith(expect.stringContaining("turn limit"));
-    expect(result.steered).toBe(true);
+    expect(result.turnBudget?.phase).toBe("warned");
   });
 });
 
@@ -373,6 +371,18 @@ describe("SubagentSession — runTurnLoop lifecycle events", () => {
     expect(lifecycle.completed).toHaveBeenCalledWith(
       childCompletedEvent({ sessionDir: "/d", agentName: "Explore" }),
     );
+  });
+
+  it("emits completed with the run's turn budget and no turn-limit flags", async () => {
+    const { session, listeners } = createSession("done");
+    programTurns(session, listeners, 3);
+    const { sub } = makeSubagentSession(session, { sessionDir: "/d", agentName: "Explore", lifecycle });
+    await sub.runTurnLoop("go", { maxTurns: 2, graceTurns: 5 });
+    expect(lifecycle.completed).toHaveBeenCalledWith({
+      sessionDir: "/d",
+      agentName: "Explore",
+      turnBudget: { maxTurns: 2, used: 3, phase: "warned" },
+    });
   });
 
   it("releases its turn-outcome subscription on dispose", async () => {

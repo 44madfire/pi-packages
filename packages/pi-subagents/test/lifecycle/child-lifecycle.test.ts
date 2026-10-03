@@ -50,7 +50,7 @@ describe("createChildLifecyclePublisher", () => {
   it("emits subagents:child:completed with the run outcome", () => {
     const { emit, publisher } = setup();
 
-    const event = childCompletedEvent({ sessionDir: "/sessions/child-abc", steered: true });
+    const event = childCompletedEvent({ sessionDir: "/sessions/child-abc", turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
     publisher.completed(event);
 
     expect(emit).toHaveBeenCalledOnce();

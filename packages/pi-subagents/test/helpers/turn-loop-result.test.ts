@@ -2,35 +2,27 @@ import { describe, expect, it } from "vitest";
 import { childCompletedEvent, turnLoopResult } from "./turn-loop-result";
 
 describe("turnLoopResult", () => {
-	it("describes a run with no turn-limit intervention by default", () => {
-		expect(turnLoopResult()).toEqual({ responseText: "done", aborted: false, steered: false });
+	it("describes a run with no turn limit by default", () => {
+		expect(turnLoopResult()).toEqual({ responseText: "done" });
 	});
 
 	it("applies overrides while keeping other defaults", () => {
-		expect(turnLoopResult({ responseText: "partial", aborted: true })).toEqual({
-			responseText: "partial",
-			aborted: true,
-			steered: false,
+		expect(turnLoopResult({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } })).toEqual({
+			responseText: "done",
+			turnBudget: { maxTurns: 2, used: 3, phase: "warned" },
 		});
 	});
 });
 
 describe("childCompletedEvent", () => {
-	it("describes a run with no turn-limit intervention by default", () => {
-		expect(childCompletedEvent()).toEqual({
-			sessionDir: "/sessions/child",
-			agentName: "Explore",
-			aborted: false,
-			steered: false,
-		});
+	it("describes a run with no turn limit by default", () => {
+		expect(childCompletedEvent()).toEqual({ sessionDir: "/sessions/child", agentName: "Explore" });
 	});
 
 	it("applies overrides while keeping other defaults", () => {
-		expect(childCompletedEvent({ agentName: "Plan", steered: true })).toEqual({
+		expect(childCompletedEvent({ agentName: "Plan" })).toEqual({
 			sessionDir: "/sessions/child",
 			agentName: "Plan",
-			aborted: false,
-			steered: true,
 		});
 	});
 });
