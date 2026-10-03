@@ -638,3 +638,26 @@ describe("SubagentsServiceAdapter — registerWorkspaceProvider", () => {
     expect(result).toBe(disposer);
   });
 });
+
+describe("SubagentsServiceAdapter — alias reload hook", () => {
+  it("re-reads aliases from disk on spawn when hooks are provided", () => {
+    const reloadAliases = vi.fn();
+    const svc = new SubagentsServiceAdapter(
+      createManagerStub(),
+      () => makeModel({ id: "claude-sonnet", provider: "anthropic" }),
+      makeRuntimeStub(),
+      { reloadAliases },
+    );
+    svc.spawn("Explore", "check TODOs");
+    expect(reloadAliases).toHaveBeenCalledTimes(1);
+  });
+
+  it("spawns without hooks when none are provided", () => {
+    const svc = new SubagentsServiceAdapter(
+      createManagerStub(),
+      () => makeModel({ id: "claude-sonnet", provider: "anthropic" }),
+      makeRuntimeStub(),
+    );
+    expect(() => svc.spawn("Explore", "check TODOs")).not.toThrow();
+  });
+});

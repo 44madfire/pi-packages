@@ -332,3 +332,54 @@ describe("modelAliases", () => {
     expect(resolveModel("haiku", makeRegistry())).toEqual(MODELS[2]);
   });
 });
+
+describe("alias-originated failures (never inherit silently)", () => {
+  const parent = MODELS[3];
+  const broken = { max: "nope/nonexistent-model" };
+
+  it("frontmatter alias with unresolvable target surfaces an error", () => {
+    const result = resolveInvocationModel(parent, "max", false, makeRegistry(), broken);
+    expect(result.model).toBeUndefined();
+    expect(result.error).toContain('alias "max"');
+  });
+
+  it("param alias with unresolvable target surfaces an error", () => {
+    const result = resolveInvocationModel(parent, "max", true, makeRegistry(), broken);
+    expect(result.model).toBeUndefined();
+    expect(result.error).toContain("nope/nonexistent-model");
+  });
+
+  it("non-alias frontmatter typo keeps legacy silent inherit", () => {
+    const result = resolveInvocationModel(parent, "zzz-no-such-model", false, makeRegistry(), broken);
+    expect(result).toEqual({ model: parent });
+  });
+
+  it("alias matching is case-insensitive", () => {
+    const result = resolveInvocationModel(parent, "MAX", false, makeRegistry(), broken);
+    expect(result.model).toBeUndefined();
+    expect(result.error).toBeDefined();
+  });
+});
+
+describe("alias chain depth vs cycle", () => {
+  const fiveHop = { a: "b", b: "c", c: "d", d: "e", e: "anthropic/claude-opus-4-6" };
+  const sixHop = { ...fiveHop, e: "f", f: "anthropic/claude-opus-4-6" };
+
+  it("a valid exactly-5-hop chain resolves", () => {
+    expect(resolveModel("a", makeRegistry(), fiveHop)).toEqual(MODELS[0]);
+  });
+
+  it("a 6-hop chain reports depth exhaustion, not a cycle", () => {
+    const result = resolveModel("a", makeRegistry(), sixHop);
+    expect(typeof result === "string").toBe(true);
+    expect(result as string).toContain("exceeds");
+    expect(result as string).not.toContain("cycle");
+  });
+
+  it("a genuine cycle names the loop", () => {
+    const result = resolveModel("a", makeRegistry(), { a: "b", b: "a" });
+    expect(typeof result === "string").toBe(true);
+    expect(result as string).toContain("cycle detected");
+    expect(result as string).toContain("a → b → a");
+  });
+});

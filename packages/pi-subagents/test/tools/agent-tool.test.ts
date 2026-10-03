@@ -473,3 +473,30 @@ describe("AgentTool — foreground execution", () => {
 		expect(result.content[0].text).toContain("Agent ID: agent-1");
 	});
 });
+
+describe("AgentTool — alias reload door", () => {
+	it("re-reads aliases from disk before resolving the spawn", async () => {
+		const deps = createToolDeps();
+		const reload = vi.fn();
+		deps.settings = { ...deps.settings, reloadModelAliases: reload };
+		await execute(deps, {
+			prompt: "test",
+			description: "test",
+			subagent_type: "general-purpose",
+			model: "nonexistent-model-xyz",
+		});
+		expect(reload).toHaveBeenCalledTimes(1);
+	});
+
+	it("works when the host provides no reload hook", async () => {
+		const deps = createToolDeps();
+		expect("reloadModelAliases" in deps.settings).toBe(false);
+		const result = await execute(deps, {
+			prompt: "test",
+			description: "test",
+			subagent_type: "general-purpose",
+			model: "nonexistent-model-xyz",
+		});
+		expect(result.content[0].text).toContain("nonexistent-model-xyz");
+	});
+});

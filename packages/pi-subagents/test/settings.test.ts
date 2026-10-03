@@ -1154,3 +1154,108 @@ describe("modelAliases", () => {
     }
   });
 });
+
+describe("modelAliases explicit clear + live reload", () => {
+  it("explicit project {} clears global aliases", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      dirs.writeProject({ modelAliases: {} });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({ modelAliases: {} });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("garbage project map does not clear global aliases", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      dirs.writeProject({ modelAliases: { bad: 42 } });
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual({
+        modelAliases: { fast: "a/b" },
+      });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("saveSettings preserves an explicit {} clear across an unrelated edit", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      dirs.writeProject({ modelAliases: {} });
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      mgr.load();
+      expect(mgr.modelAliases).toEqual({});
+      mgr.applyGraceTurns(7);
+      expect(loadSettings(dirs.globalDir, dirs.projectDir)).toEqual(
+        expect.objectContaining({ modelAliases: {}, graceTurns: 7 }),
+      );
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("saveSettings preserves hand-edited aliases across an unrelated edit", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeProject({ modelAliases: { fast: "a/b" } });
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      mgr.load();
+      mgr.applyGraceTurns(7);
+      expect(loadSettings(dirs.globalDir, dirs.projectDir).modelAliases).toEqual({ fast: "a/b" });
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("reloadModelAliases picks up disk edits without touching other settings", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" }, graceTurns: 9 });
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      mgr.load();
+      expect(mgr.resolveAlias("fast")).toBe("a/b");
+      dirs.writeGlobal({ modelAliases: { fresh: "c/d" }, graceTurns: 3 });
+      mgr.reloadModelAliases();
+      expect(mgr.resolveAlias("fresh")).toBe("c/d");
+      expect(mgr.resolveAlias("fast")).toBeUndefined();
+      // Other in-memory settings are untouched by the alias-only reload.
+      expect(mgr.graceTurns).toBe(9);
+    } finally {
+      dirs.dispose();
+    }
+  });
+
+  it("reloadModelAliases clears the map when files lose the key", () => {
+    const dirs = createSettingsDirs("subagents.json");
+    try {
+      dirs.writeGlobal({ modelAliases: { fast: "a/b" } });
+      const mgr = new SettingsManager({
+        emit: () => {},
+        cwd: dirs.projectDir,
+        agentDir: dirs.globalDir,
+      });
+      mgr.load();
+      expect(mgr.modelAliases).toEqual({ fast: "a/b" });
+      dirs.writeGlobal({ maxConcurrent: 8 });
+      mgr.reloadModelAliases();
+      expect(mgr.modelAliases).toEqual({});
+    } finally {
+      dirs.dispose();
+    }
+  });
+});
