@@ -407,6 +407,13 @@ describe("Subagent — completeRun", () => {
 		expect(record.status).toBe("steered");
 	});
 
+	it("records the turn loop's budget on the agent", () => {
+		const { record } = createCompletionAgent();
+		const turnBudget = { maxTurns: 4, used: 2, phase: "within" } as const;
+		record.completeRun(turnLoopResult({ turnBudget }));
+		expect(record.turnBudget).toEqual(turnBudget);
+	});
+
 	it("fires observer.onRunFinished on completion", () => {
 		const onRunFinished = vi.fn();
 		const { record } = createCompletionAgent({ observer: { onRunFinished } });

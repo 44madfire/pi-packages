@@ -18,6 +18,7 @@
  * session-event observer be unit-tested without constructing an executor.
  */
 
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import { addUsage } from "#src/lifecycle/usage";
 
@@ -49,6 +50,8 @@ export interface SettledOutcome {
 	workspaceNotice: string | undefined;
 	/** The updates no announcement delivered; what the carrier still owes. */
 	runUpdates: readonly string[];
+	/** The run's turn limit and its use; absent when no limit applied. */
+	turnBudget?: TurnBudget;
 }
 
 // ---- Status classification predicates ----
@@ -84,6 +87,8 @@ export interface SubagentStateInit {
 	pendingQuestion?: string;
 	/** What a teardown with no result text reported — an outcome fact, like result. */
 	workspaceNotice?: string;
+	/** The run's turn limit and its use — an outcome fact, like result. */
+	turnBudget?: TurnBudget;
 	error?: string;
 	/** Whether the agent was stopped before the limiter ever admitted it. */
 	stoppedWhileQueued?: boolean;
@@ -165,6 +170,11 @@ export class SubagentState {
 	private _workspaceNotice?: string;
 	get workspaceNotice(): string | undefined { return this._workspaceNotice; }
 
+	// The run's turn limit and its use. Part of the outcome like _result, and set
+	// alongside it at the terminal transition.
+	private _turnBudget?: TurnBudget;
+	get turnBudget(): TurnBudget | undefined { return this._turnBudget; }
+
 	// The updates the child sent during this run, each remembering whether the
 	// announcement channel delivered it — so a message reaches the parent once,
 	// through whichever channel could reach it, and no carrier repeats it.
@@ -204,6 +214,7 @@ export class SubagentState {
 		this._result = init.result;
 		this._pendingQuestion = init.pendingQuestion;
 		this._workspaceNotice = init.workspaceNotice;
+		this._turnBudget = init.turnBudget;
 		this._error = init.error;
 		this._stoppedWhileQueued = init.stoppedWhileQueued ?? false;
 		this._startedAt = init.startedAt ?? Date.now();
@@ -313,8 +324,9 @@ export class SubagentState {
 	 * Transition to completed state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markCompleted(result: string, completedAt?: number): void {
+	markCompleted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
 		this._result = result;
+		this._turnBudget = turnBudget;
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "completed";
@@ -325,8 +337,9 @@ export class SubagentState {
 	 * Transition to aborted state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markAborted(result: string, completedAt?: number): void {
+	markAborted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
 		this._result = result;
+		this._turnBudget = turnBudget;
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "aborted";
@@ -337,8 +350,9 @@ export class SubagentState {
 	 * Transition to steered state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markSteered(result: string, completedAt?: number): void {
+	markSteered(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
 		this._result = result;
+		this._turnBudget = turnBudget;
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "steered";
@@ -408,7 +422,7 @@ export class SubagentState {
 
 	/**
 	 * Reset for resume: running status, new startedAt, clear
-	 * completedAt/result/error/consumedAt.
+	 * completedAt/result/error/consumedAt/turnBudget.
 	 *
 	 * The carrier claim deliberately survives: it belongs to the caller that asked
 	 * for the resume and will deliver its outcome, not to the run being reset.
@@ -427,6 +441,7 @@ export class SubagentState {
 		this._result = undefined;
 		this._error = undefined;
 		this._consumedAt = undefined;
+		this._turnBudget = undefined;
 		// A resumed run answers the old question; whether it asks a new one is
 		// decided when it terminates.
 		this._pendingQuestion = undefined;
@@ -452,6 +467,7 @@ export class SubagentState {
 			pendingQuestion: this._pendingQuestion,
 			workspaceNotice: this._workspaceNotice,
 			runUpdates: this.runUpdates,
+			turnBudget: this._turnBudget,
 		};
 	}
 }

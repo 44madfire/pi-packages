@@ -14,6 +14,7 @@ import type { ParentSnapshot } from "#src/lifecycle/parent-snapshot";
 import { RunListeners } from "#src/lifecycle/run-listeners";
 import type { SubagentSession, TurnLoopResult } from "#src/lifecycle/subagent-session";
 import { type CarrierClaim, type SettledOutcome, SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { WorkspaceBracket } from "#src/lifecycle/workspace-bracket";
@@ -164,6 +165,7 @@ export class Subagent {
 	 * result, and duplicating it here would have every carrier report it twice.
 	 */
 	get workspaceNotice(): string | undefined { return this.state.workspaceNotice; }
+	get turnBudget(): TurnBudget | undefined { return this.state.turnBudget; }
 	get toolUses(): number { return this.state.toolUses; }
 	get lifetimeUsage(): Readonly<LifetimeUsage> { return this.state.lifetimeUsage; }
 	get compactionCount(): number { return this.state.compactionCount; }
@@ -574,24 +576,24 @@ export class Subagent {
 	 * Transition to completed state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markCompleted(result: string, completedAt?: number): void {
-		this.state.markCompleted(result, completedAt);
+	markCompleted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
+		this.state.markCompleted(result, completedAt, turnBudget);
 	}
 
 	/**
 	 * Transition to aborted state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markAborted(result: string, completedAt?: number): void {
-		this.state.markAborted(result, completedAt);
+	markAborted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
+		this.state.markAborted(result, completedAt, turnBudget);
 	}
 
 	/**
 	 * Transition to steered state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markSteered(result: string, completedAt?: number): void {
-		this.state.markSteered(result, completedAt);
+	markSteered(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
+		this.state.markSteered(result, completedAt, turnBudget);
 	}
 
 	/**
@@ -705,9 +707,9 @@ export class Subagent {
 			: result.responseText +
 				this.workspaceBracket.dispose({ status: finalStatus, description: this.description });
 
-		if (result.aborted) this.markAborted(finalResult);
-		else if (result.steered) this.markSteered(finalResult);
-		else this.markCompleted(finalResult);
+		if (result.aborted) this.markAborted(finalResult, undefined, result.turnBudget);
+		else if (result.steered) this.markSteered(finalResult, undefined, result.turnBudget);
+		else this.markCompleted(finalResult, undefined, result.turnBudget);
 
 		this.execution.observer?.onRunFinished?.(this);
 	}

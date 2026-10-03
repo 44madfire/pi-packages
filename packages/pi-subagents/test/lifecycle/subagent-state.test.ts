@@ -7,6 +7,7 @@ import {
 	type SubagentStateInit,
 	type SubagentStatus,
 } from "#src/lifecycle/subagent-state";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 
 const ALL_STATUSES: SubagentStatus[] = [
 	"queued",
@@ -413,6 +414,43 @@ describe("SubagentState — resetForResume", () => {
 			expect(state.supersededOutcome(1)).toBeUndefined();
 			expect(state.supersededOutcome(2)?.result).toBe("second result");
 		});
+	});
+});
+
+describe("SubagentState — turn budget", () => {
+	const WARNED: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
+	const EXHAUSTED: TurnBudget = { maxTurns: 2, used: 7, phase: "exhausted" };
+
+	it("has no budget until a run records one", () => {
+		expect(new SubagentState().turnBudget).toBeUndefined();
+	});
+
+	it("seeds the budget from init", () => {
+		expect(new SubagentState({ turnBudget: WARNED }).turnBudget).toEqual(WARNED);
+	});
+
+	it("markCompleted records the run's budget", () => {
+		const state = new SubagentState({ status: "running" });
+		state.markCompleted("done", 5000, WARNED);
+		expect(state.turnBudget).toEqual(WARNED);
+	});
+
+	it("markAborted records the run's budget", () => {
+		const state = new SubagentState({ status: "running" });
+		state.markAborted("partial", 5000, EXHAUSTED);
+		expect(state.turnBudget).toEqual(EXHAUSTED);
+	});
+
+	it("resetForResume clears the budget, which belongs to the run that produced it", () => {
+		const state = new SubagentState({ status: "completed", turnBudget: WARNED });
+		state.resetForResume(9000);
+		expect(state.turnBudget).toBeUndefined();
+	});
+
+	it("a superseded outcome keeps the budget the reset run ended with", () => {
+		const state = new SubagentState({ status: "completed", result: "first", turnBudget: WARNED });
+		state.resetForResume(9000);
+		expect(state.supersededOutcome(1)?.turnBudget).toEqual(WARNED);
 	});
 });
 
