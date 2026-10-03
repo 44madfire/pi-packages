@@ -5,6 +5,8 @@
  * while dropping noise (thinking content, image data, token usage, tool result bodies).
  */
 
+import { TurnLedger } from "./turn-ledger.js";
+
 /**
  * Minimal structural supertype for session entries.
  * Accepts SDK SessionEntry[] without index-signature conflicts.
@@ -284,7 +286,7 @@ export function formatTranscript(
   const assistantToolCallIds = collectAssistantToolCallIds(entries);
 
   const parts: string[] = [];
-  let turnNum = 0;
+  const ledger = new TurnLedger();
 
   for (const entry of entries) {
     if (entry.type !== "message") {
@@ -297,13 +299,18 @@ export function formatTranscript(
     if (!message) continue;
 
     const role = message.role;
+    const entryId = (entry as unknown as Record<string, unknown>).id;
 
     if (role === "user") {
-      turnNum++;
-      parts.push(formatUserMessage(message, turnNum, options));
+      const turn = ledger.numberTurn(entryId, "user", []);
+      parts.push(formatUserMessage(message, turn, options));
     } else if (role === "assistant") {
-      turnNum++;
-      parts.push(formatAssistantMessage(message, turnNum, resultMap));
+      const turn = ledger.numberTurn(
+        entryId,
+        "assistant",
+        toolCallIdsOf(message),
+      );
+      parts.push(formatAssistantMessage(message, turn, resultMap));
     } else if (role === "toolResult") {
       const toolCallId =
         typeof message.toolCallId === "string" ? message.toolCallId : "";
