@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentTypeRegistry } from "#src/config/agent-types";
+import type { TurnLoopResult } from "#src/lifecycle/subagent-session";
 import { MAX_EXPANDED_LINES, PREVIEW_CHARS } from "#src/tools/get-result-renderer";
 import {
 	GetResultTool,
@@ -118,7 +119,7 @@ describe("GetResultTool — carrier claim", () => {
 	it("leaves a claimed resume's claim in place when the wait wakes after the resume started", async () => {
 		const sessionStub = createSubagentSessionStub();
 		sessionStub.runTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "first" }));
-		const resumed = Promise.withResolvers<string>();
+		const resumed = Promise.withResolvers<TurnLoopResult>();
 		sessionStub.resumeTurnLoop.mockReturnValue(resumed.promise);
 		const record = createTestSubagent({
 			status: "running",
@@ -140,7 +141,7 @@ describe("GetResultTool — carrier claim", () => {
 		await execute(makeManager(new Map([["agent-1", record]])), { agent_id: "agent-1", wait: true });
 
 		expect(record.claimed).toBe(true);
-		resumed.resolve("second");
+		resumed.resolve(turnLoopResult({ responseText: "second" }));
 		await record.promise;
 	});
 
@@ -167,7 +168,7 @@ describe("GetResultTool — a wait a resume superseded", () => {
 			ask?.("Which config?");
 			return Promise.resolve(turnLoopResult({ responseText: "first result" }));
 		});
-		const resumed = Promise.withResolvers<string>();
+		const resumed = Promise.withResolvers<TurnLoopResult>();
 		sessionStub.resumeTurnLoop.mockReturnValue(resumed.promise);
 		const record = createTestSubagent({
 			status: "running",
@@ -186,7 +187,7 @@ describe("GetResultTool — a wait a resume superseded", () => {
 			}),
 		});
 		record.start();
-		return { record, finishResume: () => resumed.resolve("second result") };
+		return { record, finishResume: () => resumed.resolve(turnLoopResult({ responseText: "second result" })) };
 	}
 
 	it("reports the run it waited for, and that the agent is running again", async () => {

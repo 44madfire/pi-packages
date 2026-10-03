@@ -163,7 +163,7 @@ export class SubagentSession {
   }
 
   /** Re-prompt the same session (resume); does not emit `completed`. */
-  async resumeTurnLoop(prompt: string, signal?: AbortSignal): Promise<string> {
+  async resumeTurnLoop(prompt: string, signal?: AbortSignal): Promise<TurnLoopResult> {
     const session = this._session;
     const collector = collectResponseText(session);
     const cleanupAbort = forwardAbortSignal(session, signal);
@@ -176,7 +176,7 @@ export class SubagentSession {
       cleanupAbort();
     }
 
-    return collector.getText().trim() || getLastAssistantText(session);
+    return { responseText: collector.getText().trim() || getLastAssistantText(session) };
   }
 
   /** Deliver a steer to the live session. */

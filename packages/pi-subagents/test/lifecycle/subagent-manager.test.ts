@@ -4,7 +4,7 @@ import { ConcurrencyLimiter } from "#src/lifecycle/concurrency-limiter";
 import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent-session";
 import type { AgentSpawnConfig } from "#src/lifecycle/subagent-manager";
 import { resolveRetentionWindow, SubagentManager, type SubagentManagerObserver } from "#src/lifecycle/subagent-manager";
-import type { SubagentSession } from "#src/lifecycle/subagent-session";
+import type { SubagentSession, TurnLoopResult } from "#src/lifecycle/subagent-session";
 import type { WorkspaceProvider } from "#src/lifecycle/workspace";
 import { NotificationManager } from "#src/observation/notification";
 import type { RunConfig } from "#src/runtime";
@@ -1189,7 +1189,7 @@ describe("SubagentManager", () => {
           // Emit events through the session — the record observer subscribed by
           // SubagentManager.resume() will pick them up.
           emitResumeUsageAndCompaction(session);
-          return "second";
+          return turnLoopResult({ responseText: "second" });
         });
         ({ manager } = createManager({ createSubagentSession: factory }));
 
@@ -1286,7 +1286,7 @@ describe("SubagentManager", () => {
 
     it("calls resumeTurnLoop on the SubagentSession when resuming an agent", async () => {
       const { factory, stub } = createSessionFactory();
-      stub.resumeTurnLoop.mockResolvedValue("second");
+      stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
       ({ manager } = createManager({ createSubagentSession: factory }));
 
       const id = spawnBg(manager);
@@ -1301,7 +1301,7 @@ describe("SubagentManager", () => {
     it("fires onSubagentResumed when a background agent is resumed", async () => {
       const onSubagentResumed = vi.fn();
       const { factory, stub } = createSessionFactory();
-      stub.resumeTurnLoop.mockResolvedValue("second");
+      stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
       ({ manager } = createManager({ createSubagentSession: factory, observer: { onSubagentResumed } }));
 
       const id = spawnBg(manager);
@@ -1314,7 +1314,7 @@ describe("SubagentManager", () => {
     it("fires onSubagentResumed when a foreground agent is resumed", async () => {
       const onSubagentResumed = vi.fn();
       const { factory, stub } = createSessionFactory();
-      stub.resumeTurnLoop.mockResolvedValue("second");
+      stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
       ({ manager } = createManager({ createSubagentSession: factory, observer: { onSubagentResumed } }));
 
       const record = await spawnFg(manager);
@@ -1490,7 +1490,7 @@ describe("SubagentManager", () => {
     describe("accepted", () => {
       it("returns the resumed record", async () => {
         const { factory, stub } = createSessionFactory();
-        stub.resumeTurnLoop.mockResolvedValue("second");
+        stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
         ({ manager } = createManager({ createSubagentSession: factory }));
         const id = spawnBg(manager);
         await manager.getRecord(id)!.promise;
@@ -1516,7 +1516,7 @@ describe("SubagentManager", () => {
 
       it("leaves the outcome unclaimed by default", async () => {
         const { factory, stub } = createSessionFactory();
-        stub.resumeTurnLoop.mockResolvedValue("second");
+        stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
         ({ manager } = createManager({ createSubagentSession: factory }));
         const id = spawnBg(manager);
         await manager.getRecord(id)!.promise;
@@ -1534,21 +1534,21 @@ describe("SubagentManager", () => {
         const record = manager.getRecord(id)!;
         // resetForResume runs synchronously inside Subagent.resume(), so a claim
         // taken after the await would miss the terminal edge entirely.
-        const { promise, resolve } = Promise.withResolvers<string>();
+        const { promise, resolve } = Promise.withResolvers<TurnLoopResult>();
         stub.resumeTurnLoop.mockReturnValue(promise);
 
         const resumed = manager.resume(id, "continue", { claimOutcome: true });
         await vi.waitFor(() => expect(stub.resumeTurnLoop).toHaveBeenCalled());
 
         expect(record.claimed).toBe(true);
-        resolve("second");
+        resolve(turnLoopResult({ responseText: "second" }));
         await resumed;
       });
 
       it("tells the observer a resume started, before it reports one finished", async () => {
         const calls: string[] = [];
         const { factory, stub } = createSessionFactory();
-        stub.resumeTurnLoop.mockResolvedValue("second");
+        stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
         ({ manager } = createManager({
           createSubagentSession: factory,
           observer: {
@@ -1566,7 +1566,7 @@ describe("SubagentManager", () => {
 
       it("runs the resumed turn loop under the record's own lever", async () => {
         const { factory, stub } = createSessionFactory();
-        stub.resumeTurnLoop.mockResolvedValue("second");
+        stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
         ({ manager } = createManager({ createSubagentSession: factory }));
         const id = spawnBg(manager);
         await manager.getRecord(id)!.promise;
@@ -1584,12 +1584,12 @@ describe("SubagentManager", () => {
         ({ manager } = createManager({ createSubagentSession: factory }));
         const id = spawnBg(manager);
         await manager.getRecord(id)!.promise;
-        const gate = Promise.withResolvers<string>();
+        const gate = Promise.withResolvers<TurnLoopResult>();
         let signalled = false;
         stub.resumeTurnLoop.mockImplementation((_prompt: string, signal?: AbortSignal) => {
           signal?.addEventListener("abort", () => {
             signalled = true;
-            gate.resolve("partial answer");
+            gate.resolve(turnLoopResult({ responseText: "partial answer" }));
           });
           return gate.promise;
         });
@@ -1614,7 +1614,7 @@ describe("SubagentManager", () => {
         sendMessage = vi.fn();
         const notifications = new NotificationManager(sendMessage);
         const { factory, stub } = createSessionFactory();
-        stub.resumeTurnLoop.mockResolvedValue("second");
+        stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "second" }));
         ({ manager } = createManager({
           createSubagentSession: factory,
           observer: { onSubagentResumed: (r) => notifications.sendCompletion(r) },
@@ -1643,7 +1643,7 @@ describe("SubagentManager", () => {
         const sendMessage = vi.fn();
         const notifications = new NotificationManager(sendMessage);
         const { factory, stub } = createSessionFactory();
-        const resumed = Promise.withResolvers<string>();
+        const resumed = Promise.withResolvers<TurnLoopResult>();
         stub.resumeTurnLoop.mockReturnValue(resumed.promise);
         let resumeOutcome: Promise<unknown> | undefined;
         ({ manager } = createManager({
@@ -1662,7 +1662,7 @@ describe("SubagentManager", () => {
         const waiter = new GetResultTool(manager, defaultRegistry());
 
         await waiter.execute("tc-1", { agent_id: id, wait: true }, new AbortController().signal, undefined, STUB_CTX);
-        resumed.resolve("second");
+        resumed.resolve(turnLoopResult({ responseText: "second" }));
         await resumeOutcome;
 
         // The resumer receives the outcome; nothing announces it a second time.
@@ -1692,14 +1692,14 @@ describe("SubagentManager", () => {
       const id = spawnBg(manager);
       const record = manager.getRecord(id)!;
       await record.promise;
-      const gate = Promise.withResolvers<string>();
+      const gate = Promise.withResolvers<TurnLoopResult>();
       stub.resumeTurnLoop.mockReturnValue(gate.promise);
 
       const start = manager.startResume(id, "continue");
 
       expect(start).toEqual({ kind: "started", record });
       expect(record.status).toBe("running");
-      gate.resolve("second");
+      gate.resolve(turnLoopResult({ responseText: "second" }));
       await record.promise;
       expect(record.status).toBe("completed");
     });

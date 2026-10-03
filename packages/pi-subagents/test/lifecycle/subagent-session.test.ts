@@ -515,9 +515,9 @@ describe("SubagentSession — resumeTurnLoop", () => {
   it("re-prompts the session and returns the final assistant text", async () => {
     const { session } = createSession("RESUMED");
     const { sub } = makeSubagentSession(session);
-    const text = await sub.resumeTurnLoop("Continue");
+    const result = await sub.resumeTurnLoop("Continue");
     expect(session.prompt).toHaveBeenCalledWith("Continue");
-    expect(text).toBe("RESUMED");
+    expect(result).toEqual({ responseText: "RESUMED" });
   });
 
   it("does not emit completed or disposed", async () => {
@@ -603,13 +603,13 @@ describe("SubagentSession — resumeTurnLoop", () => {
       { role: "assistant", content: [{ type: "text", text: "the second answer" }], stopReason: "stop" },
     ]);
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).resolves.toBe("the second answer");
+    await expect(sub.resumeTurnLoop("Continue")).resolves.toEqual({ responseText: "the second answer" });
   });
 
   it("resolves normally when the resumed turn did not error", async () => {
     const { session } = createSession("RESUMED");
     const { sub } = makeSubagentSession(session);
-    await expect(sub.resumeTurnLoop("Continue")).resolves.toBe("RESUMED");
+    await expect(sub.resumeTurnLoop("Continue")).resolves.toEqual({ responseText: "RESUMED" });
   });
 });
 

@@ -945,7 +945,7 @@ describe("Subagent — workspace hold for a declared question", () => {
 describe("Subagent — disposing a held workspace", () => {
 	it("disposes when the resumed child answers without asking again", async () => {
 		const { agent, workspace, stub } = await heldWorkspaceAgent();
-		stub.resumeTurnLoop.mockResolvedValue("Used the project config. Done.");
+		stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "Used the project config. Done." }));
 
 		await agent.resume("The project one.");
 
@@ -957,7 +957,7 @@ describe("Subagent — disposing a held workspace", () => {
 		const { agent, workspace, stub, ask } = await heldWorkspaceAgent();
 		stub.resumeTurnLoop.mockImplementation(() => {
 			ask("And the fallback?");
-			return Promise.resolve("Thanks.");
+			return Promise.resolve(turnLoopResult({ responseText: "Thanks." }));
 		});
 
 		await agent.resume("The project one.");
@@ -1527,7 +1527,7 @@ describe("Subagent.waitUntilSettled()", () => {
 	it("reports the waited run's outcome when a resume replaced it before the wait returned", async () => {
 		const stub = createSubagentSessionStub();
 		stub.runTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "first result" }));
-		const resumed = Promise.withResolvers<string>();
+		const resumed = Promise.withResolvers<TurnLoopResult>();
 		stub.resumeTurnLoop.mockReturnValue(resumed.promise);
 		const agent = makeSubagent({
 			status: "running",
@@ -1544,7 +1544,7 @@ describe("Subagent.waitUntilSettled()", () => {
 		expect(wait.kind).toBe("superseded");
 		expect(wait.kind === "superseded" ? [wait.outcome.status, wait.outcome.result] : undefined)
 			.toEqual(["completed", "first result"]);
-		resumed.resolve("second");
+		resumed.resolve(turnLoopResult({ responseText: "second" }));
 		await agent.promise;
 	});
 });
@@ -1629,7 +1629,7 @@ describe("Subagent — ask-back", () => {
 
 	it("completes the round trip: ask, answer by resuming, continue", async () => {
 		const { agent, stub } = await runAsking({ responseText: "", question: "Which config?" });
-		stub.resumeTurnLoop.mockResolvedValue("Used the project config. Done.");
+		stub.resumeTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "Used the project config. Done." }));
 		expect(agent.pendingQuestion).toBe("Which config?");
 
 		await agent.resume("The project one.");
@@ -1645,7 +1645,7 @@ describe("Subagent — ask-back", () => {
 		const { agent, stub, ask } = await runAsking({ responseText: "", question: "Which config?" });
 		stub.resumeTurnLoop.mockImplementation(() => {
 			ask("And the fallback?");
-			return Promise.resolve("Thanks.");
+			return Promise.resolve(turnLoopResult({ responseText: "Thanks." }));
 		});
 
 		await agent.resume("The project one.");
@@ -1688,14 +1688,14 @@ describe("Subagent.resume() — cancellation", () => {
 	 * handed and whether that signal was already spent on arrival.
 	 */
 	function parkResumeUntilSignalled(stub: ReturnType<typeof createSubagentSessionStub>) {
-		const gate = Promise.withResolvers<string>();
+		const gate = Promise.withResolvers<TurnLoopResult>();
 		const loop: { signal?: AbortSignal; abortedAtEntry?: boolean; signalled: boolean } = { signalled: false };
 		stub.resumeTurnLoop.mockImplementation((_prompt: string, signal?: AbortSignal) => {
 			loop.signal = signal;
 			loop.abortedAtEntry = signal?.aborted;
 			signal?.addEventListener("abort", () => {
 				loop.signalled = true;
-				gate.resolve("partial answer");
+				gate.resolve(turnLoopResult({ responseText: "partial answer" }));
 			});
 			return gate.promise;
 		});
@@ -1752,7 +1752,7 @@ describe("Subagent.resume() — observer lifecycle", () => {
 		const stub = createSubagentSessionStub(session);
 		stub.resumeTurnLoop.mockImplementation(async () => {
 			emitResumeUsageAndCompaction(session);
-			return "second";
+			return turnLoopResult({ responseText: "second" });
 		});
 		const { agent } = createResumableAgent({ session, stub });
 		await agent.resume("more");
@@ -1769,7 +1769,7 @@ describe("Subagent.resume() — observer lifecycle", () => {
 		const stub = createSubagentSessionStub(session);
 		stub.resumeTurnLoop.mockImplementation(async () => {
 			session.emit({ type: "compaction_end", aborted: false, result: { tokensBefore: 123 }, reason: "threshold" });
-			return "second";
+			return turnLoopResult({ responseText: "second" });
 		});
 		const { agent } = createResumableAgent({ observer, session, stub });
 		await agent.resume("more");
@@ -2009,7 +2009,7 @@ describe("Subagent.resume() — awaitable handle", () => {
 		agent.start();
 		const firstRun = agent.promise;
 		await firstRun;
-		const { promise: resuming, resolve: finishResume } = Promise.withResolvers<string>();
+		const { promise: resuming, resolve: finishResume } = Promise.withResolvers<TurnLoopResult>();
 		stub.resumeTurnLoop.mockReturnValue(resuming);
 
 		const returned = agent.resume("continue");
@@ -2018,7 +2018,7 @@ describe("Subagent.resume() — awaitable handle", () => {
 		expect(agent.promise).not.toBe(firstRun);
 		expect(agent.promise).toBe(returned);
 
-		finishResume("resumed late");
+		finishResume(turnLoopResult({ responseText: "resumed late" }));
 		await returned;
 		expect(agent.status).toBe("completed");
 		expect(agent.result).toBe("resumed late");

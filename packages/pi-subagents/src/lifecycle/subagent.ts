@@ -547,12 +547,12 @@ export class Subagent {
 	}
 
 	/** Terminate a resume as completed: mark, dispose or hold the workspace, release listeners, notify observer. */
-	completeResume(result: string): void {
+	completeResume(result: TurnLoopResult): void {
 		// A child answering one question may need to ask another, which holds the
 		// workspace for the next resume the same way the original run did.
 		const finalResult = this.pendingQuestion !== undefined
-			? result
-			: result + this.workspaceBracket.dispose({ status: "completed", description: this.description });
+			? result.responseText
+			: result.responseText + this.workspaceBracket.dispose({ status: "completed", description: this.description });
 		this.markCompleted(finalResult);
 		this.listeners.release();
 		this.execution.observer?.onResumeFinished?.(this);
