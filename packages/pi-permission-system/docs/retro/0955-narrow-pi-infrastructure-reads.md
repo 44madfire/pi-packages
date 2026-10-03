@@ -74,3 +74,58 @@ The plan's marker is `**Release:** ship independently`; all three behavior commi
 
 - Follow-ups already filed: #1018 (infra list not canonicalized; carries the review's logs-exclusion comment).
 - #956 (the bash bypass) stays unblocked by this change but is untouched.
+
+## Stage: Final Retrospective (2026-10-03T01:57:12Z)
+
+### Session summary
+
+The root `/ship` merged the worktree branch with `--ff-only`, CI passed on `cbbf83b9`, #955 was closed with a summary, and the release published `pi-permission-system-v39.0.0` (a major).
+The worktree and branch were torn down.
+Across all four stages the issue went from planning to release in about three hours without a rejected review or a CI failure.
+
+### Observations
+
+#### What went well
+
+- Measuring before planning paid off twice in planning.
+  A spike through the real extension factory corrected two claims in the issue: only the `external_directory` family was bypassed, and file entries already matched on equality.
+  Bucketing the operator's 486 `infrastructure_auto_allowed` log entries put a number on the breaking change (6 entries lose the bypass) before anyone had to decide.
+- Every behavior step had named killing mutations, applied with a backup-and-`cmp` restore loop (`/tmp/i955/green-*.ts`).
+  Each mutation turned red exactly the tests the plan predicted, and the reviewer's `"**"` finding got the same treatment.
+- The pre-completion reviewer's first round found a real defect: `"**"` was counted as a targeted deny.
+  The fix was autosquashed into its step commit, and a backup tag plus `git diff` showed the tree was unchanged by the rebase.
+
+#### What caused friction (agent side)
+
+- `other` — pre-commit hooks that rewrite files (Biome, `rumdl fmt`) rejected the first `git commit` of steps 1 and 3.
+  From step 4 onward the peer wrapped every commit in `commit || { git add -A; commit; }`.
+  Impact: 2 extra tool calls; the peer adapted on its own.
+- `instruction-violation` (self-identified, caught by gates) — literal `\u2500`/`\u2026`/`\u2014` escapes landed in edit bodies three times: two source comments and the TDD retro heading.
+  The escape gates and `grep` caught each one before commit.
+  Impact: 3 repair calls, no rework past the commit.
+- `instruction-violation` (self-identified) — the peer ran package commands as `cd packages/pi-permission-system; pnpm exec vitest run …` throughout, instead of `pnpm --filter`.
+  Impact: none observed.
+- `missing-context` — after the sync rebase, `git diff --stat ORIG_HEAD HEAD` showed 30 files, which looked wrong for a no-op rebase.
+  Local `main` had moved 11 commits, which explained it.
+  Impact: 2 diagnostic calls.
+- `instruction-violation` (self-identified) — the ship's final report said the phase-last-step check was not run, instead of running it.
+  This retro checked: #955 is listed as out of scope for the roadmap in `architecture.md`, so no phase closed.
+  Impact: none.
+
+#### What caused friction (user side)
+
+- None observed.
+  The operator's planning decisions (list contents, the logs carve-out, targeted-deny-only) were each settled in a single `ask_user` gate.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5`, and sync and ship on `claude-sonnet-5-5`.
+  The three subagents (one `tidy-first-assessor`, two `pre-completion-reviewer`) ran on `claude-sonnet-5-5`.
+  The models suited their tasks: the judgment-heavy design ran on Opus, and the first review round still found a real defect on Sonnet.
+- **Feedback-loop gap analysis** — `pnpm run check` and the targeted vitest files ran after every step, and the full suite before each commit.
+  No step relied on verification left until the end.
+
+### Changes made
+
+1. Appended this Final Retrospective entry to `packages/pi-permission-system/docs/retro/0955-narrow-pi-infrastructure-reads.md`.
+   No rule changes were made: each friction point was minor and is already covered by an existing rule or gate.
