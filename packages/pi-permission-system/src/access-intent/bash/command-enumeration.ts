@@ -73,6 +73,15 @@ export interface BashCommand {
    * unreachable.
    */
   readonly salvaged?: true;
+  /**
+   * Other spellings of {@link text} the shell runs identically, matched with
+   * it as aliases of one invocation. Absent when there are none.
+   *
+   * Today the only spelling is the home-expanded one, for a unit whose text
+   * opens with `~`, `$HOME`, or `${HOME}` in a program that leaves `HOME`
+   * alone ({@link WordReader.spellHomeAtStart}).
+   */
+  readonly spellings?: readonly string[];
 }
 
 /**
@@ -409,19 +418,23 @@ function unresolvedScope(node: TSNode, scope: UnitScope): UnitScope {
     : scope;
 }
 
-/** The wrapper facts a `command` node's words establish about its unit. */
-interface WrapperFacts {
+/**
+ * The facts a `command` node's words establish about its unit: the three
+ * wrapper answers, and the other spellings its text has.
+ */
+interface UnitFacts {
   readonly wrapperKind?: WrapperKind;
   readonly executedUnit?: string;
   readonly floorExemption?: FloorExemption;
+  readonly spellings?: readonly string[];
 }
 
 function makeUnit(
   text: string,
   scope: UnitScope,
-  wrapper: WrapperFacts = {},
+  facts: UnitFacts = {},
 ): BashCommand {
-  const { wrapperKind, executedUnit, floorExemption } = wrapper;
+  const { wrapperKind, executedUnit, floorExemption, spellings } = facts;
   const scoped: BashCommand = scope.context
     ? { text, context: scope.context }
     : { text };
@@ -433,7 +446,10 @@ function makeUnit(
   const marked: BashCommand = scope.parseUnresolved
     ? { ...exempted, parseUnresolved: true }
     : exempted;
-  return scope.salvaged ? { ...marked, salvaged: true } : marked;
+  const salvaged: BashCommand = scope.salvaged
+    ? { ...marked, salvaged: true }
+    : marked;
+  return spellings === undefined ? salvaged : { ...salvaged, spellings };
 }
 
 /**
@@ -447,7 +463,9 @@ function makeUnit(
  */
 function makeCommandUnit(node: TSNode, scope: UnitScope): BashCommand {
   const { text, words } = readCommandUnit(node, scope.words);
+  const homeSpelling = scope.words.spellHomeAtStart(text);
   return makeUnit(text, scope, {
+    spellings: homeSpelling === undefined ? undefined : [homeSpelling],
     wrapperKind: classifyWrapperWords(words),
     executedUnit: executedUnitOf(text, words) ?? undefined,
     floorExemption: isTransparentWrapper(words, redirectedScope(node, scope))

@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   resetWarmBashParser,
@@ -104,6 +105,56 @@ describe("parseBashCommandsSync", () => {
         { text: "cat", parseUnresolved: true, salvaged: true },
         { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
       ]);
+    });
+
+    describe("a unit opening with a home prefix carries its home spelling", () => {
+      it("spells a command named through ~", () => {
+        expect(parseBashCommandsSync("~/bin/x --y")).toEqual([
+          { text: "~/bin/x --y", spellings: [`${homedir()}/bin/x --y`] },
+        ]);
+      });
+
+      it("spells a command named through $HOME", () => {
+        expect(parseBashCommandsSync("$HOME/bin/x")).toEqual([
+          { text: "$HOME/bin/x", spellings: [`${homedir()}/bin/x`] },
+        ]);
+      });
+
+      it("withholds the spelling once the program rebinds HOME", () => {
+        expect(parseBashCommandsSync("HOME=/tmp/evil; ~/bin/x")).toEqual([
+          { text: "HOME=/tmp/evil" },
+          { text: "~/bin/x" },
+        ]);
+      });
+
+      it("withholds the spelling under a prefix assignment of HOME", () => {
+        expect(parseBashCommandsSync("HOME=/tmp/evil ~/bin/x")).toEqual([
+          { text: "~/bin/x" },
+        ]);
+      });
+
+      it.each(["echo ~/x", '"~/bin/x"'])(
+        "does not spell a unit whose text does not open with the prefix: %s",
+        (command) => {
+          expect(parseBashCommandsSync(command)).toEqual([{ text: command }]);
+        },
+      );
+
+      it("does not spell a wrapper whose wrapped command opens with the prefix", () => {
+        const units = parseBashCommandsSync("sudo ~/bin/x");
+        expect(units?.map((unit) => unit.spellings)).toEqual([undefined]);
+      });
+
+      it("spells a nested command on its own, not its enclosing one", () => {
+        expect(parseBashCommandsSync("echo $(~/bin/x)")).toEqual([
+          { text: "echo $(~/bin/x)" },
+          {
+            text: "~/bin/x",
+            context: "command_substitution",
+            spellings: [`${homedir()}/bin/x`],
+          },
+        ]);
+      });
     });
   });
 });
