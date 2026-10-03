@@ -60,6 +60,7 @@ The note ships to the `BREAKING CHANGE:` footer, the generated CHANGELOG, and th
 
 Do not put `Closes #N` / `Fixes #N` / `Resolves #N` in commit messages.
 `/ship` posts a curated close comment (implemented-in SHA, behavior summary) via `issue_close`; a commit keyword auto-closes the issue on push and pre-empts that comment, leaving the issue with no summary.
+GitHub matches the keyword anywhere in the message, not only as a footer: "the fix #1004 proposed" closes #1004, so write "#1004's fix" instead.
 Reference issues as `(#N)` in the subject or `Refs #N` in the body instead.
 Still separate footer tokens (`Refs #N`, `BREAKING CHANGE:`) from the body with a blank line for readability; it is not enforced — `committed` validates only the header grammar.
 Credit a contributor with `Co-authored-by:` whenever their **accepted design** ships, whether or not their patch was taken and whether or not they opened a PR — a constraint or mechanism adopted from an issue, a PR review, or a comment thread all qualify.

@@ -70,3 +70,51 @@ Shipping should also close #1004, whose fixture fix landed in that commit; #1017
 ### Observations
 
 The worktree-lane rebase onto local `main` follows this note.
+
+## Stage: Final Retrospective (2026-10-03T01:10:16Z)
+
+### Session summary
+
+The root fast-forward-merged the rebased branch, pushed 9a08d878, closed #1006, and released `pi-subagents-v22.0.0` (a major, for the Pi 1.0.0 floor).
+The first `/ship` ran before the peer had finished `/sync-worktree` and stopped cleanly at the step 4 ancestry check; the second ran end to end.
+Across stages the design held: demand-driven built-in loading plus `mcp__<server>__*` expansion against the parent's `pi.getAllTools()`.
+
+### Observations
+
+#### What went well
+
+- The planning spikes against real SDK 1.0.0 (factories load as `builtin:*`, `-builtin:mcp` honored, MCP starts a server even for a `tools: [read]` child) turned a judgment call into a measured one and decided demand-driven loading.
+- The `/ship` step 4 `git merge-base --is-ancestor` prediction caught the premature ship at zero cost: no merge, no push, a precise list of the 11 divergent #1010 commits.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (missed by everyone) — the `feat(pi-subagents)!: require Pi 1.0.0 or later` commit body said "This folds in the fix #1004 proposed".
+  GitHub reads `fix #1004` as a closing keyword, so the push auto-closed #1004 via e93ec7ce with no curated comment.
+  At ship time I saw #1004 already `CLOSED` and reported "nothing to do" without checking who closed it.
+  Impact: #1004 has no summary comment; no rework.
+- `missing-context` — the planning probe bumped the SDK and ran `check` and `test`, but not `lint`; `no-unnecessary-type-assertion` then rejected plan step 1 at 0.84.4, forcing it into the bump commit.
+  Impact: one plan deviation, no rework.
+- `other` — the planning gate offered whole-server MCP allow as "needs upstream"; the operator's question exposed that `pi.getAllTools()` makes it possible in-package.
+  Impact: one extra gate round; the scope grew in the right direction.
+- `other` — TDD step 3's first mutation round copied the green file in the same tool batch as the mutating `Edit`, so the "restore" restored a mutant.
+  Self-identified; the existing `/tdd-plan` rule covers it.
+- `other` — my first ship's final report hedged on the roadmap-phase check, though planning had already established no phase is open.
+  Impact: none.
+
+#### What caused friction (user side)
+
+- `/ship 1006` was invoked before the peer's `/sync-worktree 1006` had committed its sync note; the step 2 retro read showed no `Sync (worktree)` entry, which already signalled it.
+  Impact: one aborted ship, about six tool calls.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5` (design-heavy, appropriate); sync ran on `claude-sonnet-5-5` (mechanical, appropriate).
+  All three subagents (one `tidy-first-assessor`, two `pre-completion-reviewer` passes) ran on `claude-sonnet-5-5` per their transcripts.
+- **Feedback-loop gap analysis** — TDD ran targeted `vitest` and `check` after every step and killing mutations per step; only the planning-time SDK probe skipped `lint`.
+
+### Changes made
+
+1. `.pi/skills/git-workflow/SKILL.md`: a closing keyword matches anywhere in the message, not only as a footer ("the fix #1004 proposed" closes #1004).
+2. `.pi/prompts/ship.md` step 9: a co-shipped issue already `CLOSED` gets its closer checked via the events API, and a summary comment when a commit keyword closed it.
+3. Posted the missing summary comment on #1004.
+4. Not landed: the `code-design` rule to run `lint` in a dependency-bump probe (one occurrence, no rework).
