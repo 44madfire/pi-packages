@@ -408,7 +408,7 @@ export class Subagent {
 			const result = await this.subagentSession.runTurnLoop(this.execution.prompt, {
 				maxTurns: this.execution.maxTurns,
 				defaultMaxTurns: runConfig?.defaultMaxTurns,
-				graceTurns: runConfig?.graceTurns,
+				wrapUpTurns: runConfig?.wrapUpTurns,
 				signal: this.abortController.signal,
 			});
 			this.completeRun(result);
@@ -686,7 +686,7 @@ export class Subagent {
 
 		// The harness ending the run at its turn limit is the one way a run that
 		// returned is not complete.
-		const exhausted = result.turnBudget?.phase === "exhausted";
+		const exhausted = result.turnBudget.phase === "exhausted";
 		const finalStatus: SubagentStatus = exhausted ? "aborted" : "completed";
 		// A completed child that declared a question is inviting a resume, so its
 		// workspace stays live for the resume to re-enter. Every other outcome ends

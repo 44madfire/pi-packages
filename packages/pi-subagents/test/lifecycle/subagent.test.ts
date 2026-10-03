@@ -1206,13 +1206,13 @@ describe("Subagent.run() — abort signal forwarding", () => {
 });
 
 describe("Subagent.run() — RunConfig threading", () => {
-	it("passes defaultMaxTurns and graceTurns to runTurnLoop", async () => {
+	it("passes defaultMaxTurns and wrapUpTurns to runTurnLoop", async () => {
 		const { factory, stub } = createFactory();
-		const agent = createRunnableAgent({ createSubagentSession: factory, getRunConfig: () => ({ defaultMaxTurns: 10, graceTurns: 3, midRunUpdates: true }) });
+		const agent = createRunnableAgent({ createSubagentSession: factory, getRunConfig: () => ({ defaultMaxTurns: 10, wrapUpTurns: 3, midRunUpdates: true }) });
 		await agent.run();
 		const turnOpts = stub.runTurnLoop.mock.calls[0][1];
 		expect(turnOpts.defaultMaxTurns).toBe(10);
-		expect(turnOpts.graceTurns).toBe(3);
+		expect(turnOpts.wrapUpTurns).toBe(3);
 	});
 });
 
@@ -1275,7 +1275,7 @@ describe("Subagent — the ask-back recorder", () => {
 });
 
 describe("Subagent — the mid-run update channel", () => {
-	const updatesOn = { defaultMaxTurns: undefined, graceTurns: 5, midRunUpdates: true };
+	const updatesOn = { defaultMaxTurns: undefined, wrapUpTurns: 5, midRunUpdates: true };
 
 	it("gives a background child a way to send its parent an update", async () => {
 		const { factory } = createSpyFactory();

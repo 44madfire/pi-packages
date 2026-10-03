@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { childCompletedEvent, turnLoopResult } from "./turn-loop-result";
 
 describe("turnLoopResult", () => {
-	it("describes a run with no turn limit by default", () => {
-		expect(turnLoopResult()).toEqual({ responseText: "done" });
+	it("describes a one-turn run with no turn limit by default", () => {
+		expect(turnLoopResult()).toEqual({ responseText: "done", turnBudget: { used: 1, phase: "within" } });
 	});
 
 	it("applies overrides while keeping other defaults", () => {
-		expect(turnLoopResult({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } })).toEqual({
+		expect(turnLoopResult({ turnBudget: { maxTurns: 3, used: 2, phase: "warned" } })).toEqual({
 			responseText: "done",
-			turnBudget: { maxTurns: 2, used: 3, phase: "warned" },
+			turnBudget: { maxTurns: 3, used: 2, phase: "warned" },
 		});
 	});
 });

@@ -1,10 +1,11 @@
 import type { ChildCompletedEvent } from "#src/lifecycle/child-lifecycle";
 import type { TurnLoopResult } from "#src/lifecycle/subagent-session";
 
-/** A turn loop that ran to completion with no turn limit. */
+/** A turn loop that ran to completion, one turn, with no turn limit. */
 export function turnLoopResult(overrides: Partial<TurnLoopResult> = {}): TurnLoopResult {
 	return {
 		responseText: "done",
+		turnBudget: { used: 1, phase: "within" },
 		...overrides,
 	};
 }
