@@ -56,3 +56,17 @@ The pi-subagents suite went from 1937 to 1962 tests (+25).
   - `comparison-with-upstream.md` still listed the old peer scope
   - MCP starts only *enabled* servers
   - the MCP hash suffix also applies on name collisions
+
+## Stage: Sync (worktree) (2026-10-03T00:51:10Z)
+
+### Session summary
+
+Pre-push checks passed (`pnpm run lint`, `pnpm fallow dead-code`).
+The plan's marker is `**Release:** ship independently`; the release is a major because the `feat(pi-subagents)!: require Pi 1.0.0 or later` commit carries a `BREAKING CHANGE:` footer.
+Shipping should also close #1004, whose fixture fix landed in that commit; #1017 stays open as the follow-up.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1006--/2026-10-02T22-42-38-913Z_01a0fec8-aac0-774c-a4e0-0891f23a63f5.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The worktree-lane rebase onto local `main` follows this note.
