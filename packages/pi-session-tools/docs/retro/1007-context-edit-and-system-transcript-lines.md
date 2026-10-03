@@ -29,3 +29,27 @@ Real-world frequencies were measured over the 400 newest local session files.
 - Known residual: "prompt" form is decided by window position, so a tail window can render a mid-session update in counts form.
   It is recorded in the plan's Risks.
 - No SDK round-trip test is possible at the `0.79.1` devDependency pin (no `appendContextEdit`), so fixtures are shaped from Pi source and the measured entries.
+
+## Stage: Implementation — TDD (2026-10-03T04:45:41Z)
+
+### Session summary
+
+I executed all five plan steps as five commits: two refactors, two `fix(pi-session-tools):` steps, and one docs step.
+The `pi-session-tools` suite went from 228 to 251 tests (+8 `TurnLedger` unit tests, +6 context-edit tests, +9 system-message tests).
+All gates are green: test, check, root lint, and `fallow dead-code`.
+
+### Observations
+
+- No deviations from the plan.
+  `src/index.ts` stayed unchanged, as predicted.
+- Every planned killing mutation killed its predicted tests.
+  Flipping `replacement === null` killed all five context-edit label tests, not just the omitted/replaced pair, because every test asserts the verb.
+  I added one mutation the plan didn't name: dropping the `custom_message` recording killed exactly the custom-message test.
+- The `usage` test stayed green during Red, as a deliberate pin.
+  Its mutation (`case "usage": return "[usage]"`) confirmed that it discriminates.
+- Process slip: a `cp` restore batched in the same tool call as a mutating `Edit` raced it, so the mutation didn't stick and the run read as "survived".
+  Running the restore in its own call fixed it; the `/tdd-plan` rule about separate calls applies to restores too, not just backups.
+- Adding the upstream rows to the skill's padded table tripped MD060, and `rumdl fmt` realigned it.
+- Pre-completion reviewer: PASS.
+  It reported 267 tests in 12 files for the package, but my own run shows 251 in 14.
+  The reviewer's count does not match and I did not reconcile it.
