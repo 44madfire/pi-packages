@@ -5,6 +5,7 @@ import {
 import {
   type CapabilityDirection,
   PATH_BEARING_TOOLS,
+  surfaceFamilyMembers,
   surfaceFamilyOf,
 } from "#src/access-intent/path-surfaces";
 import { type ApprovalGrant, grantTargets } from "#src/session/approval-grant";
@@ -119,6 +120,25 @@ export function buildDirectionalSessionLabels(
     sessionLabel: `Yes, allow ${DIRECTION_NOUNS[direction]} to ${target} for this session`,
     widenedLabel: `Yes, allow ${DIRECTION_NOUNS.read} and ${DIRECTION_NOUNS.write} to ${target} for this session`,
   };
+}
+
+/**
+ * Label a session grant on the `path` / `external_directory` families that
+ * proves no direction (an extension tool, `edit`), so the option still names
+ * its scope instead of the dialog's bare default. Returns `null` when any
+ * grant lies outside those families — their gates supply their own label.
+ */
+export function buildPathAccessSessionLabel(
+  grants: readonly ApprovalGrant[],
+): string | null {
+  const allPathFamily =
+    grants.length > 0 &&
+    grants.every(
+      (grant) => surfaceFamilyMembers(surfaceFamilyOf(grant.surface)) !== null,
+    );
+  return allPathFamily
+    ? `Yes, allow access to ${describeGrantTarget(grants)} for this session`
+    : null;
 }
 
 /**
