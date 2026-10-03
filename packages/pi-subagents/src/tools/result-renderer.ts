@@ -7,6 +7,7 @@
  */
 
 import type { SubagentStatus } from "#src/lifecycle/subagent-state";
+import { type TurnBudget, wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limits";
 import type { AgentDetails, Theme } from "#src/ui/display";
 import { formatMs, formatTurns } from "#src/ui/display";
 import { GLYPHS, SPINNER } from "#src/ui/glyphs";
@@ -53,8 +54,8 @@ export function renderCompleted(
 	theme: Theme,
 ): string {
 	const duration = formatMs(details.durationMs);
-	const isSteered = details.status === "steered";
-	const icon = renderStatusIcon(isSteered ? "steered" : "completed", theme);
+	const wrappedUp = wrappedUpAtTurnLimit(details);
+	const icon = wrappedUp ? renderWrappedUpIcon(theme) : renderStatusIcon("completed", theme);
 	const s = renderStats(details, theme);
 	let line = icon + (s ? " " + s : "");
 	line += " " + theme.fg("dim", "\u00B7") + " " + theme.fg("dim", duration);
@@ -75,7 +76,7 @@ export function renderCompleted(
 			}
 		}
 	} else {
-		const doneText = isSteered ? "Wrapped up (turn limit)" : "Done";
+		const doneText = wrappedUp ? "Wrapped up (turn limit)" : "Done";
 		line += "\n" + theme.fg("dim", `  ${GLYPHS.subLine}  ${doneText}`);
 	}
 	return line;
@@ -107,6 +108,23 @@ export function renderFailed(details: AgentDetails, theme: Theme): string {
 }
 
 // ---- Shared helpers ----
+
+/**
+ * The themed glyph for an outcome: its status glyph, drawn in the warning color
+ * for a run that wrapped up at its turn limit.
+ */
+export function renderOutcomeIcon(
+	outcome: { status: SubagentStatus; turnBudget?: TurnBudget },
+	theme: Theme,
+): string {
+	if (wrappedUpAtTurnLimit(outcome)) return renderWrappedUpIcon(theme);
+	return renderStatusIcon(outcome.status, theme);
+}
+
+/** A success glyph in the warning color: finished, with a turn-limit caveat. */
+function renderWrappedUpIcon(theme: Theme): string {
+	return theme.fg("warning", GLYPHS.success);
+}
 
 /**
  * The themed status glyph for a settled or pending agent.

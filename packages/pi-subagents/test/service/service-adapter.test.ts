@@ -134,6 +134,16 @@ describe("toSubagentRecord", () => {
     expect(agent.lifetimeUsage.input).toBe(100);
   });
 
+  it("copies the turn budget by value", () => {
+    const agent = createTestSubagent({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
+
+    const snapshot = toSubagentRecord(agent);
+    expect(snapshot.turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "warned" });
+
+    snapshot.turnBudget!.used = 99;
+    expect(agent.turnBudget?.used).toBe(3);
+  });
+
   it("omits optional fields when undefined on the source", () => {
     const minimal = createTestSubagent({
       id: "min-1",

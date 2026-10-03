@@ -176,6 +176,11 @@ describe("buildNotificationDetails", () => {
     expect(details.maxTurns).toBe(10);
   });
 
+  it("carries the run's turn budget", () => {
+    const record = createTestSubagent({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
+    expect(buildNotificationDetails(record, 500).turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "warned" });
+  });
+
   it("truncates long result previews with ellipsis", () => {
     const record = createTestSubagent({ description: "Test", result: "x".repeat(600), toolUses: 2, completedAt: 3000, lifetimeUsage: { input: 100, output: 200, cacheWrite: 0 } });
     const details = buildNotificationDetails(record, 100);
@@ -212,6 +217,11 @@ describe("buildEventData", () => {
       durationMs: 1000,
       tokens: { input: 1000, output: 500, total: 1500 },
     });
+  });
+
+  it("carries the run's turn budget", () => {
+    const record = createTestSubagent({ turnBudget: { maxTurns: 2, used: 7, phase: "exhausted" }, status: "aborted" });
+    expect(buildEventData(record).turnBudget).toEqual({ maxTurns: 2, used: 7, phase: "exhausted" });
   });
 
   it("omits tokens when total is zero", () => {

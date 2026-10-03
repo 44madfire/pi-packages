@@ -11,6 +11,7 @@
 
 import type { ResumeRefusal, SubagentStatus } from "#src/lifecycle/subagent";
 import type { ResumeRefusalReason } from "#src/lifecycle/subagent-manager";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import type {
   Workspace,
@@ -24,6 +25,7 @@ import type {
 // SubagentStatus is defined in the lifecycle layer (single home) and re-exported
 // here for the public API surface — mirrors the LifetimeUsage / workspace pattern.
 export type { SubagentStatus } from "#src/lifecycle/subagent";
+export type { TurnBudget, TurnBudgetPhase } from "#src/lifecycle/turn-limits";
 // The resume vocabulary is re-exported for the same reason: the record owns the
 // reasons a resume is refused, and the manager adds the one that is not a fact
 // about a record.
@@ -66,6 +68,8 @@ export interface SubagentRecord {
   turnCount: number;
   /** Turn ceiling for this run, when one was set. */
   maxTurns?: number;
+  /** The finished run's turn limit and its use; absent when no limit applied. */
+  turnBudget?: TurnBudget;
   startedAt: number;
   completedAt?: number;
   lifetimeUsage: LifetimeUsage;

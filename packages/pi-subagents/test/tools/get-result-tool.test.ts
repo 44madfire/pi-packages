@@ -541,6 +541,16 @@ describe("GetResultTool — TUI rendering", () => {
 	});
 
 	describe("details payload", () => {
+		it("carries the run's turn budget and names its wrap-up in the report", async () => {
+			const turnBudget = { maxTurns: 2, used: 3, phase: "warned" } as const;
+			const records = new Map([["agent-1", createTestSubagent({ turnBudget })]]);
+
+			const result = await execute(makeManager(records), { agent_id: "agent-1" });
+
+			expect(result.details?.turnBudget).toEqual(turnBudget);
+			expect(result.content[0].text).toContain("Status: completed (wrapped up \u2014 reached turn limit) |");
+		});
+
 		it("carries a preview bounded well below the result it summarises", async () => {
 			const records = new Map([
 				["agent-1", createTestSubagent({ result: longResult(200) })],

@@ -1,9 +1,7 @@
 import type { ThemeColor } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import {
-  isTerminalErrorStatus,
-  type SubagentStatus,
-} from "#src/lifecycle/subagent-state";
+import { isTerminalErrorStatus } from "#src/lifecycle/subagent-state";
+import { wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limits";
 import type {
   NotificationDetails,
   UpdateDetails,
@@ -48,10 +46,12 @@ export interface StatusPresentation {
 }
 
 /** Decide the icon and status label for a notification's status, once. */
-export function resolveStatusPresentation(status: SubagentStatus): StatusPresentation {
-  if (isTerminalErrorStatus(status))
-    return { iconGlyph: GLYPHS.failure, iconStyle: "error", statusText: status };
-  const statusText = status === "steered" ? "completed (steered)" : "completed";
+export function resolveStatusPresentation(
+  outcome: Pick<NotificationDetails, "status" | "turnBudget">,
+): StatusPresentation {
+  if (isTerminalErrorStatus(outcome.status))
+    return { iconGlyph: GLYPHS.failure, iconStyle: "error", statusText: outcome.status };
+  const statusText = wrappedUpAtTurnLimit(outcome) ? "completed (wrapped up)" : "completed";
   return { iconGlyph: GLYPHS.success, iconStyle: "success", statusText };
 }
 
@@ -89,7 +89,7 @@ export function createNotificationRenderer() {
     const d = message.details;
     if (!d) return undefined;
 
-    const { iconGlyph, iconStyle, statusText } = resolveStatusPresentation(d.status);
+    const { iconGlyph, iconStyle, statusText } = resolveStatusPresentation(d);
 
     // Line 1: icon + agent description + status
     let line = `${theme.fg(iconStyle, iconGlyph)} ${theme.bold(d.description)} ${theme.fg("dim", statusText)}`;

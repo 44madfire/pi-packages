@@ -93,6 +93,7 @@ export class SubagentEventsObserver implements SubagentManagerObserver {
 			status: record.status,
 			result: record.result,
 			error: record.error,
+			turnBudget: record.turnBudget,
 			startedAt: record.startedAt,
 			completedAt: record.completedAt,
 		});

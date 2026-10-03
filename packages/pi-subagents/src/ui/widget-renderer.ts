@@ -11,6 +11,7 @@ import {
 	isActiveStatus,
 	type SubagentStatus,
 } from "#src/lifecycle/subagent-state";
+import { type TurnBudget, wrappedUpAtTurnLimit } from "#src/lifecycle/turn-limits";
 import type { LifetimeUsage } from "#src/lifecycle/usage";
 import { getLifetimeTotal } from "#src/lifecycle/usage";
 import type { SubagentType } from "#src/types";
@@ -44,6 +45,8 @@ export interface WidgetAgent {
 	// Live activity (folded from the former WidgetActivity — precomputed by AgentWidget)
 	readonly turnCount: number;
 	readonly maxTurns?: number;
+	/** The finished run's turn limit and its use; absent when no limit applied. */
+	readonly turnBudget?: TurnBudget;
 	readonly activeTools: ReadonlyMap<string, string>;
 	readonly responseText: string;
 	/** Context-window utilisation (0–100), or null when unavailable. */
@@ -66,12 +69,12 @@ export function renderFinishedLine(
 
 	let icon: string;
 	let statusText: string;
-	if (agent.status === "completed") {
-		icon = theme.fg("success", GLYPHS.success);
-		statusText = "";
-	} else if (agent.status === "steered") {
+	if (wrappedUpAtTurnLimit(agent)) {
 		icon = theme.fg("warning", GLYPHS.success);
 		statusText = theme.fg("warning", " (turn limit)");
+	} else if (agent.status === "completed") {
+		icon = theme.fg("success", GLYPHS.success);
+		statusText = "";
 	} else if (agent.status === "stopped") {
 		icon = theme.fg("dim", GLYPHS.stopped);
 		statusText = theme.fg("dim", " stopped");

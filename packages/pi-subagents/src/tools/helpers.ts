@@ -1,4 +1,5 @@
 import type { AgentConfigLookup } from "#src/config/agent-types";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import { getLifetimeTotal, type LifetimeUsage } from "#src/lifecycle/usage";
 import { type AgentDetails, formatTokens, type ModelIdentity, modelLabel } from "#src/ui/display";
 
@@ -18,6 +19,7 @@ export function buildDetails(
     maxTurns?: number;
     /** The model the agent runs; unknown for an inherited model until its session exists. */
     model?: ModelIdentity;
+    turnBudget?: TurnBudget;
   },
   overrides?: Partial<AgentDetails>,
 ): AgentDetails {
@@ -32,6 +34,7 @@ export function buildDetails(
     status: record.status as AgentDetails["status"],
     agentId: record.id,
     error: record.error,
+    turnBudget: record.turnBudget,
     ...overrides,
   };
 }

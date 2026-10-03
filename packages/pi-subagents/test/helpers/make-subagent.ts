@@ -2,6 +2,7 @@ import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent
 import { Subagent, type SubagentExecution } from "#src/lifecycle/subagent";
 import type { SubagentSession } from "#src/lifecycle/subagent-session";
 import { SubagentState, type SubagentStatus } from "#src/lifecycle/subagent-state";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { SubagentType } from "#src/types";
 import { createSubagentSessionStub, toSubagentSession } from "#test/helpers/mock-session";
 import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
@@ -37,6 +38,8 @@ export interface TestSubagentOptions {
 	pendingQuestion?: string;
 	/** Seed what a teardown with no result text reported. */
 	workspaceNotice?: string;
+	/** Seed the run's turn limit and its use. */
+	turnBudget?: TurnBudget;
 	error?: string;
 	/** Seed the never-started marker (the agent was stopped before it was admitted). */
 	stoppedWhileQueued?: boolean;

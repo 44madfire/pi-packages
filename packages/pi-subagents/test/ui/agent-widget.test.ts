@@ -276,6 +276,29 @@ describe("AgentWidget — projection reads activity off Subagent records", () =>
 		expect(renderFn).toBeDefined();
 		expect(renderFn!(stubTui(), stubTheme()).render().join("\n")).toContain("anthropic/claude-sonnet-5");
 	});
+
+	it("surfaces the record's turn budget as a turn-limit wrap-up via renderWidget", () => {
+		const record = createTestSubagent({
+			status: "completed",
+			completedAt: Date.now(),
+			isBackground: true,
+			turnBudget: { maxTurns: 2, used: 3, phase: "warned" },
+		});
+		const manager = { listAgents: () => [record] } as unknown as SubagentManager;
+		const widget = new AgentWidget(manager, new AgentTypeRegistry(() => new Map()));
+
+		let renderFn: ((tui: unknown, theme: unknown) => { render(): string[] }) | undefined;
+		widget.setUICtx({
+			setStatus: () => {},
+			setWidget: (_key, content) => {
+				if (typeof content === "function") renderFn = content as typeof renderFn;
+			},
+		});
+		widget.update();
+
+		expect(renderFn).toBeDefined();
+		expect(renderFn!(stubTui(), stubTheme()).render().join("\n")).toContain("(turn limit)");
+	});
 });
 
 describe("AgentWidget.update self-seeds finished agents", () => {

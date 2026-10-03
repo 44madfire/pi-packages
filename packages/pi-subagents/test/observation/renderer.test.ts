@@ -44,23 +44,33 @@ function renderText(result: ReturnType<ReturnType<typeof createNotificationRende
 
 describe("resolveStatusPresentation", () => {
   it("resolves completed status", () => {
-    expect(resolveStatusPresentation("completed")).toEqual({
+    expect(resolveStatusPresentation({ status: "completed" })).toEqual({
       iconGlyph: "✓",
       iconStyle: "success",
       statusText: "completed",
     });
   });
 
-  it("resolves steered status to completed (steered)", () => {
-    expect(resolveStatusPresentation("steered")).toEqual({
+  it("resolves a completed run the harness warned to completed (wrapped up)", () => {
+    expect(
+      resolveStatusPresentation({ status: "completed", turnBudget: { maxTurns: 2, used: 3, phase: "warned" } }),
+    ).toEqual({
       iconGlyph: "✓",
       iconStyle: "success",
-      statusText: "completed (steered)",
+      statusText: "completed (wrapped up)",
+    });
+  });
+
+  it("resolves steered status to completed (wrapped up)", () => {
+    expect(resolveStatusPresentation({ status: "steered" })).toEqual({
+      iconGlyph: "✓",
+      iconStyle: "success",
+      statusText: "completed (wrapped up)",
     });
   });
 
   it("resolves error status", () => {
-    expect(resolveStatusPresentation("error")).toEqual({
+    expect(resolveStatusPresentation({ status: "error" })).toEqual({
       iconGlyph: "✗",
       iconStyle: "error",
       statusText: "error",
@@ -68,7 +78,7 @@ describe("resolveStatusPresentation", () => {
   });
 
   it("resolves stopped status", () => {
-    expect(resolveStatusPresentation("stopped")).toEqual({
+    expect(resolveStatusPresentation({ status: "stopped" })).toEqual({
       iconGlyph: "✗",
       iconStyle: "error",
       statusText: "stopped",
@@ -76,7 +86,7 @@ describe("resolveStatusPresentation", () => {
   });
 
   it("resolves aborted status", () => {
-    expect(resolveStatusPresentation("aborted")).toEqual({
+    expect(resolveStatusPresentation({ status: "aborted" })).toEqual({
       iconGlyph: "✗",
       iconStyle: "error",
       statusText: "aborted",

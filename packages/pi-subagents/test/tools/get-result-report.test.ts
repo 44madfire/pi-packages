@@ -179,6 +179,11 @@ describe("formatAgentReport", () => {
 		);
 	});
 
+	it("names a turn-limit wrap-up on a completed run the harness warned", () => {
+		const report = makeReport({ status: "completed", turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
+		expect(formatAgentReport(report)).toContain("Status: completed (wrapped up \u2014 reached turn limit) |");
+	});
+
 	it("adds no status note for a plain completion", () => {
 		expect(formatAgentReport(makeReport({ status: "completed" }))).toContain("Status: completed |");
 	});

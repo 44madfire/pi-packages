@@ -7,6 +7,7 @@
 
 import type { ThemeColor } from "@earendil-works/pi-coding-agent";
 import type { AgentConfigLookup } from "#src/config/agent-types";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { AgentInvocation, SubagentType } from "#src/types";
 import { GLYPHS } from "#src/ui/glyphs";
 
@@ -46,6 +47,8 @@ export interface AgentDetails {
   maxTurns?: number;
   agentId?: string;
   error?: string;
+  /** The run's turn limit and its use; absent when no limit applied. */
+  turnBudget?: TurnBudget;
 }
 
 // ---- Constants ----

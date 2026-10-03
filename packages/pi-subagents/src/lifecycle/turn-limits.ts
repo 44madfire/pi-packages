@@ -23,6 +23,17 @@ export interface TurnBudget {
   phase: TurnBudgetPhase;
 }
 
+/**
+ * A run that finished on its own after the harness warned it about its turn
+ * limit: the one outcome every presentation qualifies with a turn-limit caveat.
+ * Takes the two fields it reads, so any outcome-shaped object satisfies it.
+ */
+export function wrappedUpAtTurnLimit(outcome: { status: string; turnBudget?: TurnBudget }): boolean {
+  // The legacy status carries the same fact until it is retired.
+  if (outcome.status === "steered") return true;
+  return outcome.status === "completed" && outcome.turnBudget?.phase === "warned";
+}
+
 /** Normalize max turns. undefined or 0 = unlimited, otherwise minimum 1. */
 export function normalizeMaxTurns(n: number | undefined): number | undefined {
   if (n == null || n === 0) return undefined;

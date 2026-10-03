@@ -269,6 +269,11 @@ describe("buildDetails", () => {
     expect(details.maxTurns).toBeUndefined();
   });
 
+  it("carries the record's turn budget", () => {
+    const details = buildDetails(base, createTestSubagent({ turnBudget: { maxTurns: 2, used: 3, phase: "warned" } }));
+    expect(details.turnBudget).toEqual({ maxTurns: 2, used: 3, phase: "warned" });
+  });
+
   it("applies overrides on top of computed fields", () => {
     const details = buildDetails(base, record, { tokens: "99.9k token" });
     expect(details.tokens).toBe("99.9k token");

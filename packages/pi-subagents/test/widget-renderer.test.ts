@@ -156,6 +156,14 @@ describe("renderFinishedLine", () => {
 		expect(line).toContain("[warning: (turn limit)]");
 	});
 
+	it("renders a completed run the harness warned with warning icon and turn limit text", () => {
+		const agent = makeAgent({ status: "completed", turnBudget: { maxTurns: 2, used: 3, phase: "warned" } });
+		const line = renderFinishedLine(agent, testRegistry, theme);
+
+		expect(line).toContain("[warning:\u2713]");
+		expect(line).toContain("[warning: (turn limit)]");
+	});
+
 	it("renders stopped status with dim icon and text", () => {
 		const agent = makeAgent({ status: "stopped" });
 		const line = renderFinishedLine(agent, testRegistry, theme);

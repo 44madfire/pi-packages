@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SubagentStatus } from "#src/lifecycle/subagent-state";
+import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import {
 	renderAgentResult,
 	renderBackground,
@@ -18,6 +19,8 @@ function makeTheme(): Theme {
 		bold: (text: string) => `**${text}**`,
 	};
 }
+
+const WARNED: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
 
 function makeDetails(overrides: Partial<AgentDetails> = {}): AgentDetails {
 	return {
@@ -162,6 +165,11 @@ describe("renderCompleted", () => {
 		expect(renderCompleted(details, "", false, theme)).toContain("[warning:\u2713]");
 	});
 
+	it("uses warning icon for a completed run the harness warned", () => {
+		const details = makeDetails({ status: "completed", durationMs: 2000, turnBudget: WARNED });
+		expect(renderCompleted(details, "", false, theme)).toContain("[warning:\u2713]");
+	});
+
 	it("includes formatted duration", () => {
 		const details = makeDetails({ status: "completed", durationMs: 3500 });
 		expect(renderCompleted(details, "", false, theme)).toContain("[dim:3.5s]");
@@ -174,6 +182,13 @@ describe("renderCompleted", () => {
 
 	it("collapsed view shows 'Wrapped up (turn limit)' for steered", () => {
 		const details = makeDetails({ status: "steered", durationMs: 2000 });
+		expect(renderCompleted(details, "", false, theme)).toContain(
+			"[dim:  \u23BF  Wrapped up (turn limit)]",
+		);
+	});
+
+	it("collapsed view shows 'Wrapped up (turn limit)' for a completed run the harness warned", () => {
+		const details = makeDetails({ status: "completed", durationMs: 2000, turnBudget: WARNED });
 		expect(renderCompleted(details, "", false, theme)).toContain(
 			"[dim:  \u23BF  Wrapped up (turn limit)]",
 		);
