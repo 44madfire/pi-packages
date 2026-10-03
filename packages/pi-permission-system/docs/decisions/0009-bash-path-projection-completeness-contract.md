@@ -1,16 +1,28 @@
 ---
 status: accepted
 date: 2026-07-24
-amended: 2026-09-27
+amended: 2026-10-03
 ---
 
 # 0009 — The bash path projection is a completeness contract, not a best-effort heuristic
 
 ## Status
 
-Accepted, as amended 2026-09-30.
+Accepted, as amended 2026-10-03.
 This decision states the contract the bash path projection upholds, and settles how a "the gate missed my path" report is triaged.
 It is the framing for [#645], which closes two gaps the contract names as in-scope; it composes with `docs/decisions/0003-git-bash-posix-path-semantics.md` (win32 token shapes) and `docs/decisions/0007-model-judge-authorizer-chain-adr.md` (the judge that absorbs false positives).
+
+### Amendment, 2026-10-03: the command-pattern surface reads the same `HOME`
+
+A `bash` rule written with a leading `~`, `$HOME`, or `${HOME}` had its prefix expanded on the pattern side only, so it never matched a command unit typed with that prefix ([#981]).
+That was the same inconsistency [#694]'s `$HOME` half closed for path tokens, met this time on the command surface: the package resolved `HOME` for patterns and not for the text it matched them against.
+A command unit whose text opens with one of the three prefixes now carries a home **spelling**, `os.homedir()` followed by the rest of its text verbatim, and the manager matches the typed text and the spelling as aliases of one invocation.
+
+This is not a widening of the resolvable set.
+The spelling comes from `ShellVariables` under the rebinding rule of the 2026-09-30 amendment below: a program that rebinds `HOME` gets no spelling, and its command matches as typed.
+The rest of the text is never path-normalized, because `expandHomePath`'s `join` would collapse `..` across the command's arguments and spell `~/evil /x/../../safe` as `<home>/safe`.
+Only the unit's leading prefix is spelled, which is what the pattern side expands; an argument keeps its typed text on this surface.
+The mechanism, a gate-emitted intent carrying a unit's spellings, is the seam [#917] proposed for relative and absolute argument spellings.
 
 ### Amendment, 2026-09-30 — a `HOME` or `PWD` the program rebinds is not resolved
 
@@ -431,6 +443,8 @@ Cost is ~0.04 ms p95 per command, ~19% of the already-paid tree-sitter parse.
 [#645]: https://github.com/gotgenes/pi-packages/issues/645
 [#694]: https://github.com/gotgenes/pi-packages/issues/694
 [#995]: https://github.com/gotgenes/pi-packages/issues/995
+[#981]: https://github.com/gotgenes/pi-packages/issues/981
+[#917]: https://github.com/gotgenes/pi-packages/pull/917
 [#306]: https://github.com/gotgenes/pi-packages/issues/306
 [#741]: https://github.com/gotgenes/pi-packages/issues/741
 [#742]: https://github.com/gotgenes/pi-packages/issues/742

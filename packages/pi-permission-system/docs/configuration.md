@@ -451,6 +451,8 @@ A quoted heredoc delimiter (`<<'EOF'` or `<<"EOF"`) does not interpolate, so its
 The enclosing command is still matched without its redirect, so a rule like `npm install` keeps matching `npm install > out.txt`.
 Control-flow bodies (`if`/`while`/`for`/`case`) and `{ … }` brace groups are not descended into; their contents are matched as part of the enclosing statement's text.
 
+A command that starts with `~`, `$HOME`, or `${HOME}` also matches a home-anchored pattern spelled any of those ways, or with the absolute home directory (see [Home Directory Expansion in Patterns](#home-directory-expansion-in-patterns)).
+
 A leading environment-variable assignment prefix is stripped before matching, so the rule gates the underlying command rather than the prefix.
 So `AWS_PROFILE=prod aws ec2 …` is matched as `aws ec2 …` — a `aws *` rule applies even though the invocation begins with `AWS_PROFILE=`.
 Prefixes like `PGPASSWORD=` and `KUBECONFIG=` are handled the same way.
@@ -1119,6 +1121,19 @@ The pattern is stored and displayed as written (e.g. `~/development/*`) in logs 
 Path **values** supplied by bash commands and extension tools are expanded the same way.
 This means `~/...`, `$HOME/...`, `${HOME}/...`, and the fully-expanded absolute form all match a single home-anchored pattern: `cat ~/.ssh/config`, `cat $HOME/.ssh/config`, or `cat /Users/me/.ssh/config` is caught by a `"~/.ssh/*": "deny"` rule.
 Pi's built-in file tools expand only `~`, as Pi itself does: a `read` of `~/.ssh/config` or `/Users/me/.ssh/config` is caught, while a `read` of `$HOME/.ssh/config` opens `<cwd>/$HOME/.ssh/config` and is matched as that file.
+
+A `bash` command that **starts** with a home prefix matches a home-anchored command pattern the same way.
+With `"~/bin/tool *": "deny"`, the commands `~/bin/tool --now`, `$HOME/bin/tool --now`, `${HOME}/bin/tool --now`, and `/Users/me/bin/tool --now` are all denied, and an allow written with `~` covers each of those spellings too.
+The command is still shown, logged, and offered for session approval as typed.
+Three limits apply:
+
+- On Windows, a home-anchored `bash` pattern is compiled with backslash separators, so it matches only a command typed with the backslashed absolute path ([issue #1020](https://github.com/gotgenes/pi-packages/issues/1020)).
+- A command that reassigns `HOME` earlier in the same invocation (`HOME=/tmp/x; ~/bin/tool`, or a `HOME=/tmp/x` prefix) is matched only as typed, because its `~` no longer names your home directory.
+- A home prefix later in the command, in argument position, is matched as typed: a pattern `cat ~/notes` matches the command `cat ~/notes` but not `cat /Users/me/notes`.
+  Gate file access by any spelling on the `path` and `external_directory` surfaces instead.
+
+The `bash` surface matches text, so a `*` in a home-anchored pattern also matches `..`: `~/bin/*` allows `~/bin/../../tmp/x`, exactly as it allows `/Users/me/bin/../../tmp/x`.
+Anchor an allow on the full command (`~/bin/tool *`) rather than a directory wildcard when that matters.
 
 ---
 

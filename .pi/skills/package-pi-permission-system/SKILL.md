@@ -49,7 +49,8 @@ Run `pnpm --silent fallow guard <file>` before adding a cross-directory import: 
 - Preserve the `/permission-system` slash command name — renaming it is a breaking change.
 - In the flat permission format, `permission["*"]` is the universal fallback; pattern ordering is last-match-wins.
   Every surface resolves through the one multi-value evaluator, `evaluateAnyValue` (#928) — rule position decides, and candidate order decides only which name the decision is reported under in `PermissionCheckResult.target`.
-  Do not reintroduce a per-surface evaluator: `mcp` is the only surface producing multiple candidates, and a first-candidate-wins scan there let a catch-all mask a later rule.
+  Do not reintroduce a per-surface evaluator: `mcp` targets and a bash command unit's `spellings` are the multi-candidate cases, and a first-candidate-wins scan there let a catch-all mask a later rule.
+- A bash command unit's spellings come from the program analysis, never the matcher: `compileWildcardPattern` expands a home prefix on the pattern only, and `ShellVariables.spellHomeAtStart` spells the value side only while the program leaves `HOME` alone, keeping the rest verbatim (never `expandHomePath`, whose `join` normalizes `..` across a command's arguments).
 - The four path layers (`path`, `external_directory`, per-tool, `bash`) compose with **most-restrictive-wins** across surfaces: a more-permissive rule on one surface cannot loosen a more-restrictive rule on another (`ask` > `allow`).
   So a `path` allow cannot suppress an `external_directory: ask` prompt — allow outside-CWD directories on `external_directory`, not `path`.
 - `path` and `external_directory` each carry a **read/write axis** (ADR 0013 §3–§4, Refs #806), and the two directions are independent bits, not tiers — a `path_write` allow grants no read, a `path_read` deny floors no write.
