@@ -78,9 +78,10 @@ describe("resolveBashAdvisoryCheck", () => {
       expect(result.matchedPattern).toBe("npm *");
       // Each unit is evaluated on the bash surface.
       expect(resolver.resolve).toHaveBeenCalledWith({
-        kind: "tool",
+        kind: "bash-command",
         surface: "bash",
-        input: { command: "npm install x" },
+        command: "npm install x",
+        spellings: [],
         agentName: undefined,
       });
     });
