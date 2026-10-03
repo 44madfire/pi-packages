@@ -66,3 +66,46 @@ The plan's marker is `**Release:** ship independently`, and no follow-up issues 
 ### Observations
 
 The pre-completion reviewer's package test count (267 in 12 files) did not match the 251 in 14 files from this session's own run; it was never reconciled, so the root's `/ship` run is the tiebreaker.
+
+## Stage: Final Retrospective (2026-10-03T04:59:01Z)
+
+### Session summary
+
+The root `/ship` fast-forward-merged the peer branch with no rebase needed, passed root lint, `fallow dead-code`, and CI, closed #1007, and released `pi-session-tools` 3.0.1, then tore down the worktree.
+Across the three stages the work ran as planned: five commits, no plan deviations, and every planned killing mutation killed its predicted tests.
+This retro settled the one open question the peer left behind: the reviewer's test count.
+
+### Observations
+
+#### What went well
+
+- The worktree lane converged cleanly on the first try: `merge-base --is-ancestor` predicted `ff-ok`, there were no unpushed root commits, and the release ran on the first dispatch.
+- The plan's `TurnLedger` substitution (giving the new collaborator `turnNum` instead of splitting the loop's role dispatch) kept `src/index.ts` unchanged, as the plan predicted.
+
+#### What caused friction (agent side)
+
+- `missing-context` (pre-completion reviewer subagent) — the reviewer reported "pi-session-tools: 12 files, 267 tests".
+  The real count is 14 files and 251 tests, confirmed in this retro with `pnpm --filter @gotgenes/pi-session-tools run test`.
+  The mechanism: the root `test` script is `pnpm -r run test && vitest run`, so the last block printed is the repo's own `scripts/` suite (12 files, 267 tests, measured here).
+  The reviewer ran `pnpm run test 2>&1 | tail -15`, which shows only that trailing block, and credited it to the package under review.
+  Its definition (`.pi/agents/pre-completion-reviewer.md` Step 1 item 3) describes the script as running only `pnpm -r run test`, so nothing warned it about the trailing suite.
+  Impact: no rework, but the TDD stage and the sync stage each recorded an unreconciled discrepancy, and the ship carried it forward as an open item.
+- `instruction-violation` (self-identified, peer TDD stage) — a `cp` restore batched in the same tool call as a mutating `Edit` raced it, so a mutation read as "survived".
+  Impact: one re-run.
+  The existing `/tdd-plan` separate-calls rule already covers this; its wording is about backups, but the principle carries over.
+
+#### What caused friction (user side)
+
+- None.
+  The operator's two planning-gate decisions (transcript-term targets; pulling `role: "system"` into scope) were made once and held through implementation.
+
+### Diagnostic details
+
+- **Model-performance correlation** — both subagents (the `tidy-first-assessor` and the `pre-completion-reviewer`) ran on `claude-sonnet-5-5`, according to their transcripts.
+  The reviewer's miscount was a context gap in its definition, not a model mismatch.
+- **Feedback-loop gap analysis** — the reviewer piped its gate through `tail`, which `git-workflow` already warns masks exit status.
+  Here it also hid which suite the summary belonged to.
+
+### Changes made
+
+1. `.pi/agents/pre-completion-reviewer.md`: Step 1 item 3 now says `pnpm run test` ends with the repo's `scripts/` suite, and that a package's count comes from its `packages/<pkg> test:` lines.
