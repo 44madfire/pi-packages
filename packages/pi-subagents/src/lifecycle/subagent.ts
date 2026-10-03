@@ -410,6 +410,7 @@ export class Subagent {
 				defaultMaxTurns: runConfig?.defaultMaxTurns,
 				wrapUpTurns: runConfig?.wrapUpTurns,
 				signal: this.abortController.signal,
+				onTurnBudget: (budget) => { this.state.setTurnBudget(budget); },
 			});
 			this.completeRun(result);
 		} catch (err) {
@@ -576,16 +577,16 @@ export class Subagent {
 	 * Transition to completed state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markCompleted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
-		this.state.markCompleted(result, completedAt, turnBudget);
+	markCompleted(result: string, completedAt?: number): void {
+		this.state.markCompleted(result, completedAt);
 	}
 
 	/**
 	 * Transition to aborted state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markAborted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
-		this.state.markAborted(result, completedAt, turnBudget);
+	markAborted(result: string, completedAt?: number): void {
+		this.state.markAborted(result, completedAt);
 	}
 
 	/**
@@ -702,8 +703,8 @@ export class Subagent {
 			: result.responseText +
 				this.workspaceBracket.dispose({ status: finalStatus, description: this.description });
 
-		if (exhausted) this.markAborted(finalResult, undefined, result.turnBudget);
-		else this.markCompleted(finalResult, undefined, result.turnBudget);
+		if (exhausted) this.markAborted(finalResult);
+		else this.markCompleted(finalResult);
 
 		this.execution.observer?.onRunFinished?.(this);
 	}

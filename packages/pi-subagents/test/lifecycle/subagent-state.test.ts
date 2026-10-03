@@ -399,10 +399,11 @@ describe("SubagentState — resetForResume", () => {
 });
 
 describe("SubagentState — turn budget", () => {
-	const WARNED: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
-	const EXHAUSTED: TurnBudget = { maxTurns: 2, used: 7, phase: "exhausted" };
+	const WITHIN: TurnBudget = { maxTurns: 5, used: 1, phase: "within" };
+	const WARNED: TurnBudget = { maxTurns: 5, used: 3, phase: "warned" };
+	const EXHAUSTED: TurnBudget = { maxTurns: 5, used: 5, phase: "exhausted" };
 
-	it("has no budget until a run records one", () => {
+	it("has no budget until a run's turn loop reports one", () => {
 		expect(new SubagentState().turnBudget).toBeUndefined();
 	});
 
@@ -410,23 +411,28 @@ describe("SubagentState — turn budget", () => {
 		expect(new SubagentState({ turnBudget: WARNED }).turnBudget).toEqual(WARNED);
 	});
 
-	it("markCompleted records the run's budget", () => {
+	it("records each budget the running turn loop reports", () => {
 		const state = new SubagentState({ status: "running" });
-		state.markCompleted("done", 5000, WARNED);
+		state.setTurnBudget(WITHIN);
+		expect(state.turnBudget).toEqual(WITHIN);
+		state.setTurnBudget(WARNED);
 		expect(state.turnBudget).toEqual(WARNED);
 	});
 
-	it("markAborted records the run's budget", () => {
+	it("keeps the live budget through a terminal transition", () => {
 		const state = new SubagentState({ status: "running" });
-		state.markAborted("partial", 5000, EXHAUSTED);
+		state.setTurnBudget(EXHAUSTED);
+		state.markAborted("partial", 5000);
 		expect(state.turnBudget).toEqual(EXHAUSTED);
 	});
 
-	it("a stop during the grace turns keeps stopped and still records the budget the loop reached", () => {
-		const state = new SubagentState({ status: "stopped", completedAt: 500 });
-		state.markAborted("partial", 2000, EXHAUSTED);
+	it("a stop during the warned phase keeps stopped and the budget the loop reached", () => {
+		const state = new SubagentState({ status: "running" });
+		state.setTurnBudget(WARNED);
+		state.markStopped(500);
+		state.markCompleted("late", 2000);
 		expect(state.status).toBe("stopped");
-		expect(state.turnBudget).toEqual(EXHAUSTED);
+		expect(state.turnBudget).toEqual(WARNED);
 	});
 
 	it("resetForResume clears the budget, which belongs to the run that produced it", () => {
@@ -436,7 +442,9 @@ describe("SubagentState — turn budget", () => {
 	});
 
 	it("a superseded outcome keeps the budget the reset run ended with", () => {
-		const state = new SubagentState({ status: "completed", result: "first", turnBudget: WARNED });
+		const state = new SubagentState({ status: "running", result: "first" });
+		state.setTurnBudget(WARNED);
+		state.markCompleted("first", 5000);
 		state.resetForResume(9000);
 		expect(state.supersededOutcome(1)?.turnBudget).toEqual(WARNED);
 	});

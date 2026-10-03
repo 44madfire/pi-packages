@@ -169,8 +169,9 @@ export class SubagentState {
 	private _workspaceNotice?: string;
 	get workspaceNotice(): string | undefined { return this._workspaceNotice; }
 
-	// The run's turn limit and its use. Part of the outcome like _result, and set
-	// alongside it at the terminal transition.
+	// The run's turn budget, live: the turn loop reports it before the first turn
+	// and after each boundary, so the last report is already the outcome's. Part
+	// of the outcome like _result, and cleared where a run begins (resetForResume).
 	private _turnBudget?: TurnBudget;
 	get turnBudget(): TurnBudget | undefined { return this._turnBudget; }
 
@@ -304,6 +305,11 @@ export class SubagentState {
 		this._runUpdates.length = 0;
 	}
 
+	/** Record the budget the running turn loop reports. */
+	setTurnBudget(budget: TurnBudget): void {
+		this._turnBudget = budget;
+	}
+
 	/** Record an update the child sent during this run, owed to a carrier until delivered. */
 	recordUpdate(message: string): void {
 		this._runUpdates.push({ message, announced: false });
@@ -323,9 +329,8 @@ export class SubagentState {
 	 * Transition to completed state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markCompleted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
+	markCompleted(result: string, completedAt?: number): void {
 		this._result = result;
-		this._turnBudget = turnBudget;
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "completed";
@@ -336,9 +341,8 @@ export class SubagentState {
 	 * Transition to aborted state.
 	 * Always sets result and completedAt (??=). Only changes status if not stopped.
 	 */
-	markAborted(result: string, completedAt?: number, turnBudget?: TurnBudget): void {
+	markAborted(result: string, completedAt?: number): void {
 		this._result = result;
-		this._turnBudget = turnBudget;
 		this._completedAt ??= completedAt ?? Date.now();
 		if (this._status !== "stopped") {
 			this._status = "aborted";

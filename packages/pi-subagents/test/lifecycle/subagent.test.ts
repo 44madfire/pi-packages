@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CreateSubagentSessionParams } from "#src/lifecycle/create-subagent-session";
 import { Subagent, type SubagentExecution, type SubagentLifecycleObserver } from "#src/lifecycle/subagent";
-import { SubagentSession, type TurnLoopResult } from "#src/lifecycle/subagent-session";
+import { SubagentSession, type TurnLoopOptions, type TurnLoopResult } from "#src/lifecycle/subagent-session";
 import { SubagentState, type SubagentStateInit } from "#src/lifecycle/subagent-state";
 import type { TurnBudget } from "#src/lifecycle/turn-limits";
 import type { WorkspacePrepareContext, WorkspaceProvider } from "#src/lifecycle/workspace";
@@ -15,8 +15,8 @@ import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
 import { createChildLifecycleMock } from "#test/helpers/subagent-session-io";
 import { turnLoopResult } from "#test/helpers/turn-loop-result";
 
-const WARNED: TurnBudget = { maxTurns: 2, used: 3, phase: "warned" };
-const EXHAUSTED: TurnBudget = { maxTurns: 2, used: 7, phase: "exhausted" };
+const WARNED: TurnBudget = { maxTurns: 5, used: 3, phase: "warned" };
+const EXHAUSTED: TurnBudget = { maxTurns: 5, used: 5, phase: "exhausted" };
 
 type SessionFactory = (params: CreateSubagentSessionParams) => Promise<SubagentSession>;
 
@@ -411,14 +411,6 @@ describe("Subagent — completeRun", () => {
 		record.completeRun(turnLoopResult({ turnBudget: WARNED }));
 		expect(record.status).toBe("completed");
 		expect(record.isTerminalError()).toBe(false);
-		expect(record.turnBudget).toEqual(WARNED);
-	});
-
-	it("records the turn loop's budget on the agent", () => {
-		const { record } = createCompletionAgent();
-		const turnBudget = { maxTurns: 4, used: 2, phase: "within" } as const;
-		record.completeRun(turnLoopResult({ turnBudget }));
-		expect(record.turnBudget).toEqual(turnBudget);
 	});
 
 	it("fires observer.onRunFinished on completion", () => {
@@ -1202,6 +1194,25 @@ describe("Subagent.run() — abort signal forwarding", () => {
 		const agent = createRunnableAgent({ createSubagentSession: factory, signal: parentController.signal });
 		await agent.run();
 		expect(agent.abortController.signal.aborted).toBe(true);
+	});
+});
+
+describe("Subagent.run() — live turn budget", () => {
+	it("shows the budget the turn loop reports while the run is still going", async () => {
+		const { factory, stub } = createFactory();
+		const gate = Promise.withResolvers<TurnLoopResult>();
+		stub.runTurnLoop.mockImplementation((_prompt: string, opts: TurnLoopOptions) => {
+			opts.onTurnBudget?.(WARNED);
+			return gate.promise;
+		});
+		const agent = createRunnableAgent({ createSubagentSession: factory });
+		const run = agent.run();
+		await vi.waitFor(() => expect(stub.runTurnLoop).toHaveBeenCalled());
+		expect(agent.status).toBe("running");
+		expect(agent.turnBudget).toEqual(WARNED);
+		gate.resolve(turnLoopResult({ turnBudget: WARNED }));
+		await run;
+		expect(agent.turnBudget).toEqual(WARNED);
 	});
 });
 
