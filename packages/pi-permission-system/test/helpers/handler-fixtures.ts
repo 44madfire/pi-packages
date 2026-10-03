@@ -348,20 +348,24 @@ export function makeHandler(overrides?: {
     // paths via the single manager entry point (#478).
     vi.mocked(permissionManager.check).mockImplementation(
       (intent: ResolvedAccessIntent, sessionRules) => {
-        if (intent.kind === "path-values") {
-          return surfaceCheck(
-            intent.surface,
-            { path: intent.values[0] ?? "*" },
-            intent.agentName,
-            sessionRules,
-          );
+        switch (intent.kind) {
+          case "path-values":
+            return surfaceCheck(
+              intent.surface,
+              { path: intent.values[0] ?? "*" },
+              intent.agentName,
+              sessionRules,
+            );
+          case "tool":
+            return surfaceCheck(
+              intent.surface,
+              intent.input,
+              intent.agentName,
+              sessionRules,
+            );
+          default:
+            return unhandledIntent(intent);
         }
-        return surfaceCheck(
-          intent.surface,
-          intent.input,
-          intent.agentName,
-          sessionRules,
-        );
       },
     );
   }
@@ -432,6 +436,11 @@ export function makeHandler(overrides?: {
     permissionManager,
     forwarding,
   };
+}
+
+/** Fails the type check when the manager gains an intent kind the adapter does not map. */
+function unhandledIntent(intent: never): never {
+  throw new Error(`unhandled intent: ${JSON.stringify(intent)}`);
 }
 
 // ── Decision-event helper ─────────────────────────────────────────────────

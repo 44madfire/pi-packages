@@ -8,6 +8,7 @@ import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import { resolveBashAdvisoryCheck } from "#src/service/bash-advisory-check";
 import type { PermissionCheckResult } from "#src/types";
 
+import { bashCommandOf } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
 /**
@@ -20,11 +21,10 @@ function makeBashResolver(
 ): ScopedPermissionResolver {
   return {
     resolve: vi.fn((intent: AccessIntent): PermissionCheckResult => {
-      if (intent.kind === "tool" && intent.surface === "bash") {
-        const command = (intent.input as { command?: string }).command ?? "";
-        return byCommand[command] ?? fallback;
-      }
-      return fallback;
+      const command = bashCommandOf(intent);
+      return command === undefined
+        ? fallback
+        : (byCommand[command] ?? fallback);
     }),
   };
 }

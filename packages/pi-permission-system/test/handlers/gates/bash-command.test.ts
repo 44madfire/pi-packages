@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveBashCommandCheck } from "#src/handlers/gates/bash-command";
 import type { PermissionCheckResult } from "#src/types";
 
-import { makeResolver } from "#test/helpers/gate-fixtures";
+import { bashCommandOf, makeResolver } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
 /** Build a bash-surface check result for a single command unit. */
@@ -41,7 +41,7 @@ describe("resolveBashCommandCheck", () => {
   it("denies the chain when any sub-command is denied, reporting that command's pattern", () => {
     const resolver = makeResolver();
     resolver.resolve.mockImplementation((intent) => {
-      const command = (intent as { input: { command: string } }).input.command;
+      const command = bashCommandOf(intent) ?? "";
       return command.startsWith("npm")
         ? bashResult("deny", command, "npm *")
         : bashResult("allow", command, "cd *");
@@ -62,7 +62,7 @@ describe("resolveBashCommandCheck", () => {
   it("asks when a sub-command asks and none denies", () => {
     const resolver = makeResolver();
     resolver.resolve.mockImplementation((intent) => {
-      const command = (intent as { input: { command: string } }).input.command;
+      const command = bashCommandOf(intent) ?? "";
       return command.startsWith("git")
         ? bashResult("ask", command, "git *")
         : bashResult("allow", command, "cd *");
@@ -83,7 +83,7 @@ describe("resolveBashCommandCheck", () => {
   it("returns the first allow result when every sub-command is allowed", () => {
     const resolver = makeResolver();
     resolver.resolve.mockImplementation((intent) => {
-      const command = (intent as { input: { command: string } }).input.command;
+      const command = bashCommandOf(intent) ?? "";
       return bashResult("allow", command, `${command} *`);
     });
 
@@ -174,7 +174,7 @@ describe("resolveBashCommandCheck", () => {
   it("tags the winning result with the offending command's execution context", () => {
     const resolver = makeResolver();
     resolver.resolve.mockImplementation((intent) => {
-      const command = (intent as { input: { command: string } }).input.command;
+      const command = bashCommandOf(intent) ?? "";
       return command.startsWith("rm")
         ? bashResult("deny", command, "rm *")
         : bashResult("allow", command, "echo *");

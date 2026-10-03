@@ -21,6 +21,7 @@ import { PathNormalizer } from "#src/path/path-normalizer";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import type { PermissionState } from "#src/types";
 
+import { bashCommandOf } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
 
 /** Decision strength ordering: deny (2) > ask (1) > allow (0). */
@@ -39,10 +40,7 @@ function makeKeyedResolver(
 ): ScopedPermissionResolver {
   return {
     resolve: (intent) => {
-      const command =
-        intent.kind === "tool"
-          ? ((intent.input as { command?: string }).command ?? "")
-          : "";
+      const command = bashCommandOf(intent) ?? "";
       const rule = rules.find((r) => command.includes(r.match));
       const state: PermissionState = rule?.state ?? "allow";
       return makeCheckResult({ state, source: "bash", command });
@@ -183,10 +181,7 @@ describe("bash command gate — a redirect's position does not weaken", () => {
   ): ScopedPermissionResolver {
     return {
       resolve: (intent) => {
-        const command =
-          intent.kind === "tool"
-            ? ((intent.input as { command?: string }).command ?? "")
-            : "";
+        const command = bashCommandOf(intent) ?? "";
         return makeCheckResult({
           state: command.startsWith(prefix) ? state : "allow",
           source: "bash",
