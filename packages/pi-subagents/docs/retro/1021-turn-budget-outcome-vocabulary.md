@@ -28,5 +28,24 @@ The plan is 7 steps (fixture prep, budget lift, state fact, additive exposure wi
   Its fixture count (~35) was re-derived: 25 lines match `steered: (false|true)`; the 6 `aborted:` lines in `record-observer.test.ts` are Pi `compaction_end` events and are excluded.
 - No open improvement phase, so `roadmap-fit` exited for [#1022] and [#1023]; the batch is recorded only in the plans, so `/ship` must confirm it.
 
+## Stage: Implementation — TDD (2026-10-03T20:37:50Z)
+
+### Session summary
+
+All 7 plan steps landed as separate commits, plus one follow-up test pin from the pre-completion review: fixtures, the budget lift in `runTurnLoop`, the state outcome fact, additive exposure with the `wrappedUpAtTurnLimit` predicate, the breaking `steered` removal, the breaking `subagents:child:completed` payload change, and docs.
+The pi-subagents suite went from 1962 to 2003 tests; `check`, root `lint`, `fallow dead-code`, and `verify:public-types` are green.
+
+### Observations
+
+- Deviation: in step 2, `@typescript-eslint/no-unnecessary-condition` narrowed `aborted`/`softLimitReached` to `false` (they are set inside the turn listener), so the phase is built by a private `buildTurnBudget` helper that takes the flags as parameters.
+- Deviation: the notification box label for a wrapped-up run changed from "completed (steered)" to "completed (wrapped up)" in step 4 (the plan's Presentation section named it; the step text implied no visible change).
+- Deviation: the presentation sites use a new `renderOutcomeIcon` in `result-renderer.ts` (and a private `renderWrappedUpIcon`), because `AgentDetails.status` includes `background` and does not fit `renderStatusIcon`'s `SubagentStatus` parameter.
+- Deviation: no separate widget linger test for a wrapped-up run.
+  Its status is `completed` by construction (pinned by the `completeRun` test), so the existing completed-linger test covers it; the plan's linger mutation needed the budget at a status-only site and was not expressible.
+- The `steered` presentation tests were deleted rather than migrated in step 5, since step 4 had added a `completed` + `warned` sibling for each.
+- Every planned killing mutation went red as predicted; step 4's predicate mutation killed exactly the 10 `completed` + `warned` tests while the legacy `steered` tests stayed green.
+- Pre-completion reviewer: WARN (no test pinned `stopped` with `phase: "exhausted"`, a stop during the grace turns); fixed in `test(pi-subagents): pin that a stop during the grace turns keeps its turn budget`; the delta review returned PASS.
+- Release: mid-batch for "turn-budget" — `/ship` should land without dispatching a release until [#1022] ships.
+
 [#1022]: https://github.com/gotgenes/pi-packages/issues/1022
 [#1023]: https://github.com/gotgenes/pi-packages/issues/1023
