@@ -53,3 +53,16 @@ All gates are green: test, check, root lint, and `fallow dead-code`.
 - Pre-completion reviewer: PASS.
   It reported 267 tests in 12 files for the package, but my own run shows 251 in 14.
   The reviewer's count does not match and I did not reconcile it.
+
+## Stage: Sync (worktree) (2026-10-03T04:50:29Z)
+
+### Session summary
+
+Root `pnpm run lint` and `pnpm fallow dead-code` both passed on the branch before the rebase.
+The plan's marker is `**Release:** ship independently`, and no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1007--/2026-10-03T03-52-04-515Z_01a0ffe3-f4a2-739d-b317-dd0e8eb6248f.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The pre-completion reviewer's package test count (267 in 12 files) did not match the 251 in 14 files from this session's own run; it was never reconciled, so the root's `/ship` run is the tiebreaker.
