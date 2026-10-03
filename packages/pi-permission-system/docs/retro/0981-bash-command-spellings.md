@@ -94,3 +94,46 @@ Probing for that amendment found two forms the scan misses that ADR 0009 had not
 Both were verified to rebind `HOME` in `/bin/bash`, and both escape the path projection as well.
 They were added to the residual list rather than filed.
 Re-sync: root `lint` and `fallow dead-code` pass.
+
+## Stage: Final Retrospective (2026-10-03T17:12:39Z)
+
+### Session summary
+
+The worktree lane landed #981 in two `/ship` runs: the first stopped at step 2 on the undecided reviewer WARN, and the second fast-forward-merged once the peer had recorded the residual as accepted.
+CI passed, #981 closed citing af2d24af, and `pi-permission-system` v39.0.3 released; PR #917 stays open by the operator's choice.
+Across stages, a reproduced deny bypass widened the issue's scope, and a reviewer-found allow bypass was decided as an accepted residual.
+
+### Observations
+
+#### What went well
+
+- Real-surface spikes drove both scope decisions: the planning spike measured the deny bypass and the dead session grant that the report missed, and the TDD-stage spike confirmed the reviewer's `n=HOME; read $n` allow before it reached the operator.
+- The plan's mutation list caught its own gap: the whole-string mutation survived, and the peer added a salvaged-only pin that kills it instead of trusting the plan.
+- `/ship` stopping at step 2 cost nothing irreversible; the stop happened before the pull, merge, or push.
+
+#### What caused friction (agent side)
+
+- `other` — `/sync-worktree` ran with the reviewer WARN knowingly undecided ("Syncing only rebases and writes notes, so it's safe to continue"), deferring the decision to `/ship`.
+  Impact: one aborted `/ship` run, a second sync (repeat `lint` + `fallow dead-code`, a dated addendum on the sync note), and a context switch back to the peer tab.
+- `instruction-violation` (self-identified) — the planning stage wrote placeholder follow-up numbers (#1014, #1015) into the plan before filing; the real numbers were #1019 and #1020.
+  Impact: one `perl` fix-up pass before commit; `git-workflow` already carries the rule.
+- `instruction-violation` (self-identified) — literal `\u2014` escapes landed in `.ts` `Edit` bodies three times during TDD; the unicode-escape gate covers markdown only, so each was caught by a manual `grep`.
+  Impact: three extra edits, no escaped literal shipped.
+- `instruction-violation` (self-identified) — the sync stage appended the retro note with a shell heredoc, which `markdown-conventions` says to avoid.
+  Impact: none; the content landed intact.
+- `instruction-violation` (self-identified, this retro) — the first `/ship` run called `ask_user` without loading `clarification-gates` and put the WARN's substance in the option descriptions instead of a preceding message.
+  Impact: none; the operator answered, but the gate left out the measured config and the scope of exposure.
+
+#### What caused friction (user side)
+
+- The WARN decision reached the operator three times (TDD summary, sync summary, `/ship` gate) before being made; settling it at the end of the TDD stage would have saved the extra sync and ship runs.
+
+### Diagnostic details
+
+- **Model-performance correlation:** planning and TDD ran on `claude-opus-5-5`; the first sync ran on `claude-sonnet-5-5` (the template's pinned model) and is where the WARN was deferred; the re-sync that settled it ran back on `claude-opus-5-5`.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5`; the reviewer's WARN was correct and security-relevant, so the model fit the job.
+- **Feedback-loop gap analysis:** the TDD stage ran targeted `vitest` plus `check` after every step and a named-mutation pass per step; root `lint` ran only at the end and caught the `noTemplateCurlyInString` warning, which cost one `--amend`.
+
+### Changes made
+
+1. `.pi/prompts/sync-worktree.md` — step 1 gains item 4: settle a reviewer WARN or open operator decision recorded in the retro before syncing.

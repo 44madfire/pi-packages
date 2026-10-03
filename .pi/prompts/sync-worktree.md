@@ -20,6 +20,8 @@ Load the `worktrees` and `git-workflow` skills before step 1 — the rebase rule
 1. Run `git branch --show-current`.
 2. If the branch is `main` (or not an `issue-$1-*` branch), stop and report — this is the trunk flow's job; run `/ship $1` from the root instead.
 3. Only proceed on an `issue-$1-<slug>` branch.
+4. Read the retro file's latest stage entry.
+   If it records a reviewer WARN or an operator decision still open, settle it with the operator (`ask_user`) and commit the result here before step 2 — syncing past it only moves the stop to `/ship`.
 
 ## 2. Pre-push checks
 
