@@ -1,4 +1,4 @@
-import { existsSync, lstatSync } from "node:fs";
+import { existsSync, lstatSync, statSync } from "node:fs";
 import { AccessPath } from "#src/access-intent/access-path";
 import {
   canonicalNormalizePathForComparison,
@@ -6,7 +6,7 @@ import {
   normalizePathPolicyLiteral,
 } from "#src/access-intent/path-normalization";
 import { classifyToolKind } from "#src/access-intent/tool-kind";
-import { deriveApprovalPattern } from "./approval-pattern";
+import { deriveApprovalPatterns } from "./approval-pattern";
 import { resolveNativeToolTarget } from "./native-tool-target";
 import { isPathOutsideWorkingDirectory } from "./path-containment";
 import type { PathFlavor } from "./path-flavor";
@@ -131,17 +131,41 @@ export class PathNormalizer {
   }
 
   /**
-   * The session-approval globs for an accessed path: its directory scope plus
-   * `*`, derived through the baked flavor.
+   * The session-approval globs for an accessed path, derived through the baked
+   * flavor: an existing directory's own scope (itself and its contents), else
+   * the enclosing directory's scope plus `*`.
    *
    * Takes the already-built {@link AccessPath} — the lexical form is what a
-   * later tool call is matched on, so the pattern must be derived from the
+   * later tool call is matched on, so the patterns must be derived from the
    * same representation the decision displayed (#438). Deriving it here rather
    * than at each gate keeps the platform's separator alphabet with the object
    * that owns the flavor, instead of an ambient `node:path` read (#655).
    */
   approvalPatternsFor(accessPath: AccessPath): readonly string[] {
-    return [deriveApprovalPattern(accessPath.value(), this.flavor)];
+    return deriveApprovalPatterns(
+      accessPath.value(),
+      this.flavor,
+      this.namesDirectory(accessPath),
+    );
+  }
+
+  /**
+   * Whether an accessed path names an existing directory, so its session grant
+   * covers that directory rather than its parent.
+   *
+   * Uses `stat`, following symlinks: a link to a directory is what `ls` lists.
+   * A literal-only path (no canonical form — an unknown base, or a win32
+   * non-mount POSIX absolute) is never probed, since `stat` would resolve it
+   * against the process cwd or a fabricated drive. Any error answers `false`,
+   * which keeps the parent-directory grant callers had before this probe.
+   */
+  private namesDirectory(accessPath: AccessPath): boolean {
+    if (!accessPath.boundaryValue()) return false;
+    try {
+      return statSync(accessPath.value()).isDirectory();
+    } catch {
+      return false;
+    }
   }
 
   /** Platform-aware absoluteness (`win32` vs `posix` rules). */

@@ -457,6 +457,56 @@ describe("PathNormalizer", () => {
     });
   });
 
+  describe("approvalPatternsFor over the filesystem", () => {
+    // Real filesystem: whether a path names a directory is fs state.
+    const tmp = createTmpFixture();
+    let projects: string;
+    let normalizer: PathNormalizer;
+
+    beforeEach(() => {
+      const root = tmp.dir("pi-perm-approval-");
+      projects = tmp.subdir(root, "projects");
+      normalizer = new PathNormalizer(
+        posixPathFlavor,
+        tmp.subdir(root, "workspace"),
+      );
+    });
+
+    afterEach(() => {
+      tmp.cleanup();
+    });
+
+    test("an existing directory → the directory and its contents", () => {
+      const dir = tmp.subdir(projects, "project-a");
+      expect(normalizer.approvalPatternsFor(normalizer.forPath(dir))).toEqual([
+        dir,
+        `${dir}/*`,
+      ]);
+    });
+
+    test("an existing file → its parent directory", () => {
+      const file = tmp.file(projects, "notes.txt");
+      expect(normalizer.approvalPatternsFor(normalizer.forPath(file))).toEqual([
+        `${projects}/*`,
+      ]);
+    });
+
+    test("a missing path → its parent directory", () => {
+      expect(
+        normalizer.approvalPatternsFor(
+          normalizer.forPath(join(projects, "missing")),
+        ),
+      ).toEqual([`${projects}/*`]);
+    });
+
+    test("a literal-only path is never probed → its parent directory", () => {
+      const dir = tmp.subdir(projects, "project-a");
+      expect(
+        normalizer.approvalPatternsFor(normalizer.forLiteral(dir)),
+      ).toEqual([`${projects}/*`]);
+    });
+  });
+
   describe("forToolPath", () => {
     // Real filesystem: `read`'s variant spellings are tried by existence.
     const tmp = createTmpFixture();
