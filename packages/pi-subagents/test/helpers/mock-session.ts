@@ -2,6 +2,7 @@ import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { SubagentSession } from "#src/lifecycle/subagent-session";
+import { turnLoopResult } from "#test/helpers/turn-loop-result";
 
 /** The core shape returned by `createMockSession`. */
 export interface MockSession {
@@ -58,7 +59,7 @@ export function createSubagentSessionStub(
 	return {
 		session,
 		outputFile,
-		runTurnLoop: vi.fn().mockResolvedValue({ responseText: "done", aborted: false, steered: false }),
+		runTurnLoop: vi.fn().mockResolvedValue(turnLoopResult({ responseText: "done" })),
 		resumeTurnLoop: vi.fn().mockResolvedValue("resumed"),
 		steer: vi.fn((message: string): Promise<void> => session.steer(message) as Promise<void>),
 		dispose: vi.fn((): Promise<void> => {

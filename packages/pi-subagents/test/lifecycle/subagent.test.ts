@@ -12,6 +12,7 @@ import { makeWorkspace, makeWorkspaceProvider } from "#test/helpers/make-workspa
 import { createMockSession, createSubagentSessionStub, emitResumeUsageAndCompaction, toAgentSession, toSubagentSession } from "#test/helpers/mock-session";
 import { STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
 import { createChildLifecycleMock } from "#test/helpers/subagent-session-io";
+import { turnLoopResult } from "#test/helpers/turn-loop-result";
 
 type SessionFactory = (params: CreateSubagentSessionParams) => Promise<SubagentSession>;
 
@@ -386,39 +387,30 @@ function createCompletionAgent(overrides?: { observer?: SubagentLifecycleObserve
 	};
 }
 
-function createTurnLoopResult(overrides?: Partial<TurnLoopResult>): TurnLoopResult {
-	return {
-		responseText: "done",
-		aborted: false,
-		steered: false,
-		...overrides,
-	};
-}
-
 describe("Subagent — completeRun", () => {
 	it("transitions to completed for a normal result", () => {
 		const { record } = createCompletionAgent();
-		record.completeRun(createTurnLoopResult());
+		record.completeRun(turnLoopResult());
 		expect(record.status).toBe("completed");
 		expect(record.result).toBe("done");
 	});
 
 	it("transitions to aborted when result.aborted is true", () => {
 		const { record } = createCompletionAgent();
-		record.completeRun(createTurnLoopResult({ aborted: true }));
+		record.completeRun(turnLoopResult({ aborted: true }));
 		expect(record.status).toBe("aborted");
 	});
 
 	it("transitions to steered when result.steered is true", () => {
 		const { record } = createCompletionAgent();
-		record.completeRun(createTurnLoopResult({ steered: true }));
+		record.completeRun(turnLoopResult({ steered: true }));
 		expect(record.status).toBe("steered");
 	});
 
 	it("fires observer.onRunFinished on completion", () => {
 		const onRunFinished = vi.fn();
 		const { record } = createCompletionAgent({ observer: { onRunFinished } });
-		record.completeRun(createTurnLoopResult());
+		record.completeRun(turnLoopResult());
 		expect(onRunFinished).toHaveBeenCalledOnce();
 		expect(onRunFinished).toHaveBeenCalledWith(record);
 	});
@@ -887,7 +879,7 @@ async function runWithWorkspace(
 	};
 	stub.runTurnLoop.mockImplementation(() => {
 		if (result.question !== undefined) askParent?.(result.question);
-		return Promise.resolve({ aborted: false, steered: false, ...result });
+		return Promise.resolve(turnLoopResult(result));
 	});
 	const workspace = makeWorkspace("/ws/dir", { resultAddendum: ADDENDUM });
 	const agent = createRunnableAgent({
@@ -996,7 +988,7 @@ describe("Subagent — disposing a held workspace", () => {
 		await agent.disposeSession();
 		expect(workspace.dispose).not.toHaveBeenCalled();
 
-		turnLoop.resolve({ responseText: "done", aborted: false, steered: false });
+		turnLoop.resolve(turnLoopResult({ responseText: "done" }));
 		await agent.promise;
 	});
 
@@ -1077,7 +1069,7 @@ describe("Subagent — announcing a notice produced after the result was deliver
 		};
 		stub.runTurnLoop.mockImplementation(() => {
 			askParent?.("Which one?");
-			return Promise.resolve({ responseText: "Mapped the configs.", aborted: false, steered: false });
+			return Promise.resolve(turnLoopResult({ responseText: "Mapped the configs." }));
 		});
 		const workspace = makeWorkspace("/ws/dir", { resultAddendum: ADDENDUM });
 		const agent = createRunnableAgent({
@@ -1138,7 +1130,7 @@ describe("Subagent — announcing a notice produced after the result was deliver
 		await agent.disposeSession();
 		expect(onWorkspaceNotice).not.toHaveBeenCalled();
 
-		turnLoop.resolve({ responseText: "done", aborted: false, steered: false });
+		turnLoop.resolve(turnLoopResult({ responseText: "done" }));
 		await agent.promise;
 	});
 
@@ -1519,7 +1511,7 @@ describe("Subagent.waitUntilSettled()", () => {
 
 	it("reports the waited run's outcome when a resume replaced it before the wait returned", async () => {
 		const stub = createSubagentSessionStub();
-		stub.runTurnLoop.mockResolvedValue({ responseText: "first result", aborted: false, steered: false });
+		stub.runTurnLoop.mockResolvedValue(turnLoopResult({ responseText: "first result" }));
 		const resumed = Promise.withResolvers<string>();
 		stub.resumeTurnLoop.mockReturnValue(resumed.promise);
 		const agent = makeSubagent({
@@ -1569,12 +1561,7 @@ function createResumableAgent(overrides?: {
  *
  * Returns the recorder too, so a resumed run can ask again on the same session.
  */
-async function runAsking(opts: {
-	responseText: string;
-	question?: string;
-	aborted?: boolean;
-	steered?: boolean;
-}) {
+async function runAsking(opts: Partial<TurnLoopResult> & { responseText: string; question?: string }) {
 	const stub = createSubagentSessionStub();
 	let askParent: ((question: string) => void) | undefined;
 	const agent = makeSubagent({
@@ -1587,11 +1574,8 @@ async function runAsking(opts: {
 	});
 	stub.runTurnLoop.mockImplementation(() => {
 		if (opts.question !== undefined) askParent?.(opts.question);
-		return Promise.resolve({
-			responseText: opts.responseText,
-			aborted: opts.aborted ?? false,
-			steered: opts.steered ?? false,
-		});
+		const { question: _question, ...result } = opts;
+		return Promise.resolve(turnLoopResult(result));
 	});
 	await agent.run();
 	return { agent, stub, ask: (question: string) => askParent?.(question) };

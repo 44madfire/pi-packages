@@ -10,6 +10,7 @@ import {
 import { createTestSubagent, makeStubExecution } from "#test/helpers/make-subagent";
 import { makeWorkspace, makeWorkspaceProvider } from "#test/helpers/make-workspace";
 import { createSubagentSessionStub, toSubagentSession } from "#test/helpers/mock-session";
+import { turnLoopResult } from "#test/helpers/turn-loop-result";
 
 /** Options a notification carrier hands `pi.sendMessage`. */
 interface SendOptions {
@@ -283,7 +284,7 @@ describe("NotificationManager", () => {
     let askParent: ((question: string) => void) | undefined;
     stub.runTurnLoop.mockImplementation(() => {
       askParent?.("Which config?");
-      return Promise.resolve({ responseText: "Got partway.", aborted: true, steered: false });
+      return Promise.resolve(turnLoopResult({ responseText: "Got partway.", aborted: true }));
     });
     const disposed = createTestSubagent({
       id: "agent-3",

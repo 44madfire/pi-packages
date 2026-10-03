@@ -14,6 +14,7 @@ import { makeWorkspace, makeWorkspaceProvider } from "#test/helpers/make-workspa
 import { createBlockingFactory, createSessionFactory } from "#test/helpers/manager-stubs";
 import { createMockSession, createSubagentSessionStub, emitResumeUsageAndCompaction, toSubagentSession } from "#test/helpers/mock-session";
 import { STUB_CTX, STUB_SNAPSHOT } from "#test/helpers/stub-ctx";
+import { turnLoopResult } from "#test/helpers/turn-loop-result";
 
 /** Default max concurrent background agents (matches production default). */
 const DEFAULT_MAX_CONCURRENT = 4;
@@ -410,7 +411,7 @@ describe("SubagentManager", () => {
           stub.runTurnLoop.mockImplementation(async () => {
             if (n === 1) await gate1;
             if (n === 2) await gate2;
-            return { responseText: `result-${n}`, aborted: false, steered: false };
+            return turnLoopResult({ responseText: `result-${n}` });
           });
           return toSubagentSession(stub);
         });
@@ -479,7 +480,7 @@ describe("SubagentManager", () => {
           const stub = createSubagentSessionStub();
           stub.runTurnLoop.mockImplementation(async () => {
             if (n === 1) await gate;
-            return { responseText: "ok", aborted: false, steered: false };
+            return turnLoopResult({ responseText: "ok" });
           });
           return toSubagentSession(stub);
         });
@@ -558,7 +559,7 @@ describe("SubagentManager", () => {
           const stub = createSubagentSessionStub();
           stub.runTurnLoop.mockImplementation(async () => {
             if (n === 1) await gate;
-            return { responseText: `result-${n}`, aborted: false, steered: false };
+            return turnLoopResult({ responseText: `result-${n}` });
           });
           return toSubagentSession(stub);
         });
@@ -1141,7 +1142,7 @@ describe("SubagentManager", () => {
         stub.runTurnLoop.mockImplementation(async () => {
           session.emit({ type: "message_end", message: { role: "assistant", usage: { input: 100, output: 50, cacheWrite: 10 } } });
           session.emit({ type: "message_end", message: { role: "assistant", usage: { input: 200, output: 80, cacheWrite: 20 } } });
-          return { responseText: "done", aborted: false, steered: false };
+          return turnLoopResult({ responseText: "done" });
         });
         ({ manager } = createManager({ createSubagentSession: factory }));
 
@@ -1163,7 +1164,7 @@ describe("SubagentManager", () => {
           // onCompact should reflect the just-incremented count.
           session.emit({ type: "compaction_end", aborted: false, result: { tokensBefore: 12345 }, reason: "threshold" });
           session.emit({ type: "compaction_end", aborted: false, result: { tokensBefore: 22222 }, reason: "manual" });
-          return { responseText: "done", aborted: false, steered: false };
+          return turnLoopResult({ responseText: "done" });
         });
 
         ({ manager } = createManager({ createSubagentSession: factory, observer: { onSubagentCompacted: (record, info) => {
@@ -1376,7 +1377,7 @@ describe("SubagentManager", () => {
       let askParent: ((question: string) => void) | undefined;
       stub.runTurnLoop.mockImplementation(() => {
         askParent?.("Which config?");
-        return Promise.resolve({ responseText: "Mapped them.", aborted: false, steered: false });
+        return Promise.resolve(turnLoopResult({ responseText: "Mapped them." }));
       });
       ({ manager } = createManager({
         createSubagentSession: vi.fn(async (params: CreateSubagentSessionParams) => {

@@ -2,6 +2,7 @@ import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SubagentSession } from "#src/lifecycle/subagent-session";
 import { createChildLifecycleMock } from "#test/helpers/subagent-session-io";
+import { childCompletedEvent } from "#test/helpers/turn-loop-result";
 
 // ── Session mock factory ───────────────────────────────────────────────────────
 
@@ -335,12 +336,9 @@ describe("SubagentSession — runTurnLoop lifecycle events", () => {
     const { sub } = makeSubagentSession(session, { sessionDir: "/d", agentName: "Explore", lifecycle });
     await sub.runTurnLoop("go", {});
     expect(lifecycle.completed).toHaveBeenCalledOnce();
-    expect(lifecycle.completed).toHaveBeenCalledWith({
-      sessionDir: "/d",
-      agentName: "Explore",
-      aborted: false,
-      steered: false,
-    });
+    expect(lifecycle.completed).toHaveBeenCalledWith(
+      childCompletedEvent({ sessionDir: "/d", agentName: "Explore" }),
+    );
   });
 
   it("releases its turn-outcome subscription on dispose", async () => {
