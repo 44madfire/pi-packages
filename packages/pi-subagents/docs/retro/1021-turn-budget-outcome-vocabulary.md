@@ -47,5 +47,60 @@ The pi-subagents suite went from 1962 to 2003 tests; `check`, root `lint`, `fall
 - Pre-completion reviewer: WARN (no test pinned `stopped` with `phase: "exhausted"`, a stop during the grace turns); fixed in `test(pi-subagents): pin that a stop during the grace turns keeps its turn budget`; the delta review returned PASS.
 - Release: mid-batch for "turn-budget" — `/ship` should land without dispatching a release until [#1022] ships.
 
+## Stage: Final Retrospective (2026-10-03T21:23:39Z)
+
+### Session summary
+
+One trunk session took a third-party bug report (Paseo spins forever on `steered`) through planning, TDD, ship, and retro.
+Planning became an operator-driven redesign of the turn-limit vocabulary, split into a release batch (#1021 then [#1022]) plus a spike ([#1023]); #1021 landed as 8 commits, CI passed, the issue closed, and the major release is deferred to the batch tail.
+
+### Observations
+
+#### What went well
+
+- Cloning `getpaseo/paseo` and reading its mapper turned the reporter's claim into a hard constraint ("every terminal status must be one Paseo maps"), which settled the ceiling question once the operator ruled out filing against Paseo.
+- The step-4 lift (the `wrappedUpAtTurnLimit` predicate kept a legacy `steered` arm) produced a clean mutation split: removing the budget check killed exactly the 10 `completed` + `warned` tests while the `steered` tests stayed green, so step 5 could delete the legacy arm with the replacement already pinned.
+- The Tidy-First fixture step (`test/helpers/turn-loop-result.ts`) absorbed step 6's `TurnLoopResult`/`ChildCompletedEvent` reshape in one file.
+
+#### What caused friction (agent side)
+
+- `premature-convergence` — I listed "the turn-limit meaning of `aborted` leaves the status" as settled and offered `completed` versus `error` for the ceiling, missing that `aborted` (harness stop) versus `stopped` (external stop) already encoded the distinction the operator wanted.
+  User-caught ("Isn't it aborted?").
+  Impact: one gate bounced and a settled item withdrawn; no rework.
+- `missing-context` — the gate that offered `turnBudget: { maxTurns, used, phase }` did not check that `SubagentRecord`, `AgentDetails`, and `NotificationDetails` already carry `turnCount`/`maxTurns`; I found the overlap only while mapping touch points.
+  Self-identified.
+  Impact: one extra `ask_user` round.
+- `instruction-violation` — gate options used undefined terms: `phase` (the operator asked "What is `phase`?") and a proposed `subagents:finished` channel the operator read as an existing one.
+  `clarification-gates` already requires defining terms of art before the substance.
+  User-caught.
+  Impact: two extra explanatory turns.
+- `missing-context` — the plan's Edge cases section stated the stop-during-grace behavior (`stopped` with the loop's budget) but no TDD step pinned it, and the Invariants table omitted it.
+  Caught by the pre-completion reviewer (WARN).
+  Impact: one follow-up `test:` commit and a delta review.
+- `other` — `@typescript-eslint/no-unnecessary-condition` narrowed `aborted`/`softLimitReached` to `false` because a `session.subscribe` listener mutates them; the step ran `check` and `vitest` but not ESLint, so the pre-commit hook rejected the commit.
+  `code-design`'s "Closure narrowing loop" covers only `.forEach()`, whose fix (`for...of`) does not apply to an event listener.
+  Impact: one rejected commit; fixed with a parameter-taking `buildTurnBudget` helper.
+- `instruction-violation` — two `Edit` calls spelled an em-dash as the escape `\u2014` in `oldText` and failed to match; one doc comment received a garbled em-dash (`\ndash;`).
+  Self-identified each time.
+  Impact: three extra edits.
+- `other` — the plan named a step-5 widget-linger mutation at `shouldShowFinished`, a status-only site that cannot see `turnBudget`, so the mutation was not expressible.
+  Impact: a recorded deviation, no rework.
+
+#### What caused friction (user side)
+
+- The "no issue against Paseo" constraint arrived after three design turns; stated with the first gate it would have removed the Paseo-side option immediately.
+  The redirecting questions ("What is `phase`?", "Isn't it aborted?") were the efficient intervention style and caught both gate defects cheaply.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning, TDD, and retro ran on `anthropic/claude-opus-5-5`; `/ship` ran on `anthropic/claude-sonnet-5-5`, appropriate for its mechanical steps.
+  The `tidy-first-assessor` and both `pre-completion-reviewer` dispatches ran on `anthropic/claude-sonnet-5-5` (from their transcripts); the reviewer's WARN was a real coverage gap.
+- **Feedback-loop gap analysis** — every step ran its test file, the package suite, and `pnpm run check` before committing, but ESLint ran only through the pre-commit hook, which is how step 2's commit was rejected.
+
+### Changes made
+
+1. `.pi/skills/code-design/SKILL.md` — "Closure narrowing loop" now covers event-listener callbacks, with the fix of passing the flags as parameters to a helper.
+2. `.pi/prompts/plan-issue.md` — the Design Overview bullet requires a TDD step that pins each edge case stated as behavior.
+
 [#1022]: https://github.com/gotgenes/pi-packages/issues/1022
 [#1023]: https://github.com/gotgenes/pi-packages/issues/1023

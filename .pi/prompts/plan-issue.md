@@ -181,6 +181,7 @@ Then an H1 title (e.g., `# <short descriptive title>`) — required by markdownl
 - **Background** — relevant existing modules/functions and how they relate.
   Flag any constraint from AGENTS.md that applies.
 - **Design Overview** — decision model, data shapes, separation of concerns, edge cases.
+  An edge case the Design Overview states as behavior (not as out of scope) gets a test in some TDD step — name the step.
   Include code-fenced TS types when shape changes.
   When the design introduces a new collaborator that multiple consumers will use, sketch the consumer's call site (3–5 lines of pseudocode) to verify the interaction pattern follows Tell-Don't-Ask and Law of Demeter.
   When the design extracts code into a new module, sketch the extracted module's interaction with its upstream dependencies (3–5 lines) to verify it doesn't carry Tell-Don't-Ask violations, output-argument mutations, or reverse-search patterns from the original code.
