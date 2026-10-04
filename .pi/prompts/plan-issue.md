@@ -187,6 +187,7 @@ Then an H1 title (e.g., `# <short descriptive title>`) — required by markdownl
   When the design extracts code into a new module, sketch the extracted module's interaction with its upstream dependencies (3–5 lines) to verify it doesn't carry Tell-Don't-Ask violations, output-argument mutations, or reverse-search patterns from the original code.
   Fix upstream API gaps in the plan before planning the extraction.
   When a step adds an import edge A → B within one directory, confirm B does not already reach A through its own imports — `fallow guard` allows every same-zone edge, so the cycle surfaces only as a `fallow dead-code` failure mid-TDD.
+  When a step adds an import edge A → B across directories, run `pnpm --silent fallow guard <A>` at planning time — a forbidden zone reshapes the design, and found mid-TDD it forces a deviation.
   When a new exported function accepts domain objects, verify the parameter type follows ISP — list which fields the function reads and confirm the type doesn't carry unused fields.
   When the plan consolidates code from multiple methods into a shared helper, verify the methods have the same lifecycle semantics — different guards, cleanup scopes, or shutdown-vs-normal-operation contexts indicate structural duplication that should not be extracted.
   When the design has N sibling call sites each supply the same derived fact, check whether a shared downstream point already stamps per-call fields (a runner, a writer, a factory) — a fact every sibling merely relays belongs there, not in N places.
