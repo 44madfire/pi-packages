@@ -45,3 +45,17 @@ Test count 116 → 119 in `pi-colgrep` (three `renderResult` tests); `pi-github-
   Running `rumdl fmt` fixed it before the commit.
 - Pre-completion reviewer: WARN.
   Its one non-blocking note: `captureTool` reads `registerTool.mock.calls[0][0]` by raw index, and `render()` re-registers the tool on every call.
+
+## Stage: Sync (worktree) (2026-10-04T21:24:39Z)
+
+### Session summary
+
+Root `pnpm run lint` and `pnpm fallow dead-code` both pass on the branch.
+The plan's marker is `**Release:** ship independently`; dispatch both `pi-github-tools` and `pi-colgrep` (both `feat!:` commits cut a major).
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1003--/2026-10-04T01-45-53-985Z_01a10496-cc40-7755-9fae-9d6ad8bb9527.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- No deferred work and no follow-up issues.
+- Open third-party PR #993 touches `pi-github-tools` `issue-close` files; it keeps compiling because `err()` is unchanged.
