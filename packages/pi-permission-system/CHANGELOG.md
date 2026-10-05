@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.0.4](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.3...pi-permission-system-v39.0.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** show a broken config file's error once, not twice, at session start ([67ddf4f](https://github.com/gotgenes/pi-packages/commit/67ddf4f637bd6f4e15246093dc3d1c459552c7f2)), closes [#953](https://github.com/gotgenes/pi-packages/issues/953)
+* **pi-permission-system:** report a policy file that fails closed mid-session ([100a0d3](https://github.com/gotgenes/pi-packages/commit/100a0d3e1b49c92454163b270df52df7cc78ca1f)), closes [#953](https://github.com/gotgenes/pi-packages/issues/953)
+
 ## [39.0.3](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.2...pi-permission-system-v39.0.3) (2026-10-03)
 
 
