@@ -191,6 +191,7 @@ Then hand off based on the decision:
 2. **Adopt as-is** — produce a focused review checklist (correctness, convention fit, test coverage, behavior-change/breaking call-out, attribution), then land it per the operator's call: request changes, merge as-is, or push your own fixes onto the contributor's branch and `gh pr merge --rebase`.
    That third ending needs `gh pr view $1 --json maintainerCanModify` to report `true`; it keeps `main` correct at every commit and preserves per-commit authorship.
    `maintainerCanModify` is the evidence — a `git push --dry-run` reporting `Everything up-to-date` is not.
+   Check each contributor commit header for `type(<pkg>):` — an unscoped header ships an unscoped, issue-unlinked changelog entry; reword it on the branch before merging, or merge with `--squash` and a conforming subject plus `Co-authored-by:`.
 3. **Decline / defer** — commit the triage note, then close the PR with a comment that credits `@<login>`, explains the reasoning, and (if the problem is real) points at a tracked follow-up.
 
 Commit the triage note before stopping: `git add <retro-file> && git commit -m "docs(pr-review): triage PR #$1 → <decision>"` (e.g. `adopt-as-is`, `decline`), matching the form in direction 1.
