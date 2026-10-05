@@ -59,3 +59,51 @@ The plan's marker is `**Release:** ship independently`; dispatch both `pi-github
 
 - No deferred work and no follow-up issues.
 - Open third-party PR #993 touches `pi-github-tools` `issue-close` files; it keeps compiling because `err()` is unchanged.
+
+## Stage: Final Retrospective (2026-10-05T03:54:31Z)
+
+### Session summary
+
+The root `/ship` fast-forward-merged the worktree branch, passed root lint and `fallow dead-code`, and got green CI on `28c92c43`.
+It closed the issue and released `pi-github-tools-v6.0.0` and `pi-colgrep-v2.0.0` in one dispatch, then tore down the worktree.
+Across all four stages the issue ran with no rework commits and no user corrections after the planning gate.
+
+### Observations
+
+#### What went well
+
+- Planning verified the defect against the real surface: the published `pi-agent-core` 0.75.0 tarball and the pinned 0.79.1 `dist/agent-loop.js`, not the type declarations.
+  It also disproved one of the issue's own claims (throwing costs `details`) by reading the `err()` builders.
+- The devDependency spike to 1.0.0, run during planning and reverted, made the two floor-raise steps mechanical: TDD steps 1 and 2 matched the prediction exactly.
+- The colgrep renderer defect (`✓ no matches` for any error) was found while planning, not by a user, and folded in through the operator gate.
+- Every killing mutation the plan named reddened the predicted test.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (self-identified, at retro) — `/ship` step 9 says to re-resolve every hex token in the finished close-comment draft before `issue_close`.
+  I resolved the range before drafting and pasted from that output, but did not re-verify the draft itself.
+  Impact: none; all three cited SHAs were copied from command output and are reachable from `main`.
+- `other` — the ship's final report said I had not checked whether #1003 completed a roadmap phase, instead of running the check. #1003 is triage rank 14 in `docs/triage/2026-10-02-backlog.md`, not a roadmap step, which one `grep` showed at retro time.
+  Impact: an open question left in the report; no rework.
+- `other` — TDD: the first `fix(pi-colgrep):` commit was rejected by the `rumdl fmt` hook because the skill's table padding changed; `rumdl fmt` then a re-commit fixed it.
+  Impact: one extra tool call.
+
+#### What caused friction (user side)
+
+- None.
+  The one operator decision (raise the floor instead of throwing) came at the planning gate, where it belonged.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Planning and TDD ran on `claude-opus-5-5`, and the sync stage on `claude-sonnet-5-5`.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5` and produced grounded, file-cited reports.
+  No mismatch.
+- **Feedback-loop gap analysis** — TDD ran package `check`/`lint`/`test` after each step and the full root suite at the end; no gap.
+- **Tool observation** — `ci_watch` printed `[1/1] queued (210s)` after the CI job had completed, and `[3/3] queued` during the release run.
+  `formatProgress` in `packages/pi-github-tools/src/lib/ci-helpers.ts` labels any poll with no `in_progress` job as `queued`, including the window after every job has completed and before the run reports completion.
+
+### Changes made
+
+1. Filed [#1026] (`pi-github-tools`: `ci_watch` progress line says "queued" after jobs have completed); `pi-github-tools` has no architecture doc, so no roadmap-fit disposition applies.
+
+[#1026]: https://github.com/gotgenes/pi-packages/issues/1026
