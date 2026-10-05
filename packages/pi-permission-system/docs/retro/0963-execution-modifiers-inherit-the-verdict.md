@@ -51,7 +51,7 @@ The instrument reports 73 floored asks relieved by the new clause alone (298 flo
 - Plan deviations in Step 3: `WRITING_OPTIONS` became per-wrapper, because `stdbuf -o` sets a buffering mode and a global `-o` refusal turned two `stdbuf` rows red; and `LITERAL_COMMAND_NAME` may not lead with `-` (`time -- -x` would be exempt while `executedUnitOf` declines to name it).
 - Mutation findings: the five-deep `time` row is killed by the reserved-word guard as well as the peel-end check, and `time { …` by the reserved-word set as well as the charset, so the plan's per-mutation red counts were one row high for those two mutations; both rows are double-covered.
 - Two metamorphic rows the fix step first wrote (`timeout $D sudo rm x`) were green before the fix, because the visible `sudo` already refuses; replaced with `timeout $D pnpm test`, the shape where the split word is the hidden wrapper.
-- `\u2014`/`\u2026` written in `Edit` bodies landed as literal escapes in source and as tabs or space runs in markdown, several times; each was repaired by a scripted substitution and checked with `rg`.
+- `—`/`\u2026` written in `Edit` bodies landed as literal escapes in source and as tabs or space runs in markdown, several times; each was repaired by a scripted substitution and checked with `rg`.
 - Pre-completion reviewer, round 1: **FAIL** on two bypasses, both reproduced: `timeout -- 5 sudo rm x` (`innerCommandIndex` returned at `--` without consuming the pending duration, so the gate resolved a command named `5`) and `timeout {5,sudo} rm x` / `timeout $D pnpm test` (computed prefix words the shell splits into extra words).
   Fixed in the `feat:` commit itself, squashed in at sync time so the changelog shows one feature; the literal-word rule costs no logged asks.
   The round-1 reviewer also ran `time find . -delete` as real shell inside the package while probing; it restored the tree, and the suite and `git status` were verified clean afterwards.
@@ -61,6 +61,22 @@ The instrument reports 73 floored asks relieved by the new clause alone (298 flo
   `timeout -- -- 5 rm x` / `timeout -- 5 5 rm x` still resolve a misread command, but real `timeout` cannot run `rm` from either, so they were left as-is.
 - Round 3: **PASS**.
 - Reviewer warnings left open: path-qualified wrapper names match by basename (`./time rm x`), not weaker than the same rule's allow of the bare `./time`; `timeout -s KILL rm x` (no duration) misaligns the derivation, but GNU `timeout` errors without running anything.
+
+## Stage: Sync (worktree) (2026-10-05T14:00:40Z)
+
+### Session summary
+
+Pre-push gates passed (`pnpm run lint`, `pnpm fallow dead-code`, `pnpm run check`, and the 5530-test package suite).
+The plan's marker is `**Release:** ship independently`; the `feat:` commit is the release vehicle.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-963--/2026-10-04T20-39-58-367Z_01a108a5-129f-7439-beef-4b01a6933308.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- On the operator's decision, the review-round `fix:` commit was squashed into the `time, timeout, nice, stdbuf, and setsid resolve by the command they run` `feat:` commit (a `fixup` rebase; the tree was byte-identical before and after), so the changelog shows one feature rather than a fix for something never released.
+  The architecture `Landed:` note and the TDD stage note were updated to match.
+- The operator chose to ship with the two open reviewer WARNs (`timeout -- -- 5 rm x` misread, path-qualified wrapper names matched by basename).
+- Follow-up for the root: [#1027] is the next Phase 15 step; the retro's `#### Phase handoff` records the command-description-layer phase candidate.
 
 [#804]: https://github.com/gotgenes/pi-packages/issues/804
 [#880]: https://github.com/gotgenes/pi-packages/issues/880
