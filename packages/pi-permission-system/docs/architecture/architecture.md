@@ -1325,6 +1325,9 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
 - [#1027] — filed by [#963]'s planning; **becomes a new step in this phase, directly after [#963]** (operator decision, 2026-10-05).
   `tree-sitter-bash` has no `time` keyword, so `time ( … )` parses as a command whose argument is a subshell, and the commands inside are never enumerated as units; [#963]'s literal-head guard keeps the floor on that shape, which forfeits 10 of the 84 modifier-led floored asks in the local review log.
   Placed after [#963] rather than after [#880] so it releases independently instead of splitting the "declared-effects" batch.
+- [#1029] — filed by the #963 retrospective; **becomes a new step in this phase, directly after [#963] and ahead of [#1027]** (operator decision, 2026-10-05).
+  A subagent's floored bash ask forwards only its command value, and the serving node resolves that value against plain rules, so a `bash: *` allow auto-approves the ask the wrapper floor raised; it was observed letting a reviewer subagent's `time find . -delete` run unprompted.
+  It shares no mechanism with this phase's token roles (it is the forwarding wire [#1019] also touches), but it is a live bypass of a floor this phase keeps relying on, so it lands before the remaining relief steps.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1633,6 +1636,19 @@ ADR 0013 §11 keys transparency on the *inner command* (a pure-reader-core head 
 
 Release: independent
 
+#### [#1029] A forwarded bash ask keeps the floor that raised it
+
+**Cause:** `describeToolGate` builds a bash ask's child-fixed facts with `accessFactsFromValue(gateSurface, decisionValue)`, and `ForwardedRequestServer.resolveDecision` resolves that value through plain rule matching.
+The wrapper floor (`<indirection-bash-wrapper>`, `<opaque-bash-wrapper>`, `<unparsed-bash-subtree>`) is computed only in the child's parse, so it never crosses the wire, and a serving node holding `bash: *` auto-approves the ask the floor raised.
+
+- **Smell:** Category C (a decision the child fixed is re-derived by a node that cannot see its reason).
+- **Target:** `src/handlers/gates/tool.ts`, `src/authority/forwarded-request-server.ts`, and the forwarded-request wire shape (ADR 0008's child-fixed facts).
+- **Constraint:** a serving-node `deny` still auto-denies; only an `allow` the floor overrode must escalate instead of approving.
+- **Outcome:** a subagent's `time rm x` under a parent `bash: *` allow reaches the parent's `Authorizer` instead of logging `forwarded_permission.auto_approved`.
+- **Commit type:** `fix:`.
+
+Release: independent
+
 #### [#1027] The commands inside `time ( … )` are units
 
 **Cause:** `tree-sitter-bash` (0.25.1, the latest release) defines no `time` keyword, so `time (rm -rf /tmp/x)` parses as a `command` named `time` whose argument is a `subshell`, and `time { rm …; }` as a `command` whose arguments are the brace group's words.
@@ -1711,7 +1727,8 @@ flowchart TD
     S924["✅ #924<br/>sed/awk presumed readers"] -.soft.-> S992["✅ #992<br/>Computed words withdraw the claim"]
     S992 -.soft.-> S995["✅ #995<br/>A reassigned $HOME is not known"]
     S995 -.soft.-> S963["✅ #963<br/>Execution-modifier wrappers inherit the verdict"]
-    S963 -.soft.-> S1027["#1027<br/>Commands inside time ( … )"]
+    S963 -.soft.-> S1029["#1029<br/>A forwarded ask keeps its floor"]
+    S1029 -.soft.-> S1027["#1027<br/>Commands inside time ( … )"]
     S963 -.soft.-> S880["#880<br/>commandEffects"]
     S880 --> S881["#881<br/>Blame reaches the ask"]
     S609 -.soft.-> S881
@@ -1740,14 +1757,16 @@ The diagram is laid out by dependency instead, so its shape and the working sequ
   [#924] owns `command-effects.ts` and the pure-reader core section of `docs/configuration.md`; [#963] owns `wrapper-analysis.ts` and ADR 0013 §11; [#880] owns `src/config/` and re-enters `command-effects.ts`; [#881] owns `src/presentation/` and the two bash path gates.
   [#881] touches `bash-path.ts` / `bash-external-directory.ts`; [#609]'s plan leaves both gates unchanged, but [#881]'s blame reads the candidate set [#609] widens, so sequence [#881] after [#609].
 - **Track C — the judgment lane:** [#882], a deliberation first; its code half touches `authority/delegation-envelope.ts`, `authority/permission-forwarding.ts`, and the payload core [#881] owns, so it lands after [#881].
+- **Track D — the forwarding wire:** [#1029].
+  Owns `src/authority/forwarded-request-server.ts` and the forwarded access facts; it shares that wire with Track C's [#882] code half, so sequence them rather than run them concurrently.
 
-The sandbox seam that Phase 15 briefly carried as a fourth track is now Phase 16's subject in full ([#892], with [#802]).
+The sandbox seam that Phase 15 briefly carried as a track of its own is now Phase 16's subject in full ([#892], with [#802]).
 
 ### Release batches
 
 - **Batch "declared-effects":** [#880], [#881] (ship together; tail = [#881]; release vehicle = [#880]'s `feat:` with [#881]'s `fix:` riding the same release).
   They ship together because [#881]'s blame line names the config key [#880] creates, and a prompt telling the user to declare an effect they cannot declare is worse than the prompt it replaces.
-- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix!:` — newly prompts on a computed argument that may lead with `-`), [#995] (`fix:`), [#1027] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
+- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix!:` — newly prompts on a computed argument that may lead with `-`), [#995] (`fix:`), [#1029] (`fix:`), [#1027] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
 
 ## Refactoring history
 
@@ -1910,5 +1929,6 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1020]: https://github.com/gotgenes/pi-packages/issues/1020
 [#1027]: https://github.com/gotgenes/pi-packages/issues/1027
 [#1028]: https://github.com/gotgenes/pi-packages/issues/1028
+[#1029]: https://github.com/gotgenes/pi-packages/issues/1029
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
