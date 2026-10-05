@@ -184,7 +184,7 @@ Four guards keep the inherited verdict naming the command that really runs; with
 - Every option on a modifier layer is on that wrapper's allowlist, with value-taking options drawn from the same table the inner-command search skips by.
   The real tools accept long-option abbreviations that search does not know, so `timeout --sig KILL 5 rm -rf /` was read as running `5 rm -rf /`.
   `time`'s file-writing options (`-o`, `--output`, `-a`) are never admitted.
-  Every option, value, and operand on a modifier layer must also be literal, since the shell splits or expands a computed word into others before the modifier runs: `timeout {5,sudo} rm x` runs `timeout 5 sudo rm x`.
+  Every option, value, and operand on a modifier layer must also be literal (an environment assignment, which does not split, is exempt), since the shell splits or expands a computed word into others before the modifier runs: `timeout {5,sudo} rm x` runs `timeout 5 sudo rm x`.
   A `--` ends the options but not `timeout`'s duration, so `timeout -- 5 sudo rm x` peels to `sudo rm x`, not to a command named `5`.
 - The peel ends at an ordinary command, not a wrapper it could not see past.
 - The inner head is a literal command name, not shell syntax: `tree-sitter-bash` has no `time` keyword, so `time { rm …; }` and `time ( … )` reach the clause with `{` or a subshell where the name should be.
