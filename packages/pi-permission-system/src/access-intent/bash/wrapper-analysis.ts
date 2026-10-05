@@ -180,7 +180,9 @@ export function floorExemptionOf(
   // Only the peeled words matter here, so the walk is handed no source span to
   // cut from — the text slice is `executedUnitOf`'s product, not this one's.
   const unwrapped = unwrapIndirection(words, "");
-  if (unwrapped.kind === "opaque" || unwrapped.layers === 0) return undefined;
+  if (unwrapped.kind === "opaque" || unwrapped.peeled.length === 0) {
+    return undefined;
+  }
 
   const head = unwrapped.words.at(0)?.text ?? "";
   return proveCommandEffect(head, unwrapped.words.slice(1)).effect === "read"
@@ -206,8 +208,11 @@ type UnwrapResult =
       readonly kind: "peeled";
       readonly text: string;
       readonly words: readonly CommandWord[];
-      /** How many indirection layers came off; `0` means none did. */
-      readonly layers: number;
+      /**
+       * Each peeled layer's words before its inner command: the wrapper name,
+       * its options, and any leading operand. Empty when none came off.
+       */
+      readonly peeled: readonly (readonly CommandWord[])[];
     };
 
 /**
@@ -228,7 +233,7 @@ function unwrapIndirection(
 ): UnwrapResult {
   let text = unitText;
   let current = words;
-  let layers = 0;
+  const peeled: (readonly CommandWord[])[] = [];
 
   for (let depth = 0; depth < MAX_UNWRAP_DEPTH; depth++) {
     const kind = classifyWrapperWords(current);
@@ -244,11 +249,11 @@ function unwrapIndirection(
     if (start === -1 || start >= current.length) break;
     const end = execTerminatorIndex(current, start);
     text = sliceWords(text, current, start, end).trimEnd();
+    peeled.push(current.slice(0, start));
     current = rebase(current, start, end);
-    layers++;
   }
 
-  return { kind: "peeled", text, words: current, layers };
+  return { kind: "peeled", text, words: current, peeled };
 }
 
 /** How many wrapper layers to unwrap before giving up. */
