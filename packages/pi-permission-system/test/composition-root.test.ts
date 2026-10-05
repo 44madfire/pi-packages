@@ -2571,6 +2571,34 @@ describe("configured prompt preferences reach the inline dialog", () => {
       rmSync(cwd, { recursive: true, force: true });
     });
   });
+
+  // #953: the policy side and `ConfigStore` load the same config files, so a
+  // schema error was reported by both. Each fact now has one reporter: the
+  // store owns the file's own errors, the policy side the clamp it causes.
+  describe("a project config file rejected fail-closed", () => {
+    const schemaError = "Unrecognized config key 'bogusKey'.";
+    const clampNotice = "Invalid project configuration detected";
+
+    function count(notified: string[], fragment: string): number {
+      return notified.filter((message) => message.includes(fragment)).length;
+    }
+
+    it("is reported once, with its clamp, when present at session start", async () => {
+      writeGlobalConfig({ permission: { "*": "ask" } });
+      const cwd = mkdtempSync(join(tmpdir(), "pi-perm-policy-start-cwd-"));
+      writeProjectConfig(cwd, { permission: { demo: "allow" }, bogusKey: 1 });
+      const pi = makeFakePi({ toolNames: ["demo"] });
+      piPermissionSystemExtension(pi as unknown as ExtensionAPI);
+
+      const { ctx, notified } = makeTuiCtx(cwd);
+      await fireSessionStart(pi, ctx);
+
+      expect(count(notified, schemaError)).toBe(1);
+      expect(count(notified, clampNotice)).toBe(1);
+
+      rmSync(cwd, { recursive: true, force: true });
+    });
+  });
 });
 
 describe("Pi's built-in MCP tools are gated on the mcp surface", () => {
