@@ -41,7 +41,7 @@ export const UNTRUSTED_PROJECT_MESSAGE =
  *
  * Constructor deps:
  * - `session` — encapsulates all mutable session state and lifecycle operations
- * - `resolver` — owns permission-query surface: `getConfigIssues`
+ * - `resolver` — owns permission-query surface: `getPolicyIssues`
  * - `serviceLifecycle` — owns the process-global service publication;
  *   `activate` publishes (skipped for registered subagent children) and emits
  *   the ready event; `teardown` unsubscribes all session listeners and unpublishes
@@ -84,7 +84,7 @@ export class SessionLifecycleHandler {
     }
 
     const agentName = this.session.resolveAgentName(ctx);
-    const policyIssues = this.resolver.getConfigIssues(agentName ?? undefined);
+    const policyIssues = this.resolver.getPolicyIssues(agentName ?? undefined);
     for (const issue of policyIssues) {
       this.logger.warn(issue);
     }

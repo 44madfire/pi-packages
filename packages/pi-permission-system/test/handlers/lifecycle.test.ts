@@ -32,7 +32,7 @@ function makeSetup(opts?: { configIssues?: string[] }) {
     makeRealSession();
   const { resolver } = makeRealResolver(permissionManager, sessionRules);
   if (opts?.configIssues) {
-    vi.mocked(permissionManager.getConfigIssues).mockReturnValue(
+    vi.mocked(permissionManager.getPolicyIssues).mockReturnValue(
       opts.configIssues,
     );
   }

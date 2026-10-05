@@ -100,7 +100,7 @@ describe("PermissionManager fail-closed clamp on invalid non-global scope", () =
       global: { permission: { bash: "allow" } },
       project: { invalid: true },
     });
-    expect(manager.getConfigIssues()).toEqual([
+    expect(manager.getPolicyIssues()).toEqual([
       "Invalid project configuration detected — failing closed: 'allow' rules " +
         "are clamped to 'ask' for this session until the configuration is corrected.",
     ]);
@@ -111,6 +111,6 @@ describe("PermissionManager fail-closed clamp on invalid non-global scope", () =
       global: { permission: { bash: "allow" } },
       project: { permission: { read: "allow" } },
     });
-    expect(manager.getConfigIssues()).toEqual([]);
+    expect(manager.getPolicyIssues()).toEqual([]);
   });
 });
