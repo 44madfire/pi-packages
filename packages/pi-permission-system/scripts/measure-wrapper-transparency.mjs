@@ -27,11 +27,12 @@
  *
  * The execution-modifier clause (#963) is scored beside it: a floored unit is
  * exempt when it proves a read with no write-proving redirect, or when every
- * wrapper layer is an execution modifier admitting each of its options and the
- * peel ends at a literal command name. Measured 2026-10-05 against the same
- * log, 2026-07 onward: 296 of 1025 prompts floored, 159 relieved (53.7% of
- * floored), 73 of them by the execution-modifier clause alone. Its guards cost
- * 15 (every layer a modifier), 0 (the option allowlist), and 11 (a literal
+ * wrapper layer is an execution modifier admitting each of its options (every
+ * one literal) and the peel ends at a literal command name. Measured
+ * 2026-10-05 against the same log, 2026-07 onward: 298 of 1027 prompts
+ * floored, 159 relieved (53.4% of floored), 73 of them by the
+ * execution-modifier clause alone. Its guards cost 15 (every layer a
+ * modifier), 0 (the option allowlist and its literal-word rule), and 12 (a literal
  * inner head, mostly the `time ( … )` subshells #1027 tracks).
  *
  * Only the sentinel era is totalled. The floor sentinels reach the review log
@@ -176,6 +177,12 @@ const MODIFIER_FLAGS = new Map([
 /** Each modifier's value-taking options that write a file (`WRITING_OPTIONS`). */
 const WRITING = new Map([["time", ["-o", "--output"]]]);
 
+/**
+ * A word the shell may rewrite into others (`CommandWord.computed`), crudely:
+ * any expansion, quoting, glob, brace, or escape character.
+ */
+const COMPUTED = /[$`{}*?[\]'"\\]/;
+
 /** A literal, non-option command name (`LITERAL_COMMAND_NAME`). */
 const LITERAL_NAME = /^[A-Za-z0-9_./+@%,:][A-Za-z0-9_./+@%,:-]*$/;
 
@@ -273,7 +280,7 @@ function innerCommandIndex(words) {
   let index = 1;
   while (index < words.length) {
     const word = words[index];
-    if (word === "--") return index + 1;
+    if (word === "--") return operandPending ? index + 2 : index + 1;
     if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) {
       index++;
       continue;
@@ -427,10 +434,13 @@ function admitsLayer(name, prefix) {
   );
   for (let index = 0; index < prefix.length; index++) {
     const word = prefix[index];
-    if (word === "--" || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) continue;
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) continue;
+    if (COMPUTED.test(word)) return false;
+    if (word === "--") continue;
     if (!word.startsWith("-") || flags.includes(word)) continue;
     if (valueTaking.includes(word)) {
       index++;
+      if (COMPUTED.test(prefix[index] ?? "")) return false;
       continue;
     }
     const attached = word.startsWith("--")
