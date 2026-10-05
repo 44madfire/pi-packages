@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.1.0](https://github.com/gotgenes/pi-packages/compare/pi-github-tools-v6.0.0...pi-github-tools-v6.1.0) (2026-10-05)
+
+
+### Features
+
+* refuse issue-close comments with unresolvable commit SHAs ([38d9adb](https://github.com/gotgenes/pi-packages/commit/38d9adb100c25055e498fd9876840f2c4f86c131))
+
+### Documentation
+
+* **pi-github-tools:** trim the issue_close SHA-check description and README ([b25b705](https://github.com/gotgenes/pi-packages/commit/b25b7050f8eca0df607f36df6a11d1e9e5a9e057)), closes [#948](https://github.com/gotgenes/pi-packages/issues/948)
+
 ## [6.0.0](https://github.com/gotgenes/pi-packages/compare/pi-github-tools-v5.0.1...pi-github-tools-v6.0.0) (2026-10-04)
 
 
