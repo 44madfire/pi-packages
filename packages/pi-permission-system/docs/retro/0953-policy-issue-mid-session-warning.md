@@ -86,5 +86,60 @@ The one follow-up, [#1028], is filed and dispositioned out of scope for Phase 15
 The latest stage entry's reviewer WARN is an evidence-provenance note only, with no open operator decision.
 The `/ship` root should know the fix changes what the operator sees in two ways: a fail-closed notice now arrives mid-session, and a schema error at session start is shown once rather than twice.
 
+## Stage: Final Retrospective (2026-10-05T13:53:04Z)
+
+### Session summary
+
+The peer session planned, implemented, and synced #953 in one transcript (Opus for planning and TDD, Sonnet for sync), and the root session shipped it as a worktree-lane fast-forward.
+CI and the release run both passed, and `pi-permission-system` released as 39.0.4.
+The implementation was clean: every killing mutation reddened what the plan predicted, and the only deviation (the `implements PolicyIssueSource` fix) came from a gate rather than from rework.
+
+### Observations
+
+#### What went well
+
+- **The planning spike changed the design.**
+  Reproducing through the real composition root before the first gate found the start-time duplicate that the issue's suggested fold would have locked in.
+  The plan then deleted code (the loader's issue accumulation) instead of adding a second reporter over a duplicated list.
+- **The worktree convergence had no friction.**
+  `/sync-worktree`'s rebase was a no-op, step 4's `merge-base --is-ancestor` prediction held, and the root's lint and dead-code gates passed on the merged tree.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (user-caught) — the planning gate's turn had no visible text before the `ask_user` call, so all of its substance sat in option descriptions.
+  The planning stage note recorded the bounce as an undefined term (`ConfigStore`), but the transcript shows a bigger miss: the `clarification-gates` skill's `## Substance first` rule was broken outright, 17 turns after the skill was loaded.
+  The follow-up explanation then laid out the three options without arguing for one, so the operator had to ask "Which way forward would you recommend?"
+  Impact: two extra operator round-trips before the design settled; no rework.
+- `instruction-violation` (self-identified, in this retro) — the architecture-doc entries for `policy-issue-reporter.ts`, `permission-manager.ts`, and `before-agent-start.ts` each end with a `(#953)` provenance citation.
+  The `markdown-conventions` skill's `## Architecture docs` section says to cite an issue in a module-tree entry only for an active constraint.
+  The pre-completion reviewer did not flag it.
+  Impact: three citations that `/finish-phase`'s doc-hygiene pass would otherwise have to remove.
+- `other` — Unicode handling in `Edit` bodies again: an em-dash came out as a newline plus `dash` in a `newText`, an `oldText` failed on a mistyped em-dash, and the TDD stage note arrived with literal `\u2212`/`\u2192` escapes.
+  All three were self-caught by re-reading, and the escape gates exist.
+  Impact: about four extra tool calls; no rework that landed.
+- `instruction-violation` (self-identified, in this retro) — in `/ship` the agent called `issue_close` without first re-resolving the close comment's hex tokens with `git rev-parse` and `merge-base --is-ancestor`, as the `## 9. Close the issue` section requires.
+  The SHAs were pasted from `git log` output in the same session, so all of them were correct.
+  The final report also said the roadmap last-step check had not been done instead of doing it; #953 is not a Phase 15 step.
+  Impact: none this time, but the verification is there to catch a bad SHA before it is published.
+
+#### What caused friction (user side)
+
+- None of note.
+  The operator's challenge ("I'm not thrilled about the duplication") turned into a scoped follow-up, [#1028], instead of scope creep.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Opus ran planning and TDD, which were the judgment-heavy stages; Sonnet ran the mechanical sync stage.
+  The `tidy-first-assessor` and `pre-completion-reviewer` dispatches both returned sound verdicts.
+  Neither the assessor nor the reviewer caught the `(#953)` architecture-doc citations.
+- **Feedback-loop gap analysis** — `pnpm fallow dead-code` ran only at the baseline and in the final gates.
+  It flagged `PermissionResolver.getPolicyIssues` after step 4, which forced an amend.
+  The plan did not predict the edit, because a method that satisfies an interface only structurally shows as unused once its old caller is removed.
+
+### Changes made
+
+1. `packages/pi-permission-system/docs/architecture/architecture.md`: dropped the `(#953)` provenance citations from the `policy-issue-reporter.ts`, `permission-manager.ts`, and `before-agent-start.ts` module-tree entries.
+2. No change to `clarification-gates` or `/plan-issue` for the gate that had no message before it; the rule already exists word for word, and one breach does not justify a tool-side mechanism.
+
 [#933]: https://github.com/gotgenes/pi-packages/issues/933
 [#1028]: https://github.com/gotgenes/pi-packages/issues/1028
