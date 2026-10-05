@@ -53,7 +53,7 @@ The instrument reports 73 floored asks relieved by the new clause alone (298 flo
 - Two metamorphic rows the fix step first wrote (`timeout $D sudo rm x`) were green before the fix, because the visible `sudo` already refuses; replaced with `timeout $D pnpm test`, the shape where the split word is the hidden wrapper.
 - `\u2014`/`\u2026` written in `Edit` bodies landed as literal escapes in source and as tabs or space runs in markdown, several times; each was repaired by a scripted substitution and checked with `rg`.
 - Pre-completion reviewer, round 1: **FAIL** on two bypasses, both reproduced: `timeout -- 5 sudo rm x` (`innerCommandIndex` returned at `--` without consuming the pending duration, so the gate resolved a command named `5`) and `timeout {5,sudo} rm x` / `timeout $D pnpm test` (computed prefix words the shell splits into extra words).
-  Fixed in `fix(pi-permission-system): a timeout duration after -- or a computed modifier option no longer lifts the wrapper floor`; the literal-word rule costs no logged asks.
+  Fixed in the `feat:` commit itself, squashed in at sync time so the changelog shows one feature; the literal-word rule costs no logged asks.
   The round-1 reviewer also ran `time find . -delete` as real shell inside the package while probing; it restored the tree, and the suite and `git status` were verified clean afterwards.
   The round-2 dispatch told the reviewer to probe only through parse/resolve.
 - Round 2: **WARN**, with both bypasses closed.
