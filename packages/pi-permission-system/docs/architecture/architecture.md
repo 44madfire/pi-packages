@@ -1319,6 +1319,8 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   A forwarded bash ask carries only the typed command, so the serving node misses the home spelling the child resolved with; the fix is a serving-wire and result-shape change sharing no mechanism with this phase's token roles.
 - [#1020] — filed by [#981]'s planning; out of scope for the roadmap.
   A home-prefixed bash pattern is compiled through `path.join`, which rewrites its arguments and its win32 separators; a pattern-compile fix in `wildcard-matcher.ts` / `expand-home.ts`, which no step of this phase touches.
+- [#1028] — filed by [#953]'s planning; out of scope for the roadmap.
+  Each `config.json` is parsed and validated twice — by `ConfigStore` for the extension settings and by `FilePolicyLoader` for the `permission` block — on different refresh cadences; unifying the reads is a `config/` loader restructuring, not a token role lost at projection.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1882,5 +1884,6 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#981]: https://github.com/gotgenes/pi-packages/issues/981
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1020]: https://github.com/gotgenes/pi-packages/issues/1020
+[#1028]: https://github.com/gotgenes/pi-packages/issues/1028
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
