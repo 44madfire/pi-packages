@@ -41,5 +41,35 @@ The Tidy-First assessor recommended one preparatory commit, the `getPolicyIssues
 - `src/handlers/before-agent-start.ts`: converting `AgentPrepHandler`'s positional deps (now seven) to a deps object; the `src/handlers/` convention is positional.
 - Folding both reporters into one class over a `Map` of sources: wrong abstraction given the agent-name parameter.
 
+## Stage: Implementation (TDD) (2026-10-05T05:02:56Z)
+
+### Session summary
+
+Executed all four plan steps as four commits: the `getPolicyIssues` rename, the dedupe fix (the policy side answers only its derived notices; the loader accumulation is deleted), the `PolicyIssueReporter`, and the wiring fix through `SessionLifecycleHandler` and `AgentPrepHandler`.
+Package test count 5418 to 5429 (+11: +3 and −4 in step 2, +8 in step 3, +4 in step 4).
+Baseline and final gates were all green; the pre-completion reviewer returned WARN, with no FAILs.
+
+### Observations
+
+- **Every killing mutation killed exactly what the plan predicted.**
+  Step 3's mutation (c) (dropping the agent argument) also reddened the agent-switch row, which is expected because that row is keyed by agent.
+  Step 4's mutation (c) reddened the `session_start`-only pin as the plan required, so the [#933] lesson (a pin that fires both moments lets turn prep mask a missing start-time drive) held.
+- **Step 2's killing mutation equalled the Red state.**
+  Restoring the loader spread is the pre-Green code byte for byte, so the Red run (2 notifications; the extra string in both manager tests) was the mutation's evidence.
+- **Deviation:** `pnpm fallow dead-code` flagged `PermissionResolver.getPolicyIssues` as unused, because the resolver satisfied `PolicyIssueSource` only structurally.
+  Fixed by declaring `implements PolicyIssueSource` (a type-only `policy/` → `config/` edge, which `fallow guard` allows), amended into step 4's commit.
+  The plan's Module-Level Changes did not predict a resolver edit in step 4.
+- **Deviation:** `lifecycle.test.ts`'s `makeSetup` also lost its now-unread `permissionManager` return field, beyond the planned swap of `resolver` for the reporter.
+- **Em-dash dropout recurred twice in `Edit` bodies** (the `before-agent-start.ts` doc bullet arrived as a newline plus `dash`; one `oldText` failed to match the same way).
+  Both were caught by re-reading the region, and the written one was repaired with a scripted substitution, per `markdown-conventions`.
+- **Reviewer re-derivation:** it enumerated every `loadUnifiedConfig` call `FilePolicyLoader` made at the base ref and found no string the removed channel delivered that `ConfigStore` does not, covering untrusted projects, reloads, legacy files, and agent files.
+  It noted one timing nuance: the fail-closed notice can now arrive a turn *before* the schema string, since the policy side re-reads by mtime and `ConfigStore` per turn.
+
+### Reviewer verdict
+
+Pre-completion reviewer: **WARN**, ready for `/ship`.
+Reviewer warnings: evidence provenance only.
+The planning baseline (2 duplicates, 0 mid-session) came from one spike run per scenario; the new composition-root pins re-assert both outcomes.
+
 [#933]: https://github.com/gotgenes/pi-packages/issues/933
 [#1028]: https://github.com/gotgenes/pi-packages/issues/1028
