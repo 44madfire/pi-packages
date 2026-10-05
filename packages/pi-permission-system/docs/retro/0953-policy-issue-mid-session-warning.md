@@ -71,5 +71,20 @@ Pre-completion reviewer: **WARN**, ready for `/ship`.
 Reviewer warnings: evidence provenance only.
 The planning baseline (2 duplicates, 0 mid-session) came from one spike run per scenario; the new composition-root pins re-assert both outcomes.
 
+## Stage: Sync (worktree) (2026-10-05T05:04:48Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint` with zero Biome findings, `pnpm fallow dead-code`) both passed clean with no changes needed.
+The plan's `**Release:** ship independently` marker holds: no batch, and the work is confined to `packages/pi-permission-system/` plus its package skill.
+The one follow-up, [#1028], is filed and dispositioned out of scope for Phase 15; nothing else was deferred.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-953--/2026-10-05T04-09-05-762Z_01a10a40-41e1-76e8-a007-196620e69613.jsonl` — read with `read_session_file({ path: "..." })` for message-level verification at land/retro time.
+
+### Observations
+
+The latest stage entry's reviewer WARN is an evidence-provenance note only, with no open operator decision.
+The `/ship` root should know the fix changes what the operator sees in two ways: a fail-closed notice now arrives mid-session, and a schema error at session start is shown once rather than twice.
+
 [#933]: https://github.com/gotgenes/pi-packages/issues/933
 [#1028]: https://github.com/gotgenes/pi-packages/issues/1028
