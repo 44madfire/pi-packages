@@ -38,6 +38,30 @@ Sequencing call: the operator chose to continue #963 as designed; weigh this can
 - `src/access-intent/bash/wrapper-analysis.ts` — `inlineShellPayloadIndex` runs its own peel loop beside `unwrapIndirection`; declined as settled by #923.
 - `src/access-intent/bash/command-enumeration.ts` — the `makeUnit` optional-field spread chain; untouched by this change.
 
+## Stage: Implementation — TDD (2026-10-05T05:14:07Z)
+
+### Session summary
+
+All six planned steps landed (two refactors, the `execution-modifier` clause, the verified flag rows, the instrument, docs), plus a `fix:` and three `docs:` commits from the pre-completion review.
+The `pi-permission-system` suite went from 5418 to 5530 tests (+112).
+The instrument reports 73 floored asks relieved by the new clause alone (298 floored since 2026-07, 159 relieved in total).
+
+### Observations
+
+- Plan deviations in Step 3: `WRITING_OPTIONS` became per-wrapper, because `stdbuf -o` sets a buffering mode and a global `-o` refusal turned two `stdbuf` rows red; and `LITERAL_COMMAND_NAME` may not lead with `-` (`time -- -x` would be exempt while `executedUnitOf` declines to name it).
+- Mutation findings: the five-deep `time` row is killed by the reserved-word guard as well as the peel-end check, and `time { …` by the reserved-word set as well as the charset, so the plan's per-mutation red counts were one row high for those two mutations; both rows are double-covered.
+- Two metamorphic rows the fix step first wrote (`timeout $D sudo rm x`) were green before the fix, because the visible `sudo` already refuses; replaced with `timeout $D pnpm test`, the shape where the split word is the hidden wrapper.
+- `\u2014`/`\u2026` written in `Edit` bodies landed as literal escapes in source and as tabs or space runs in markdown, several times; each was repaired by a scripted substitution and checked with `rg`.
+- Pre-completion reviewer, round 1: **FAIL** on two bypasses, both reproduced: `timeout -- 5 sudo rm x` (`innerCommandIndex` returned at `--` without consuming the pending duration, so the gate resolved a command named `5`) and `timeout {5,sudo} rm x` / `timeout $D pnpm test` (computed prefix words the shell splits into extra words).
+  Fixed in `fix(pi-permission-system): a timeout duration after -- or a computed modifier option no longer lifts the wrapper floor`; the literal-word rule costs no logged asks.
+  The round-1 reviewer also ran `time find . -delete` as real shell inside the package while probing; it restored the tree, and the suite and `git status` were verified clean afterwards.
+  The round-2 dispatch told the reviewer to probe only through parse/resolve.
+- Round 2: **WARN**, with both bypasses closed.
+  Doc prose overstated the literal rule (assignments are exempt), fixed in a `docs:` commit.
+  `timeout -- -- 5 rm x` / `timeout -- 5 5 rm x` still resolve a misread command, but real `timeout` cannot run `rm` from either, so they were left as-is.
+- Round 3: **PASS**.
+- Reviewer warnings left open: path-qualified wrapper names match by basename (`./time rm x`), not weaker than the same rule's allow of the bare `./time`; `timeout -s KILL rm x` (no duration) misaligns the derivation, but GNU `timeout` errors without running anything.
+
 [#804]: https://github.com/gotgenes/pi-packages/issues/804
 [#880]: https://github.com/gotgenes/pi-packages/issues/880
 [#1027]: https://github.com/gotgenes/pi-packages/issues/1027
