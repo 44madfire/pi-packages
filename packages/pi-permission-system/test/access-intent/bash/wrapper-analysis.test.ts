@@ -427,6 +427,29 @@ describe("floorExemptionOf", () => {
       });
     });
 
+    describe("with a flag the modifier admits", () => {
+      it.each([
+        "time -p pnpm test",
+        "/usr/bin/time -l yarn make",
+        "/usr/bin/time -h pnpm test",
+        "timeout -v 5 pnpm test",
+        "timeout --verbose 5 pnpm test",
+        "timeout --foreground 5 pnpm test",
+        "timeout -f 5 pnpm test",
+        "timeout -p 5 pnpm test",
+        "timeout --preserve-status 5 pnpm test",
+      ])("is exempt: %s", (unit) => {
+        expect(exemptionOf(unit)).toBe("execution-modifier");
+      });
+
+      it.each([
+        ["setsid -f pnpm test", "setsid's flags are unverified here"],
+        ["time -pl pnpm test", "a flag cluster is not listed"],
+      ])("is not exempt: %s (%s)", (unit) => {
+        expect(exemptionOf(unit)).toBeUndefined();
+      });
+    });
+
     describe("running a proven pure reader", () => {
       it("records the core-reader reason first", () => {
         expect(exemptionOf("time grep foo")).toBe("core-reader");

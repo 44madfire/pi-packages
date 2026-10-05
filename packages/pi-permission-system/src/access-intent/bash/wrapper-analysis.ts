@@ -562,8 +562,23 @@ const EMPTY_FLAGS: ReadonlySet<string> = new Set<string>();
  * refuses the exemption.
  */
 const EXECUTION_MODIFIER_FLAGS = new Map<string, ReadonlySet<string>>([
-  ["time", EMPTY_FLAGS],
-  ["timeout", EMPTY_FLAGS],
+  // BSD `man 1 time`: `time [-al] [-h | -p] [-o file]`; `-p` is also the bash
+  // keyword's only option. `-a` appends to the `-o` file, so it is not listed.
+  ["time", new Set(["-p", "-l", "-h"])],
+  // GNU coreutils `timeout --help`.
+  [
+    "timeout",
+    new Set([
+      "-f",
+      "--foreground",
+      "-p",
+      "--preserve-status",
+      "-v",
+      "--verbose",
+    ]),
+  ],
+  // `nice` and `stdbuf` take only value options; util-linux `setsid`'s flags
+  // are unverified on this host, so none is admitted.
   ["nice", EMPTY_FLAGS],
   ["stdbuf", EMPTY_FLAGS],
   ["setsid", EMPTY_FLAGS],
