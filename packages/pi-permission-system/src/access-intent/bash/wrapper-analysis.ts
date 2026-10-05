@@ -9,6 +9,7 @@
  * classifiers over the same vocabulary would drift.
  */
 
+import type { FloorExemption } from "#src/types";
 import { proveCommandEffect } from "./command-effects";
 import type { ArgWord } from "./node-text";
 
@@ -143,9 +144,12 @@ export function executedUnitOf(
 }
 
 /**
- * True when a wrapper unit's floor has no reason left to hold: the command it
- * runs is in the pure-reader core, so its *direction* is provable however
- * unknown its argument feed is (ADR 0013 §11, #803).
+ * Why a wrapper unit's floor has no reason left to hold, or `undefined` when it
+ * still does.
+ *
+ * `"core-reader"`: the command it runs is in the pure-reader core, so its
+ * *direction* is provable however unknown its argument feed is (ADR 0013 §11,
+ * #803).
  *
  * The floor exists because a wrapper hides the command that should be gated,
  * and the unknowability it guards is unknowability of scope — which stays the
@@ -166,20 +170,22 @@ export function executedUnitOf(
  * 4. The unit writes no file through a redirect, which the caller reads off
  *    the parse tree and this module never sees.
  */
-export function isTransparentWrapper(
+export function floorExemptionOf(
   words: readonly CommandWord[],
   statement: { readonly writesViaRedirect: boolean },
-): boolean {
-  if (statement.writesViaRedirect) return false;
-  if (classifyWrapperWords(words) !== "indirection") return false;
+): FloorExemption | undefined {
+  if (statement.writesViaRedirect) return undefined;
+  if (classifyWrapperWords(words) !== "indirection") return undefined;
 
   // Only the peeled words matter here, so the walk is handed no source span to
   // cut from — the text slice is `executedUnitOf`'s product, not this one's.
   const unwrapped = unwrapIndirection(words, "");
-  if (unwrapped.kind === "opaque" || unwrapped.layers === 0) return false;
+  if (unwrapped.kind === "opaque" || unwrapped.layers === 0) return undefined;
 
   const head = unwrapped.words.at(0)?.text ?? "";
-  return proveCommandEffect(head, unwrapped.words.slice(1)).effect === "read";
+  return proveCommandEffect(head, unwrapped.words.slice(1)).effect === "read"
+    ? "core-reader"
+    : undefined;
 }
 
 // ── Unwrapping ───────────────────────────────────────────────────────────────
@@ -210,7 +216,7 @@ type UnwrapResult =
  *
  * Stopping early is not an error: the words peeled so far are returned, and
  * each caller decides what an incomplete peel is worth — `executedUnitOf`
- * shows it, {@link isTransparentWrapper} declines it because the head word it
+ * shows it, {@link floorExemptionOf} declines it because the head word it
  * would judge is the wrapper's own.
  *
  * `unitText` is the span the peeled `text` is cut from; a caller that wants

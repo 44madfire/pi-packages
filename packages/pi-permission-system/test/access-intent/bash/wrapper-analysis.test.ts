@@ -4,8 +4,8 @@ import {
   type CommandWord,
   classifyWrapperWords,
   executedUnitOf,
+  floorExemptionOf,
   inlineShellPayloadIndex,
-  isTransparentWrapper,
 } from "#src/access-intent/bash/wrapper-analysis";
 
 /**
@@ -285,10 +285,13 @@ describe("executedUnitOf", () => {
   });
 });
 
-describe("isTransparentWrapper", () => {
-  /** The predicate over a unit that carries no write-proving redirect. */
+describe("floorExemptionOf", () => {
+  /** Whether a unit with no write-proving redirect is exempt as a core reader. */
   function isTransparent(unitText: string): boolean {
-    return isTransparentWrapper(words(unitText), { writesViaRedirect: false });
+    return (
+      floorExemptionOf(words(unitText), { writesViaRedirect: false }) ===
+      "core-reader"
+    );
   }
 
   describe("a wrapper running a proven pure reader", () => {
@@ -368,19 +371,21 @@ describe("isTransparentWrapper", () => {
     });
 
     it("is not transparent for an empty word list", () => {
-      expect(isTransparentWrapper([], { writesViaRedirect: false })).toBe(
-        false,
-      );
+      expect(
+        floorExemptionOf([], { writesViaRedirect: false }),
+      ).toBeUndefined();
     });
   });
 
   describe("a write-proving redirect", () => {
     it("withholds the exemption from an otherwise transparent wrapper", () => {
       const unit = "xargs grep foo";
-      expect(isTransparent(unit)).toBe(true);
+      expect(floorExemptionOf(words(unit), { writesViaRedirect: false })).toBe(
+        "core-reader",
+      );
       expect(
-        isTransparentWrapper(words(unit), { writesViaRedirect: true }),
-      ).toBe(false);
+        floorExemptionOf(words(unit), { writesViaRedirect: true }),
+      ).toBeUndefined();
     });
   });
 });
