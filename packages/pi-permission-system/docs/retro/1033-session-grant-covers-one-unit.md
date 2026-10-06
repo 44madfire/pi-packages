@@ -22,3 +22,19 @@ Spiked the fix, the dead-filter removal, and the runner hardening against the fu
 - Hardening the runner makes `isUnconditionalDeny`'s session clause rest on a false premise, so Step 2 drops it and flips its descriptor test; that part was not spiked.
 - Observable side effects: a `session_approved` entry for a floored unit now names the grant's pattern instead of the sentinel (113 such entries in the local review log, measured), and a mixed rule-allow/session-allow chain may log a rule allow instead of `session_approved`.
 - The Tidy-First assessor recommended no preparatory commits; it corrected the design's "one guard vs two" question: the wrapper guard reads `base` while `floorUnparsedUnit` reads the possibly exempt inner result, so the two guards stay separate.
+
+## Stage: Implementation — TDD (2026-10-06T22:42:29Z)
+
+### Session summary
+
+Completed all three plan steps: the floors skip a session grant (`fix:`), the runner's fast path requires a session `allow` with `isUnconditionalDeny` matching (`refactor:`), and the architecture-doc update with the `✅` step marks and `Landed:` note (`docs:`).
+The package suite went from 5664 to 5668 tests (four new chain tests; three existing tests rewritten).
+
+### Observations
+
+- No deviations from the plan; every killing mutation reddened exactly the predicted tests.
+  Dropping the wrapper guard also reddened the two existing `#1029`/`#1030` "leaves out … the session already granted" tests, which confirms they now pin the outcome through the unit's state.
+- The Step 2 mutations were applied together; each kills a test in a different file that exercises only its own function, so the pairing is unambiguous.
+- An `Edit` of a runner comment emitted a literal `\u2014` escape into TypeScript source; caught on read-back and replaced with a colon before commit (the markdown gates do not cover `.ts` comments).
+- Pre-completion reviewer: PASS.
+  It re-derived that `deriveSource` (session layer) and `SessionRules.approve` (allow only) are the sole producers of a session-sourced check, so no session `ask` can reach the combiner.
