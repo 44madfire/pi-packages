@@ -89,6 +89,11 @@ export interface SessionNavigatorParams {
   readFile: (path: string) => string;
 }
 
+/** How a scroll move treats following new output; by default it follows when it lands on the bottom. */
+interface ScrollOptions {
+  follow?: boolean;
+}
+
 /** Options for the read-only transcript pane. */
 export interface TranscriptPaneOptions {
   tui: TUI;
@@ -182,26 +187,20 @@ export class TranscriptPane implements Component {
       return;
     }
 
-    const { viewportHeight, maxScroll } = this.scrollBounds(this.inputWidth());
+    const { viewportHeight } = this.scrollBounds(this.inputWidth());
 
     if (matchesKey(data, "up") || matchesKey(data, "k")) {
-      this.scrollOffset = Math.max(0, this.scrollOffset - 1);
-      this.autoScroll = this.scrollOffset >= maxScroll;
+      this.scrollBy(-1);
     } else if (matchesKey(data, "down") || matchesKey(data, "j")) {
-      this.scrollOffset = Math.min(maxScroll, this.scrollOffset + 1);
-      this.autoScroll = this.scrollOffset >= maxScroll;
+      this.scrollBy(1);
     } else if (matchesKey(data, "pageUp") || matchesKey(data, "shift+up")) {
-      this.scrollOffset = Math.max(0, this.scrollOffset - viewportHeight);
-      this.autoScroll = false;
+      this.scrollBy(-viewportHeight, { follow: false });
     } else if (matchesKey(data, "pageDown") || matchesKey(data, "shift+down")) {
-      this.scrollOffset = Math.min(maxScroll, this.scrollOffset + viewportHeight);
-      this.autoScroll = this.scrollOffset >= maxScroll;
+      this.scrollBy(viewportHeight);
     } else if (matchesKey(data, "home")) {
-      this.scrollOffset = 0;
-      this.autoScroll = false;
+      this.scrollTo(0, { follow: false });
     } else if (matchesKey(data, "end")) {
-      this.scrollOffset = maxScroll;
-      this.autoScroll = true;
+      this.scrollTo(Number.POSITIVE_INFINITY);
     }
   }
 
@@ -261,6 +260,21 @@ export class TranscriptPane implements Component {
     const runtime = describeRuntime(model, thinkingLevel);
     const runtimeTag = runtime ? th.fg("muted", ` · ${runtime}`) : "";
     return [`${identity}  ${th.fg("muted", description)}${runtimeTag}`, identity + runtimeTag, identity];
+  }
+
+  private scrollBy(delta: number, options?: ScrollOptions): void {
+    this.scrollTo(this.scrollOffset + delta, options);
+  }
+
+  /**
+   * Move to `offset`, clamped to the transcript. The pane follows new output
+   * when it lands on the bottom, unless the move says otherwise: paging up or
+   * jumping to the top stops following even on a transcript that fits.
+   */
+  private scrollTo(offset: number, { follow }: ScrollOptions = {}): void {
+    const { maxScroll } = this.scrollBounds(this.inputWidth());
+    this.scrollOffset = Math.min(maxScroll, Math.max(0, offset));
+    this.autoScroll = follow ?? this.scrollOffset >= maxScroll;
   }
 
   /**
