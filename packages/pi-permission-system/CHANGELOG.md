@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [40.0.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.1.2...pi-permission-system-v40.0.0) (2026-10-06)
+
+
+### Features
+
+* **pi-permission-system:** report which spelling of a bash command a rule matched ([9c1a9da](https://github.com/gotgenes/pi-packages/commit/9c1a9da4ee19e25aa6ea8366f3d6a5062e2d3c2c)), closes [#910](https://github.com/gotgenes/pi-packages/issues/910)
+* **pi-permission-system:** show the matching bash spelling in the ask dialog and the review log ([09c1ef6](https://github.com/gotgenes/pi-packages/commit/09c1ef62e9b1fdc6dc4beabc7193ac89ef9496ce)), closes [#910](https://github.com/gotgenes/pi-packages/issues/910)
+
+### Bug Fixes
+
+* **pi-permission-system:** **breaking:** match a bash rule written with an absolute path against the relative spelling of that path ([8883d96](https://github.com/gotgenes/pi-packages/commit/8883d960f4ccbe6131e22959e3acbc35abe2558b)), closes [#910](https://github.com/gotgenes/pi-packages/issues/910)
+
+### Documentation
+
+* **pi-permission-system:** document the absolute argument spelling of a bash command ([29816e7](https://github.com/gotgenes/pi-packages/commit/29816e7664cb2a813f042fe1b41d7b46ce5c870e)), closes [#910](https://github.com/gotgenes/pi-packages/issues/910)
+* **pi-permission-system:** note that a slash-bearing non-path argument is spelled too ([8a21456](https://github.com/gotgenes/pi-packages/commit/8a21456faa43eb86ac0c0cb790cff3e170b73ee2)), closes [#910](https://github.com/gotgenes/pi-packages/issues/910)
+
 ## [39.1.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.1.1...pi-permission-system-v39.1.2) (2026-10-06)
 
 
