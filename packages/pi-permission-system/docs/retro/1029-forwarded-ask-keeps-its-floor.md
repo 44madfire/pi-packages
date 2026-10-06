@@ -60,6 +60,19 @@ The one changelog line is `fix(pi-permission-system): a subagent's floored bash 
   Reviewer warning: a chain floor does not hold against a serving session grant that covers the winning unit's value (`git push *` granted on the parent approves `git push … && sudo rm y`).
   It is not a regression, and it belongs to [#1030]'s class, so I recorded it there as a comment rather than widening this change.
 
+## Stage: Sync (worktree) (2026-10-06T01:29:18Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass on the branch; the plan's marker is `**Release:** ship independently`, so the root dispatches a `pi-permission-system` release after landing.
+The TDD stage's reviewer WARN is already settled: the chain-floor-versus-serving-session-grant case is recorded on [#1030], which is the follow-up the root need not file again.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1029--/2026-10-05T17-37-23-126Z_01a10d24-44b4-73ea-ab24-f4e9a0dddba1.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The branch carries the plan, the five implementation commits, and the Phase 15 dispositions for [#1030] and [#1031]; no stage note cites a branch SHA.
+
 [#963]: https://github.com/gotgenes/pi-packages/issues/963
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1030]: https://github.com/gotgenes/pi-packages/issues/1030
