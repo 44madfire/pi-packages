@@ -24,3 +24,25 @@ The plan has five steps: a test helper, an entry-contract module, new `outputFil
   Step 5's live check records the answer.
 - The Tidy-First assessor recommended one preparatory step, a `handleWith` helper in `test/ui/session-navigator.test.ts`, which is in the plan as Step 1.
   It also confirmed that `composition-root.test.ts` does not drive the command.
+
+## Stage: Implementation — TDD (2026-10-06T06:28:52Z)
+
+### Session summary
+
+All five TDD steps landed, plus a separate docs commit.
+`subagents:record` entries now carry `outputFile` and `toolUses`, and `/subagents:sessions` lists the persisted runs the manager no longer holds as transcript snapshots.
+The pi-subagents suite went from 2050 to 2065 tests.
+
+### Observations
+
+- Every killing mutation reddened exactly the tests the plan predicted.
+  Dropping `outputFile` from `toPersistedRecord` reddens only the builder test: the observer fixtures carry no session, so `outputFile: undefined` matches an absent key under `toHaveBeenCalledExactlyOnceWith`.
+- Process slip, twice: I issued the green-file `cp` backup in the same tool batch as the mutating `Edit`, so the backup captured the mutation.
+  Both times I caught it and restored the code by hand before committing.
+  The template's rule (separate turn for the `cp`) is correct as written; I just didn't follow it.
+- Deviation: `toPersistedRecord` takes `PersistedSubagentRecord` itself instead of a separate `PersistedRecordSource` alias, because the alias would have been identical.
+- Deviation: the README, `architecture.md` and package-skill updates landed as their own `docs(pi-subagents):` commit, per the template, instead of inside the `fix:` commit.
+- Not done: the live `/reload` check (and whether a run aborted at reload gets its entry recorded) could not run in this non-interactive session.
+  The `src/index.ts` relay `sessionEntries: ctx.sessionManager.getEntries()` is typechecked but has no test pinning it.
+- Pre-completion reviewer: WARN.
+  Its two findings are the `PersistedRecordSource` deviation (accepted) and the unpinned `index.ts` relay, which needs a manual `/reload` then `/subagents:sessions` check before or at ship.
