@@ -1335,6 +1335,8 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   Setting yolo per node (a child separately from its parent) is a feature, and nothing in this phase's token-role spine touches `yoloMode`.
 - [#1033] — filed by [#1030]'s planning; **becomes a new step in this phase, directly after [#1030]** (operator decision, 2026-10-06).
   A session-granted wrapper unit floors to an `ask` that keeps `source: "session"`, wins `pickMostRestrictive`'s first-wins tie, and takes `GateRunner`'s session fast path, so `sudo rm y && git push origin main` runs the `git push *: ask` unit unprompted; it is a live chain bypass in the same `resolveBashCommandCheck` as [#1029] and [#1030].
+- [#910] — reopened by its planning (filed and self-closed by its third-party author); out of scope for the roadmap.
+  A path argument's absolute spelling joins the bash command unit's spellings on [#981]'s seam, a change to which texts the `bash` surface matches rather than a token role lost at projection; it edits `token-collection.ts` and `command-enumeration.ts`, so it lands before or after [#1027] and [#880], never beside them.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1968,6 +1970,7 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1016]: https://github.com/gotgenes/pi-packages/issues/1016
 [#1018]: https://github.com/gotgenes/pi-packages/issues/1018
 [#981]: https://github.com/gotgenes/pi-packages/issues/981
+[#910]: https://github.com/gotgenes/pi-packages/issues/910
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1020]: https://github.com/gotgenes/pi-packages/issues/1020
 [#1027]: https://github.com/gotgenes/pi-packages/issues/1027
