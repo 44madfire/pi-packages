@@ -85,6 +85,18 @@ export interface BashCommand {
 }
 
 /**
+ * What the enumerator asks about one argument word of a unit: the absolute
+ * spelling of the path it names, as the party that resolved the program's
+ * paths knows it, or `undefined` when there is none to give.
+ *
+ * Asked by node rather than by text, because only the node says which
+ * occurrence of a token a unit's word is.
+ */
+export interface ArgumentSpeller {
+  absoluteSpellingOf(node: TSNode): string | undefined;
+}
+
+/**
  * What the statement enclosing a command unit establishes about it.
  *
  * Both facts flow down the walk together because both are the *statement's*,
