@@ -453,6 +453,40 @@ Control-flow bodies (`if`/`while`/`for`/`case`) and `{ … }` brace groups are n
 
 A command that starts with `~`, `$HOME`, or `${HOME}` also matches a home-anchored pattern spelled any of those ways, or with the absolute home directory (see [Home Directory Expansion in Patterns](#home-directory-expansion-in-patterns)).
 
+A path argument also matches in its absolute spelling.
+Each command is matched as typed and with every path argument replaced by the absolute path it resolves to, against the working directory a literal `cd` earlier in the chain moved to.
+The last rule matching either text wins, as for any other pattern.
+
+```jsonc
+{
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm *": "ask",
+      "rm /tmp/agent-builds/*": "allow"
+    }
+  }
+}
+```
+
+With this policy, `cd /tmp && rm agent-builds/x` runs, because `rm agent-builds/x` is also matched as `rm /tmp/agent-builds/x`.
+An absolute `deny` reaches the relative spelling the same way.
+An absolute `allow` written *before* the broader `ask` still loses to it.
+
+Some arguments get no absolute spelling and are matched as typed only:
+
+- an argument after a `cd` whose target is not literal (`cd "$DIR"`, `cd -`, a bare `cd`), since the directory is not known;
+- an argument holding a glob (`*`, `?`, `[`), quoted or not;
+- an argument a variable or substitution computes (`$DIR/x`, `$(pwd)/x`);
+- a bare name such as `config.json` that names nothing on disk;
+- a POSIX absolute path on Windows (`/tmp/x`), which is kept as typed.
+
+The absolute spelling replaces every path argument of a command at once, and it is separate from the home spelling above.
+A rule naming one argument absolute and another relative, or naming both the expanded home and an absolute argument, matches neither text.
+A quoted argument is spelled without its quotes (`rm "a b/c"` is also matched as `rm /tmp/a b/c`).
+When the spelling is what a rule matched, the prompt shows it on a `matched as` line beside the rule, and the review log records it as `matchedSpelling`.
+A session approval still records the command as typed, so approving `rm agent-builds/x` does not cover a later `rm /tmp/agent-builds/x`.
+
 A leading environment-variable assignment prefix is stripped before matching, so the rule gates the underlying command rather than the prefix.
 So `AWS_PROFILE=prod aws ec2 …` is matched as `aws ec2 …` — a `aws *` rule applies even though the invocation begins with `AWS_PROFILE=`.
 Prefixes like `PGPASSWORD=` and `KUBECONFIG=` are handled the same way.
