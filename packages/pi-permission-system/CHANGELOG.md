@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.1.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.1.0...pi-permission-system-v39.1.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** a subagent's floored bash ask prompts on the parent instead of riding its allow rule ([b33d6df](https://github.com/gotgenes/pi-packages/commit/b33d6df6e7bf430d5df898e190394c2d5d3ac9b7)), closes [#1029](https://github.com/gotgenes/pi-packages/issues/1029)
+
+### Documentation
+
+* **pi-permission-system:** a forwarded ask keeps its floor ([0db97e4](https://github.com/gotgenes/pi-packages/commit/0db97e48bf6deea75bba36212e62d3c12502c43c)), closes [#1029](https://github.com/gotgenes/pi-packages/issues/1029)
+
 ## [39.1.0](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.0.4...pi-permission-system-v39.1.0) (2026-10-05)
 
 
