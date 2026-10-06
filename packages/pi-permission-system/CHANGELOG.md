@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [39.1.2](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.1.1...pi-permission-system-v39.1.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **pi-permission-system:** a subagent's forwarded bash line is judged command by command on the parent ([0990e92](https://github.com/gotgenes/pi-packages/commit/0990e921868d077868b007682ffbaacc3a00cbc8)), closes [#1030](https://github.com/gotgenes/pi-packages/issues/1030)
+
+### Documentation
+
+* **pi-permission-system:** a forwarded bash line carries every asking command ([5cb6696](https://github.com/gotgenes/pi-packages/commit/5cb6696feb8572247dd6d09d4eb980292c0510f1))
+
 ## [39.1.1](https://github.com/gotgenes/pi-packages/compare/pi-permission-system-v39.1.0...pi-permission-system-v39.1.1) (2026-10-06)
 
 
