@@ -89,6 +89,13 @@ export interface PermissionCheckResult {
    * once have prompted for is auditable to the reason that let it through.
    */
   floorExemption?: FloorExemption;
+  /**
+   * The synthetic pattern of a floor that raised this ask on the bash chain —
+   * on the deciding unit, or on another asking unit of the same command. Only
+   * the child's parse knows it, so a forwarded ask carries it for the serving
+   * node to clamp its own `allow` with.
+   */
+  floor?: string;
 }
 
 export function isPermissionState(value: unknown): value is PermissionState {

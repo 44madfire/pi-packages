@@ -839,3 +839,118 @@ describe("resolveBashCommandCheck: home-prefixed rules and commands", () => {
     expect(result.matchedPattern).toBe("<indirection-bash-wrapper>");
   });
 });
+
+describe("resolveBashCommandCheck: the floor that raised an ask", () => {
+  beforeAll(async () => {
+    await warmBashParser();
+  });
+
+  function resolverOver(
+    bash: Record<string, PermissionState>,
+    sessionGrants: Ruleset = [],
+  ): PermissionResolver {
+    return new PermissionResolver(
+      createInMemoryManager({ global: { permission: { bash } } }),
+      { getRuleset: () => sessionGrants },
+    );
+  }
+
+  function decide(
+    bash: Record<string, PermissionState>,
+    command: string,
+    sessionGrants: Ruleset = [],
+  ): PermissionCheckResult {
+    const units = parseBashCommandsSync(command);
+    if (units === null) throw new Error("parser not warm");
+    return resolveBashCommandCheck(
+      command,
+      units,
+      undefined,
+      resolverOver(bash, sessionGrants),
+    );
+  }
+
+  describe("a floored ask names its floor", () => {
+    it.each([
+      ["sudo rm x", "<indirection-bash-wrapper>"],
+      ["bash -c 'rm x'", "<opaque-bash-wrapper>"],
+    ])("%s", (command, sentinel) => {
+      const result = decide({ "*": "allow" }, command);
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe(sentinel);
+      expect(result.floor).toBe(sentinel);
+    });
+
+    it("a unit the parse could not resolve", () => {
+      const result = resolveBashCommandCheck(
+        "rm x (",
+        [{ text: "rm x", parseUnresolved: true }],
+        undefined,
+        resolverOver({ "*": "allow" }),
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("<unparsed-bash-subtree>");
+      expect(result.floor).toBe("<unparsed-bash-subtree>");
+    });
+
+    it("a command the parse matched nothing in", () => {
+      const result = resolveBashCommandCheck(
+        "( rm x )",
+        [],
+        undefined,
+        resolverOver({ "*": "allow" }),
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("<unparseable-bash-command>");
+      expect(result.floor).toBe("<unparseable-bash-command>");
+    });
+  });
+
+  describe("a chain carries a floor raised on a unit that did not win", () => {
+    it("stamps the floored unit's sentinel on the rule-asking winner", () => {
+      const result = decide(
+        { "*": "allow", "git push *": "ask" },
+        "git push origin main && sudo rm x",
+      );
+      expect(result.state).toBe("ask");
+      expect(result.command).toBe("git push origin main");
+      expect(result.matchedPattern).toBe("git push *");
+      expect(result.floor).toBe("<indirection-bash-wrapper>");
+    });
+
+    it("leaves out a floored unit the session already granted", () => {
+      const result = decide(
+        { "*": "allow", "git push *": "ask" },
+        "git push origin main && sudo rm x",
+        [sessionRule("bash", "sudo rm x")],
+      );
+      expect(result.state).toBe("ask");
+      expect(result.command).toBe("git push origin main");
+      expect(result.floor).toBeUndefined();
+    });
+  });
+
+  describe("no floor raised", () => {
+    it("a deny winner carries none, even beside a floored unit", () => {
+      const result = decide(
+        { "*": "allow", "rm *": "deny" },
+        "sudo touch y && rm x",
+      );
+      expect(result.state).toBe("deny");
+      expect(result.floor).toBeUndefined();
+    });
+
+    it("an execution-modifier wrapper resolved by its inner command", () => {
+      const result = decide({ "*": "allow", "rm *": "ask" }, "time rm x");
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("rm *");
+      expect(result.floor).toBeUndefined();
+    });
+
+    it("a plain rule ask", () => {
+      const result = decide({ "*": "ask" }, "rm x");
+      expect(result.state).toBe("ask");
+      expect(result.floor).toBeUndefined();
+    });
+  });
+});

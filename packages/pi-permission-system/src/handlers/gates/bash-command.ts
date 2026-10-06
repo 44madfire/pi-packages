@@ -104,6 +104,7 @@ export function resolveBashCommandCheck(
         origin: "builtin",
         command,
         matchedPattern: UNPARSEABLE_COMMAND_SENTINEL,
+        floor: UNPARSEABLE_COMMAND_SENTINEL,
       };
     }
   }
@@ -111,10 +112,32 @@ export function resolveBashCommandCheck(
   const results = commands.map((cmd) =>
     resolveCommandUnit(cmd, command, agentName, resolver),
   );
-  return (
+  const winner =
     pickMostRestrictive(results) ??
-    resolveOnBashSurface(command, [], agentName, resolver)
+    resolveOnBashSurface(command, [], agentName, resolver);
+  return withChainFloor(winner, results);
+}
+
+/**
+ * Carry onto an asking winner the floor another asking unit of the chain
+ * raised.
+ *
+ * The winner is the first of the most restrictive units, so in
+ * `git push x && sudo rm y` a `git push *: ask` rule wins the tie and the
+ * wrapper's floor would otherwise go unrecorded. A forwarded ask is judged on
+ * the winner's value alone, so the floor has to ride the result for the
+ * serving node to keep it (#1029). A unit the session already granted is left
+ * out: the user approved exactly that command.
+ */
+function withChainFloor(
+  winner: PermissionCheckResult,
+  results: readonly PermissionCheckResult[],
+): PermissionCheckResult {
+  if (winner.state !== "ask" || winner.floor !== undefined) return winner;
+  const floored = results.find(
+    (result) => result.floor !== undefined && result.source !== "session",
   );
+  return floored ? { ...winner, floor: floored.floor } : winner;
 }
 
 /**
@@ -188,7 +211,12 @@ function floorToAsk(
   resolved: PermissionCheckResult,
   sentinel: string,
 ): PermissionCheckResult {
-  return { ...resolved, state: "ask", matchedPattern: sentinel };
+  return {
+    ...resolved,
+    state: "ask",
+    matchedPattern: sentinel,
+    floor: sentinel,
+  };
 }
 
 /**
