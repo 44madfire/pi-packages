@@ -75,3 +75,74 @@ The plan's marker is `**Release:** ship independently`, and no follow-up issues 
 - Known cost, recorded in ADR 0012: the pane covers an extension status row (Pi's optional third footer row) and any custom footer taller than two rows while open.
 - `/subagents:sessions` lists nothing after `/reload`, because the reloaded extension builds a new manager with no earlier subagents.
   This predates the change and no issue is filed for it.
+
+## Stage: Final Retrospective (2026-10-06T04:26:48Z)
+
+### Session summary
+
+The issue ran in one peer session (planning, TDD, sync) and one root session (ship, retro).
+The root fast-forward-merged the branch, CI passed on the first try, #1032 closed with a curated comment, and `pi-subagents-v23.1.0` released.
+The fix mounts the viewer as a bottom-anchored overlay in fullscreen and keeps it docked in regular mode.
+
+### Observations
+
+#### What went well
+
+- Live checks during planning shaped the design.
+  The agent dispatched a background Explore subagent (Haiku) to produce a long transcript, and the operator used it to test the viewer.
+  That run gave two inputs that reading the compiled code had not: the footer hint is wrong in fullscreen, and Pi's footer rows stay visible below the docked pane.
+  The same method was used twice more at sync, and it caught the bottom-margin error before the change landed.
+- The planning stage checked upstream before committing to a direction.
+  [earendil-works/pi#7574] and [earendil-works/pi#7894] removed "ask upstream" as an option, and the plan used the focused-overlay deferral those issues settled.
+- Mutation testing was applied to every behavior step and included two mutations the plan did not list.
+  A synchronous-`done` mutation showed that a planned test was redundant, and an options-on-probe mutation pinned the probe's no-mount contract.
+- The margin fix at sync was folded into the `fix:` and `docs:` commits with an autosquash.
+  A tag recorded the state before the squash, and a `git diff` against it confirmed the tree was unchanged.
+  The branch kept a single changelog entry for the fullscreen change.
+- The ship ran cleanly: fast-forward predicted and merged, both gates passed on the merged tree, CI passed first time, and the release succeeded first time.
+
+#### What caused friction (agent side)
+
+- `missing-context` — In planning, the agent said "the editor is hidden while the viewer is open either way" and sized the overlay's bottom margin from `footer.js` alone (2 rows + 1 status row = 3).
+  The editor actually stays mounted under the overlay, so the third row showed the editor's bottom border.
+  Impact: one fixup to the `fix:` and `docs:` commits plus an autosquash at sync, about 6 tool calls.
+  The plan's Step 8 manual check was what caught it.
+- `instruction-violation` (self-identified) — In TDD Step 1, `cp` backed up `session-navigator.ts` in the same batch as the mutation edit, so the backup may have captured the mutated file.
+  The agent noticed this and restored from `git checkout`, which was safe because `src/` matched HEAD in that step; later steps took the backup first, in a separate call.
+  Impact: one extra tool call, no rework.
+- `instruction-violation` (not caught by the agent) — The pre-completion dispatch passed `Base ref: 7e5a9c4c`, a SHA that resolves to nothing.
+  The `pre-completion` skill says to resolve the base ref with `git rev-parse`, and the agent knew enough to hedge ("resolve with `git rev-parse 5d22f266^` if this differs").
+  The reviewer followed the hedge and used `185cb233`.
+  Impact: none, because the reviewer recovered; without the hedge, the decision-surface check (2k) would have run against a bad ref.
+  This is the first occurrence across retros, and the rule already exists in the skill and in `AGENTS.md` Principle 4.
+- `other` — Three `Edit` calls failed because `\u` escapes were emitted in `oldText`, and one literal `\u2014` landed in a doc comment and was fixed before commit.
+  Impact: about 4 retried calls.
+  The `markdown-conventions` skill already covers this class.
+- `other` (ship) — The close comment thanked `@gotgenes` "for the report" even though the reporter is the operator, whose voice the comment is written in.
+  Impact: cosmetic.
+
+#### What caused friction (user side)
+
+- The operator's first answer at the direction gate was a question ("are you saying … Ctrl+PgUp is supposed to scroll up?").
+  The gate assumed familiarity with Pi's editor-vs-transcript key convention, which the operator did not have.
+  The clarification and the live experiment that followed were worth it, because they produced the footer and margin inputs.
+- The live check at sync was run, but the operator did not report per-key results, so neither the sync note nor the close comment could claim them.
+  A one-line "PgUp/PgDn/Home/End/wheel all OK" would have turned the reviewer's WARN into a recorded PASS.
+
+### Diagnostic details
+
+- **Model-performance correlation** — The main peer session ran on `claude-opus-5-5` for planning and TDD and on `claude-sonnet-5-5` for both sync passes, which were mechanical, so the switch fit.
+  The three transcript-fodder Explore subagents ran on `claude-haiku-4-5`, which suits purely mechanical work.
+  The `tidy-first-assessor` and `pre-completion-reviewer` ran on `claude-sonnet-5-5`, which suits judgment work.
+  No mismatches.
+- **Feedback-loop gap analysis** — Every TDD step ran the focused test file after each edit and `pnpm --filter @gotgenes/pi-subagents run check` before committing.
+  The full suite ran at Steps 5 and 7 and at the end.
+  No end-only verification.
+
+### Changes made
+
+1. `.pi/prompts/ship.md` step 9: the credit line now skips the operator's own login (`gh api user --jq .login`), because #1032's and #1008's close comments thanked `@gotgenes` in his own voice.
+2. Filed [#1034] (`/subagents:sessions` is empty after `/reload`).
+   `pi-subagents` has no open improvement phase, so no roadmap disposition was recorded.
+
+[#1034]: https://github.com/gotgenes/pi-packages/issues/1034
