@@ -56,3 +56,22 @@ The `pi-subagents` suite went from 2030 to 2044 tests (+14, all in `test/ui/sess
 
 [earendil-works/pi#7574]: https://github.com/earendil-works/pi/issues/7574
 [earendil-works/pi#7894]: https://github.com/earendil-works/pi/issues/7894
+
+## Stage: Sync (worktree) (2026-10-06T04:15:52Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass.
+The plan's marker is `**Release:** ship independently`, and no follow-up issues were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1032--/2026-10-06T03-15-36-708Z_01a10f35-a683-72e3-9ad4-9992944ade80.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The TDD stage's open reviewer WARN (no live fullscreen check) was acted on: the operator ran the viewer in a fresh Pi session and re-ran this sync.
+  The operator did not report per-key results to the session, so the retro does not claim them.
+- The live run changed one value: the fullscreen overlay's bottom margin went from 3 rows to 2, because the editor stays mounted under the overlay and a third row showed its bottom border.
+  The change was folded into the fix and ADR commits before landing, so the branch carries one changelog entry for the fullscreen change.
+- Known cost, recorded in ADR 0012: the pane covers an extension status row (Pi's optional third footer row) and any custom footer taller than two rows while open.
+- `/subagents:sessions` lists nothing after `/reload`, because the reloaded extension builds a new manager with no earlier subagents.
+  This predates the change and no issue is filed for it.
