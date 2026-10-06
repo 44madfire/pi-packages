@@ -33,6 +33,8 @@ import {
   type MarkdownTheme,
   matchesKey,
   type TUI,
+  type TuiMouseEvent,
+  type TuiMouseEventResult,
   truncateToWidth,
 } from "@earendil-works/pi-tui";
 import type { AgentConfigLookup } from "#src/config/agent-types";
@@ -217,6 +219,13 @@ export class TranscriptPane implements Component {
     } else if (this.keys.matches(data, "tui.altScreen.bottom")) {
       this.scrollTo(Number.POSITIVE_INFINITY);
     }
+  }
+
+  /** The wheel scrolls the transcript; every other mouse event is left to the host. */
+  handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
+    if (event.type !== "wheel") return undefined;
+    this.scrollBy(event.wheelDelta ?? 0);
+    return { handled: true };
   }
 
   render(width: number): string[] {

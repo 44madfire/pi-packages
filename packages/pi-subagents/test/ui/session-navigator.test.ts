@@ -1,6 +1,12 @@
 import { getMarkdownTheme, initTheme } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { type KeybindingsConfig, KeybindingsManager, TUI_KEYBINDINGS, visibleWidth } from "@earendil-works/pi-tui";
+import {
+  type KeybindingsConfig,
+  KeybindingsManager,
+  TUI_KEYBINDINGS,
+  type TuiMouseEvent,
+  visibleWidth,
+} from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { AgentTypeRegistry } from "#src/config/agent-types";
 import type { SessionMessage } from "#src/types";
@@ -324,6 +330,72 @@ describe("TranscriptPane", () => {
       messages = rowsOf(90);
       captured?.();
       expect(visibleRows(pane).at(-1)).toBe(89);
+    });
+  });
+
+  describe("mouse wheel", () => {
+    const mouse = (type: TuiMouseEvent["type"], wheelDelta?: number): TuiMouseEvent => ({
+      type,
+      button: "none",
+      x: 10,
+      y: 5,
+      screenX: 10,
+      screenY: 5,
+      width: 80,
+      height: 28,
+      shift: false,
+      alt: false,
+      ctrl: false,
+      ...(wheelDelta === undefined ? {} : { wheelDelta }),
+    });
+
+    const firstRow = (pane: TranscriptPane): number =>
+      pane
+        .render(80)
+        .map((line) => /\br(\d{3})\b/.exec(stripAnsi(line))?.[1])
+        .filter((row) => row !== undefined)
+        .map(Number)[0] ?? -1;
+
+    function livePane() {
+      let messages = rowsOf(80);
+      let captured: (() => void) | undefined;
+      const pane = makePane({
+        tui: mockTui(40, 80),
+        source: fakeSource({
+          getMessages: () => messages,
+          subscribe: (onChange) => {
+            captured = onChange;
+            return () => {};
+          },
+        }),
+      });
+      const grow = (rows: number) => {
+        messages = rowsOf(rows);
+        captured?.();
+      };
+      return { pane, grow };
+    }
+
+    it("scrolls the transcript up by the wheel's lines", () => {
+      const { pane } = livePane();
+      const atBottom = firstRow(pane);
+      expect(pane.handleMouse(mouse("wheel", -3))).toEqual({ handled: true });
+      expect(firstRow(pane)).toBe(atBottom - 3);
+    });
+
+    it("scrolls back to the bottom and follows new output", () => {
+      const { pane, grow } = livePane();
+      const atBottom = firstRow(pane);
+      pane.handleMouse(mouse("wheel", -3));
+      pane.handleMouse(mouse("wheel", 3));
+      expect(firstRow(pane)).toBe(atBottom);
+      grow(90);
+      expect(firstRow(pane)).toBe(atBottom + 10);
+    });
+
+    it("leaves other mouse events to the host", () => {
+      const { pane } = livePane();
+      expect(pane.handleMouse(mouse("click"))).toBeUndefined();
     });
   });
 
