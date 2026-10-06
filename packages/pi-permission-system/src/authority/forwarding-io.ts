@@ -124,6 +124,7 @@ function asForwardedAccessIntent(
     surface?: unknown;
     matchValues?: unknown;
     boundaryValue?: unknown;
+    floor?: unknown;
     requesterCwd?: unknown;
     principal?: unknown;
   };
@@ -135,6 +136,9 @@ function asForwardedAccessIntent(
       candidate.boundaryValue === null ||
       typeof candidate.boundaryValue === "string"
     ) ||
+    // A malformed floor drops the whole intent, which escalates: it must
+    // never read as "no floor".
+    !(candidate.floor === undefined || typeof candidate.floor === "string") ||
     typeof candidate.requesterCwd !== "string" ||
     typeof candidate.principal !== "object" ||
     candidate.principal === null
@@ -155,6 +159,7 @@ function asForwardedAccessIntent(
     surface: candidate.surface,
     matchValues: [...candidate.matchValues],
     boundaryValue: candidate.boundaryValue,
+    ...(candidate.floor === undefined ? {} : { floor: candidate.floor }),
     requesterCwd: candidate.requesterCwd,
     principal: {
       sessionId: principal.sessionId,

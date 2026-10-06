@@ -151,6 +151,7 @@ function toAccessFacts(intent: ForwardedAccessIntent): ForwardedAccessFacts {
     surface: intent.surface,
     matchValues: intent.matchValues,
     boundaryValue: intent.boundaryValue,
+    ...(intent.floor === undefined ? {} : { floor: intent.floor }),
   };
 }
 

@@ -273,6 +273,34 @@ describe("readForwardedPermissionRequest — accessIntent field", () => {
     expect(parsed?.accessIntent).toBeUndefined();
   });
 
+  it("round-trips the floor that raised a bash ask", () => {
+    const accessIntent: ForwardedAccessIntent = {
+      surface: "bash",
+      matchValues: ["sudo rm x"],
+      boundaryValue: null,
+      floor: "<indirection-bash-wrapper>",
+      requesterCwd: "/repo",
+      principal: { sessionId: "child-session", agentName: "reviewer" },
+    };
+    const parsed = writeAndRead({ ...baseRequest(), accessIntent });
+    expect(parsed?.accessIntent).toEqual(accessIntent);
+  });
+
+  it("drops an access intent whose floor is not a string, so the ask escalates", () => {
+    const parsed = writeAndRead({
+      ...baseRequest(),
+      accessIntent: {
+        surface: "bash",
+        matchValues: ["sudo rm x"],
+        boundaryValue: null,
+        floor: 42,
+        requesterCwd: "/repo",
+        principal: { sessionId: "child-session", agentName: "reviewer" },
+      },
+    });
+    expect(parsed?.accessIntent).toBeUndefined();
+  });
+
   it("drops a malformed access intent to undefined (missing principal)", () => {
     const parsed = writeAndRead({
       ...baseRequest(),

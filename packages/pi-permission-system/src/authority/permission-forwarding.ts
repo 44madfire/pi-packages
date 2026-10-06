@@ -123,6 +123,14 @@ export interface ForwardedAccessFacts {
   matchValues: string[];
   /** `AccessPath.boundaryValue()` (canonical) for a path surface; `null` for a non-path surface. */
   boundaryValue: string | null;
+  /**
+   * The synthetic pattern of a floor that raised a bash ask on the child
+   * (`<indirection-bash-wrapper>`, `<opaque-bash-wrapper>`,
+   * `<unparsed-bash-subtree>`, `<unparseable-bash-command>`). Only the child's
+   * parse knows it, so the serving node clamps its own `allow` with it rather
+   * than recomputing it. Absent when no floor was raised.
+   */
+  floor?: string;
 }
 
 /**
