@@ -543,6 +543,31 @@ describe("AgentWidget — animation cadence", () => {
 
 		widget.dispose();
 	});
+
+	it("keeps asking for renders while an agent runs", () => {
+		const record = createTestSubagent({
+			id: "a1",
+			status: "running",
+			completedAt: undefined,
+			isBackground: true,
+		});
+		const manager = { listAgents: () => [record] } as unknown as SubagentManager;
+		const widget = new AgentWidget(manager, new AgentTypeRegistry(() => new Map()));
+		const requestRender = vi.fn();
+		widget.setUICtx({
+			setStatus: () => {},
+			setWidget: (_key, content) => {
+				content?.({ terminal: { columns: 200, rows: 40 }, requestRender }, stubTheme());
+			},
+		});
+
+		widget.onSubagentStarted(record);
+		vi.advanceTimersByTime(750);
+
+		expect(requestRender).toHaveBeenCalledTimes(3);
+
+		widget.dispose();
+	});
 });
 
 describe("AgentWidget.dispose", () => {
