@@ -55,3 +55,17 @@ The `pi-permission-system` suite went from 5587 to 5634 tests, and every killing
 [#917]: https://github.com/gotgenes/pi-packages/pull/917
 [#928]: https://github.com/gotgenes/pi-packages/issues/928
 [#981]: https://github.com/gotgenes/pi-packages/issues/981
+
+## Stage: Sync (worktree) (2026-10-06T06:02:36Z)
+
+### Session summary
+
+Pre-push checks passed (`pnpm run lint`, `pnpm fallow dead-code`), and the reviewer's earlier WARN was already settled by the delta commits, so nothing is open at land time.
+The plan's marker is `**Release:** ship independently`, and the `fix!` commit makes it a major; PR #917 is the close target at ship time.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-910--/2026-10-06T05-02-55-824Z_01a10f97-e750-70cf-8b7c-aa3c8606400b.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The Phase 15 sweep disposition ("out of scope for the roadmap") already landed on this branch as `docs(pi-permission-system): disposition #910 against Phase 15`, so the root needs no roadmap edit.
+- `.fallowrc.json` still carries stale `pi-subagents` boundary zones that make `fallow guard` error; `fallow dead-code` is unaffected.
