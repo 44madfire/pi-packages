@@ -123,6 +123,36 @@ async function escalateForwardedAsk(
 }
 
 describe("processInbox — recorded-authority resolution", () => {
+  test("records the child's floor on the prompted entry of an ask it escalates", async () => {
+    temp = createForwardingTempDir("parent-session");
+    temp.writeRequest({
+      id: "req-floored",
+      source: "tool_call",
+      surface: "bash",
+      value: "sudo rm x",
+      accessIntent: makeForwardedAccessIntent({
+        matchValues: ["sudo rm x"],
+        floor: "<indirection-bash-wrapper>",
+      }),
+    });
+    const logger = { review: vi.fn(), debug: vi.fn() };
+
+    const server = new ForwardedRequestServer(
+      makeServerDeps({ forwardingDir: temp.forwardingDir, logger }),
+    );
+    await server.processInbox(
+      makeForwarderContext({ hasUI: true, sessionId: "parent-session" }),
+    );
+
+    expect(logger.review).toHaveBeenCalledWith(
+      "forwarded_permission.prompted",
+      expect.objectContaining({
+        requestId: "req-floored",
+        floor: "<indirection-bash-wrapper>",
+      }),
+    );
+  });
+
   test("auto-approves and writes an approved response when the serving policy allows", async () => {
     temp = createForwardingTempDir("parent-session");
     const accessIntent = makeForwardedAccessIntent({

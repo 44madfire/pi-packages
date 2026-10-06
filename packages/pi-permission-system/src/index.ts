@@ -195,7 +195,7 @@ export default function piPermissionSystemExtension(pi: ExtensionAPI): void {
   // composed ruleset, agent-scoped to the requester (§3) — the match values
   // are used as fixed by the child, never re-derived through this session's
   // PathNormalizer/cwd (#597).
-  const servingPolicy = new ResolverServingPolicy(resolver);
+  const servingPolicy = new ResolverServingPolicy(resolver, isYoloEnabled);
 
   // Constructed here rather than beside the gate runner below: the serving
   // side broadcasts its own decisions, so both readers share one reporter over

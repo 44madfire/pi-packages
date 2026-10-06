@@ -2,10 +2,14 @@ import { describe, expect, test } from "vitest";
 import type { ForwardedAccessIntent } from "#src/authority/permission-forwarding";
 import { PermissionResolver } from "#src/policy/permission-resolver";
 import { ResolverServingPolicy } from "#src/policy/serving-policy";
+import { SessionApproval } from "#src/session/session-approval";
 import { SessionRules } from "#src/session/session-rules";
-import type { PermissionCheckResult } from "#src/types";
+import type { PermissionCheckResult, PermissionState } from "#src/types";
 import { makeForwardedAccessIntent } from "#test/helpers/forwarding-fixtures";
-import { createManagerWithConfig } from "#test/helpers/manager-harness";
+import {
+  createInMemoryManager,
+  createManagerWithConfig,
+} from "#test/helpers/manager-harness";
 
 describe("ResolverServingPolicy over real recorded authority", () => {
   // The serving composition index.ts constructs, over a filesystem-backed
@@ -20,6 +24,7 @@ describe("ResolverServingPolicy over real recorded authority", () => {
     const { manager, cleanup } = createManagerWithConfig(permission);
     const policy = new ResolverServingPolicy(
       new PermissionResolver(manager, new SessionRules()),
+      () => false,
     );
     return { resolve: (intent) => policy.resolve(intent), cleanup };
   }
@@ -139,5 +144,78 @@ describe("ResolverServingPolicy over real recorded authority", () => {
     } finally {
       policy.cleanup();
     }
+  });
+});
+
+describe("ResolverServingPolicy honors the floor the child raised", () => {
+  const WRAPPER = "<indirection-bash-wrapper>";
+
+  function servingPolicyOver(
+    bash: Record<string, PermissionState>,
+    options: { yolo?: boolean; sessionRules?: SessionRules } = {},
+  ): ResolverServingPolicy {
+    return new ResolverServingPolicy(
+      new PermissionResolver(
+        createInMemoryManager({ global: { permission: { bash } } }),
+        options.sessionRules ?? new SessionRules(),
+      ),
+      () => options.yolo ?? false,
+    );
+  }
+
+  const flooredIntent = makeForwardedAccessIntent({
+    surface: "bash",
+    matchValues: ["sudo rm x"],
+    floor: WRAPPER,
+  });
+
+  test("clamps an allow rule to an ask naming the floor", () => {
+    const result = servingPolicyOver({ "*": "allow" }).resolve(flooredIntent);
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe(WRAPPER);
+  });
+
+  test("answers the same intent from the allow rule when no floor was raised", () => {
+    const { floor: _floor, ...unfloored } = flooredIntent;
+    const result = servingPolicyOver({ "*": "allow" }).resolve(unfloored);
+    expect(result.state).toBe("allow");
+    expect(result.matchedPattern).toBe("*");
+  });
+
+  test("still denies what a deny rule covers", () => {
+    const result = servingPolicyOver({
+      "*": "allow",
+      "sudo *": "deny",
+    }).resolve(flooredIntent);
+    expect(result.state).toBe("deny");
+    expect(result.matchedPattern).toBe("sudo *");
+  });
+
+  test("leaves an ask rule's own pattern", () => {
+    const result = servingPolicyOver({ "*": "ask" }).resolve(flooredIntent);
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe("*");
+  });
+
+  test("approves a command the serving session already granted", () => {
+    const sessionRules = new SessionRules();
+    sessionRules.recordSessionApproval(
+      SessionApproval.single("bash", "sudo rm x"),
+    );
+    const result = servingPolicyOver(
+      { "*": "allow" },
+      { sessionRules },
+    ).resolve(flooredIntent);
+    expect(result.state).toBe("allow");
+    expect(result.source).toBe("session");
+  });
+
+  test("approves under the serving node's yolo, naming the floor and yolo", () => {
+    const result = servingPolicyOver({ "*": "allow" }, { yolo: true }).resolve(
+      flooredIntent,
+    );
+    expect(result.state).toBe("allow");
+    expect(result.origin).toBe("yolo");
+    expect(result.matchedPattern).toBe(WRAPPER);
   });
 });
