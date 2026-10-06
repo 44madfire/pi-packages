@@ -1654,6 +1654,28 @@ describe("BashProgram", () => {
         });
       });
 
+      describe("a statement that redirects to the discard device", () => {
+        it.each([
+          ["rg -l x | xargs ls -1t 2>/dev/null", [undefined, "core-reader"]],
+          ["xargs grep -l x >/dev/null 2>&1", ["core-reader"]],
+          ["2>/dev/null xargs grep -l x", ["core-reader"]],
+        ])("keeps the exemption for %s", async (command, expected) => {
+          await expect(exemptions(command)).resolves.toEqual(expected);
+        });
+
+        it.each([
+          ["xargs grep x 2>/dev/null > out.txt", "another redirect writes"],
+          ["xargs grep -l x 2>/dev/stdout", "a stream device reopens its file"],
+          ['xargs grep -l x 2>"/dev/null"', "a quoted spelling stays unproven"],
+          [
+            "xargs pnpm test 2>/dev/null",
+            "the inner command is not in the core",
+          ],
+        ])("withholds it for %s (%s)", async (command) => {
+          await expect(exemptions(command)).resolves.toEqual([undefined]);
+        });
+      });
+
       it("gives a nested execution its own scope", async () => {
         // The redirect belongs to the enclosing statement, not to the command
         // substitution hosted in its destination.
