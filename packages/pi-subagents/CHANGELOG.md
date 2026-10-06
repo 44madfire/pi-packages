@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [23.1.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v23.0.0...pi-subagents-v23.1.0) (2026-10-06)
+
+
+### Features
+
+* **pi-subagents:** the session viewer's paging keys follow your keybindings ([c83225b](https://github.com/gotgenes/pi-packages/commit/c83225bc226aa2fbcba216a03e82c5de2d31d42b)), closes [#1032](https://github.com/gotgenes/pi-packages/issues/1032)
+* **pi-subagents:** scroll the session viewer with the mouse wheel ([b800890](https://github.com/gotgenes/pi-packages/commit/b80089052e7afb41d2cdfdaacc98abfb09ba15c9)), closes [#1032](https://github.com/gotgenes/pi-packages/issues/1032)
+
+### Bug Fixes
+
+* **pi-subagents:** page the session viewer natively in fullscreen mode ([915bbf2](https://github.com/gotgenes/pi-packages/commit/915bbf23676af80758943336e43c5cc5597b12bd)), closes [#1032](https://github.com/gotgenes/pi-packages/issues/1032)
+
+### Documentation
+
+* **pi-subagents:** record why the fullscreen session viewer is an overlay ([8c688ba](https://github.com/gotgenes/pi-packages/commit/8c688bab100ce1597a5d7178202822c7a29f12de)), closes [#1032](https://github.com/gotgenes/pi-packages/issues/1032)
+
 ## [23.0.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v22.0.0...pi-subagents-v23.0.0) (2026-10-03)
 
 
