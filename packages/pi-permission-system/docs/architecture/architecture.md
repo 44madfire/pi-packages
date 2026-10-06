@@ -1336,6 +1336,10 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   A session-granted wrapper unit floors to an `ask` that keeps `source: "session"`, wins `pickMostRestrictive`'s first-wins tie, and takes `GateRunner`'s session fast path, so `sudo rm y && git push origin main` runs the `git push *: ask` unit unprompted; it is a live chain bypass in the same `resolveBashCommandCheck` as [#1029] and [#1030].
 - [#910] — reopened by its planning (filed and self-closed by its third-party author); out of scope for the roadmap.
   A path argument's absolute spelling joins the bash command unit's spellings on [#981]'s seam, a change to which texts the `bash` surface matches rather than a token role lost at projection; it edits `token-collection.ts` and `command-enumeration.ts`, so it lands before or after [#1027] and [#880], never beside them.
+- [#1036] — filed by the #910 retrospective; out of scope for the roadmap.
+  It repairs repo-wide markdown that `rumdl`'s MD018 fix turned into headings, unrelated to token roles or declared effects.
+- [#1037] — filed by the #910 retrospective; out of scope for the roadmap.
+  It lifts the repo's `rumdl` version pin, which is lint tooling, not this package's code.
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1978,5 +1982,7 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1030]: https://github.com/gotgenes/pi-packages/issues/1030
 [#1031]: https://github.com/gotgenes/pi-packages/issues/1031
 [#1033]: https://github.com/gotgenes/pi-packages/issues/1033
+[#1036]: https://github.com/gotgenes/pi-packages/issues/1036
+[#1037]: https://github.com/gotgenes/pi-packages/issues/1037
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
