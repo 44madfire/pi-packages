@@ -4,6 +4,8 @@ import {
   resetWarmBashParser,
   warmBashParser,
 } from "#src/access-intent/bash/parser";
+import { pathFlavorForPlatform } from "#src/path/path-flavor";
+import { PathNormalizer } from "#src/path/path-normalizer";
 import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
 import { resolveBashAdvisoryCheck } from "#src/service/bash-advisory-check";
 import type { PermissionCheckResult } from "#src/types";
@@ -29,6 +31,11 @@ function makeBashResolver(
   };
 }
 
+const normalizer = new PathNormalizer(
+  pathFlavorForPlatform(process.platform),
+  "/test/cwd",
+);
+
 describe("resolveBashAdvisoryCheck", () => {
   beforeEach(() => {
     resetWarmBashParser();
@@ -44,6 +51,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "cd /repo && npm install x",
         "my-agent",
         resolver,
+        normalizer,
       );
       expect(resolver.resolve).toHaveBeenCalledTimes(1);
       expect(resolver.resolve).toHaveBeenCalledWith({
@@ -73,6 +81,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "cd /repo && npm install x",
         undefined,
         resolver,
+        normalizer,
       );
       expect(result.state).toBe("deny");
       expect(result.matchedPattern).toBe("npm *");
@@ -97,6 +106,7 @@ describe("resolveBashAdvisoryCheck", () => {
         'bash -c "rm -rf /"',
         undefined,
         resolver,
+        normalizer,
       );
       expect(result.state).toBe("ask");
       expect(result.matchedPattern).toBe("<opaque-bash-wrapper>");
@@ -128,6 +138,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "xargs grep -l foo",
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("allow");
@@ -144,6 +155,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "xargs rm -rf",
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("ask");
@@ -160,6 +172,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "git commit -F - <<'MSG' 2>&1 | rm -rf /tmp/x\nmsg\nMSG",
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("ask");
@@ -181,6 +194,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "git commit -F - <<'MSG' 2>&1 | rm -rf /tmp/x\nmsg\nMSG",
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("deny");
@@ -202,6 +216,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "cat <<EOF ; rm -rf /tmp/x\nb\nEOF",
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("deny");
@@ -210,7 +225,12 @@ describe("resolveBashAdvisoryCheck", () => {
 
     it("fails closed for a non-empty command that parses to zero units", () => {
       const resolver = makeBashResolver();
-      const result = resolveBashAdvisoryCheck("> out.txt", undefined, resolver);
+      const result = resolveBashAdvisoryCheck(
+        "> out.txt",
+        undefined,
+        resolver,
+        normalizer,
+      );
       expect(result.state).toBe("ask");
       expect(result.matchedPattern).toBe("<unparseable-bash-command>");
       // The whole command is resolved once, to see whether a deny covers it.
@@ -226,7 +246,12 @@ describe("resolveBashAdvisoryCheck", () => {
         }),
       });
 
-      const result = resolveBashAdvisoryCheck("> out.txt", undefined, resolver);
+      const result = resolveBashAdvisoryCheck(
+        "> out.txt",
+        undefined,
+        resolver,
+        normalizer,
+      );
 
       expect(result.state).toBe("deny");
       expect(result.matchedPattern).toBe("> *");
@@ -248,6 +273,7 @@ describe("resolveBashAdvisoryCheck", () => {
         "echo $(rm -rf /)",
         undefined,
         resolver,
+        normalizer,
       );
       expect(result.state).toBe("deny");
       expect(result.commandContext).toBe("command_substitution");
@@ -271,6 +297,7 @@ describe("resolveBashAdvisoryCheck", () => {
         'echo "hello world" > $(rm *.txt)',
         undefined,
         resolver,
+        normalizer,
       );
 
       expect(result.state).toBe("deny");

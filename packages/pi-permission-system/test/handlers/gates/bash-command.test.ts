@@ -2,8 +2,10 @@ import { homedir } from "node:os";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { warmBashParser } from "#src/access-intent/bash/parser";
-import { parseBashCommandsSync } from "#src/access-intent/bash/sync-commands";
+import { type BashCommand, BashProgram } from "#src/access-intent/bash/program";
 import { resolveBashCommandCheck } from "#src/handlers/gates/bash-command";
+import { pathFlavorForPlatform } from "#src/path/path-flavor";
+import { PathNormalizer } from "#src/path/path-normalizer";
 import { PermissionResolver } from "#src/policy/permission-resolver";
 import type { Ruleset } from "#src/policy/rule";
 import type { PermissionCheckResult, PermissionState } from "#src/types";
@@ -766,7 +768,7 @@ describe("resolveBashCommandCheck: home-prefixed rules and commands", () => {
     const resolver = new PermissionResolver(manager, {
       getRuleset: () => sessionGrants,
     });
-    const units = parseBashCommandsSync(command);
+    const units = commandsOf(command);
     if (units === null) throw new Error("parser not warm");
     return resolveBashCommandCheck(command, units, undefined, resolver);
   }
@@ -1031,7 +1033,7 @@ function decide(
   command: string,
   sessionGrants: Ruleset = [],
 ): PermissionCheckResult {
-  const units = parseBashCommandsSync(command);
+  const units = commandsOf(command);
   if (units === null) throw new Error("parser not warm");
   return resolveBashCommandCheck(
     command,
@@ -1039,4 +1041,14 @@ function decide(
     undefined,
     resolverOver(bash, sessionGrants),
   );
+}
+
+const normalizer = new PathNormalizer(
+  pathFlavorForPlatform(process.platform),
+  process.cwd(),
+);
+
+/** The units the synchronous parse enumerates, or `null` while cold. */
+function commandsOf(command: string): BashCommand[] | null {
+  return BashProgram.parseSync(command, normalizer)?.commands() ?? null;
 }
