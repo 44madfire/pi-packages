@@ -4,13 +4,19 @@ import {
   type KeybindingsConfig,
   KeybindingsManager,
   TUI_KEYBINDINGS,
+  type TuiMode,
   type TuiMouseEvent,
   visibleWidth,
 } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { AgentTypeRegistry } from "#src/config/agent-types";
 import type { SessionMessage } from "#src/types";
-import type { EntryHeading, SessionModel, TranscriptSource } from "#src/ui/session-navigation";
+import {
+  type EntryHeading,
+  listNavigableAgents,
+  type SessionModel,
+  type TranscriptSource,
+} from "#src/ui/session-navigation";
 import { type PaneKeys, SessionNavigatorHandler, TranscriptPane } from "#src/ui/session-navigator";
 import { makeNavigable } from "#test/helpers/make-navigable";
 import { fakeSource, mockTui } from "#test/helpers/transcript-fixtures";
@@ -453,24 +459,39 @@ describe("TranscriptPane", () => {
 });
 
 describe("SessionNavigatorHandler", () => {
-  function makeUI(selectResult?: string) {
-    return {
-      select: vi.fn().mockResolvedValue(selectResult),
-      notify: vi.fn(),
-      custom: vi.fn().mockResolvedValue(undefined),
-    };
-  }
-
-  type PaneFactory = (
+  type ComponentFactory<R> = (
     tui: TUI,
     theme: ReturnType<typeof ansiTheme>,
     kb: PaneKeys,
-    done: (r: undefined) => void,
+    done: (r: R) => void,
   ) => Component;
+  type PaneFactory = ComponentFactory<undefined>;
+
+  /**
+   * A `ctx.ui` double. Its `custom` behaves like Pi's: it runs the factory on a
+   * TUI in `mode` and resolves with what `done` received if the factory called
+   * it before returning, else `undefined` (the operator never closes the pane
+   * here). A non-interactive UI resolves `undefined` without running anything,
+   * as Pi's print and RPC modes do.
+   */
+  function makeUI(selectResult?: string, { mode = "regular", interactive = true }: { mode?: TuiMode; interactive?: boolean } = {}) {
+    return {
+      select: vi.fn().mockResolvedValue(selectResult),
+      notify: vi.fn(),
+      custom: vi.fn().mockImplementation((factory: ComponentFactory<unknown>) => {
+        if (!interactive) return Promise.resolve(undefined);
+        let result: unknown;
+        factory(mockTui(40, 80, mode), ansiTheme(), keysWith(), (r) => {
+          result = r;
+        });
+        return Promise.resolve(result);
+      }),
+    };
+  }
 
   /** The factory of the `ui.custom` call that mounted the transcript pane; throws when none did. */
   function mountedPaneFactory(ui: ReturnType<typeof makeUI>): PaneFactory {
-    const call = ui.custom.mock.calls.at(0);
+    const call = ui.custom.mock.calls.at(-1);
     if (!call) throw new Error("no transcript pane was mounted");
     return call[0] as PaneFactory;
   }
@@ -542,7 +563,38 @@ describe("SessionNavigatorHandler", () => {
       readFile: noReadFile,
     });
 
-    expect(ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: false });
+    expect(ui.custom).toHaveBeenLastCalledWith(expect.any(Function), { overlay: false });
+  });
+
+  describe("mount mode", () => {
+    const PICK = makeNavigable();
+    const handleIn = (ui: ReturnType<typeof makeUI>) =>
+      new SessionNavigatorHandler().handle({ ui, agents: [PICK], registry, cwd: "/test/cwd", readFile: noReadFile });
+    const label = () => listNavigableAgents([PICK], registry)[0]?.label;
+
+    it("floats the pane over the bottom of a fullscreen TUI, above Pi's footer", async () => {
+      // Pi's fullscreen viewport claims PgUp/PgDn/Home/End before a docked
+      // component sees them, and defers them only to a focused overlay.
+      const ui = makeUI(label(), { mode: "fullscreen" });
+      await handleIn(ui);
+      expect(ui.custom).toHaveBeenLastCalledWith(expect.any(Function), {
+        overlay: true,
+        overlayOptions: { anchor: "bottom-center", width: "100%", maxHeight: "70%", margin: { bottom: 2 } },
+      });
+    });
+
+    it("docks the pane when the UI reports no mode", async () => {
+      const ui = makeUI(label(), { interactive: false });
+      await handleIn(ui);
+      expect(ui.custom).toHaveBeenLastCalledWith(expect.any(Function), { overlay: false });
+    });
+
+    it("mounts the pane once, after a probe that mounts nothing", async () => {
+      const ui = makeUI(label(), { mode: "fullscreen" });
+      await handleIn(ui);
+      expect(ui.custom).toHaveBeenCalledTimes(2);
+      expect(ui.custom.mock.calls[0]).toEqual([expect.any(Function)]);
+    });
   });
 
   it("opens a pane sourced from the persisted file when a released agent is picked", async () => {

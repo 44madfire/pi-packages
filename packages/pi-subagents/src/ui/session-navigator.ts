@@ -19,10 +19,14 @@
  * and the widget. It consumes a `TranscriptSource`, so a released agent's disk
  * snapshot (`fileSnapshotSource`) swaps in without touching the renderer or the pane.
  *
- * It mounts through `ui.custom`'s non-overlay path deliberately: Pi's regular-mode
- * renderer composites overlays into the buffer that backs scrollback, so an overlay
- * mount bakes this pane's chrome into terminal history. See
- * `docs/decisions/0007-transcript-viewer-is-not-an-overlay.md`.
+ * In regular mode it mounts through `ui.custom`'s non-overlay path deliberately:
+ * Pi's regular-mode renderer composites overlays into the buffer that backs
+ * scrollback, so an overlay mount bakes this pane's chrome into terminal history
+ * (`docs/decisions/0007-transcript-viewer-is-not-an-overlay.md`). In fullscreen
+ * mode it floats as an overlay over the bottom of the screen, because Pi's
+ * fullscreen viewport claims PgUp/PgDn/Home/End before any docked component and
+ * defers them only to a focused overlay
+ * (`docs/decisions/0012-fullscreen-viewer-is-an-overlay.md`).
  */
 
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
@@ -32,7 +36,9 @@ import {
   type KeyId,
   type MarkdownTheme,
   matchesKey,
+  type OverlayOptions,
   type TUI,
+  type TuiMode,
   type TuiMouseEvent,
   type TuiMouseEventResult,
   truncateToWidth,
@@ -52,10 +58,28 @@ import { TranscriptContent } from "#src/ui/transcript-content";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Chrome lines: the header rule and the footer rule. The pane is docked, so it needs no frame. */
+/** Chrome lines: the header rule and the footer rule. The pane sits on Pi's own chrome, so it needs no frame. */
 const CHROME_LINES = 2;
 const MIN_VIEWPORT = 3;
 const VIEWPORT_HEIGHT_PCT = 70;
+
+/**
+ * Rows Pi's default footer takes: the cwd and stats rows. An extension status
+ * adds a third, which the pane covers while open; reserving it instead would
+ * expose the editor's bottom border whenever no status is set.
+ */
+const PI_FOOTER_ROWS = 2;
+
+/** Where the fullscreen pane floats: the region the docked pane fills in regular mode, above Pi's footer. */
+const FULLSCREEN_OVERLAY: OverlayOptions = {
+  anchor: "bottom-center",
+  width: "100%",
+  maxHeight: `${VIEWPORT_HEIGHT_PCT}%`,
+  margin: { bottom: PI_FOOTER_ROWS },
+};
+
+/** What the mode probe mounts: nothing, since it closes before Pi would mount it. */
+const NOTHING: Component = { render: () => [], invalidate: () => {} };
 
 /**
  * The pane's theme: the shared narrow `Theme` plus the one method only the pane
@@ -88,7 +112,13 @@ export type CustomComponentFactory<R> = (
 export interface SessionNavigatorUI {
   select(title: string, options: string[]): Promise<string | undefined>;
   notify(message: string, level: "info" | "warning" | "error"): void;
-  custom<R>(component: CustomComponentFactory<R>, options?: unknown): Promise<R>;
+  custom<R>(component: CustomComponentFactory<R>, options?: ViewerMountOptions): Promise<R>;
+}
+
+/** How `ui.custom` mounts a component: Pi's options, narrowed to what the navigator sets. */
+export interface ViewerMountOptions {
+  overlay: boolean;
+  overlayOptions?: OverlayOptions;
 }
 
 /** Parameters for one `/subagents:sessions` invocation. */
@@ -151,12 +181,33 @@ export class SessionNavigatorHandler {
       return;
     }
     const markdownTheme = getMarkdownTheme();
+    const mode = await probeTuiMode(ui);
     await ui.custom<undefined>(
       (tui, theme, keys, done) =>
         new TranscriptPane({ tui, theme, keys, source, heading: entry.heading, done, cwd, markdownTheme }),
-      { overlay: false },
+      viewerMountOptions(mode),
     );
   }
+}
+
+/**
+ * The TUI's render mode, read before the pane mounts. Pi decides overlay versus
+ * docked before it runs a `ui.custom` factory and exposes no mode accessor, so
+ * this mounts a factory that closes with `tui.mode` before returning; Pi then
+ * never mounts what it returns. A UI that runs no factory (print or RPC mode)
+ * resolves `undefined`, which keeps the docked default.
+ */
+async function probeTuiMode(ui: SessionNavigatorUI): Promise<TuiMode> {
+  const mode = await ui.custom<TuiMode | undefined>((tui, _theme, _keys, done) => {
+    done(tui.mode);
+    return NOTHING;
+  });
+  return mode === "fullscreen" ? "fullscreen" : "regular";
+}
+
+/** Docked in regular mode (ADR 0007); a focused overlay in fullscreen mode, so the viewport keys reach it (ADR 0012). */
+function viewerMountOptions(mode: TuiMode): ViewerMountOptions {
+  return mode === "fullscreen" ? { overlay: true, overlayOptions: FULLSCREEN_OVERLAY } : { overlay: false };
 }
 
 /**
