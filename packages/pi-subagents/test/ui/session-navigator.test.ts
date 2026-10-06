@@ -355,16 +355,24 @@ describe("SessionNavigatorHandler", () => {
     };
   }
 
-  // Invoke the component factory captured by the handler's ui.custom call and
-  // render it — the act (handle) stays explicit in each test.
+  type PaneFactory = (
+    tui: TUI,
+    theme: ReturnType<typeof ansiTheme>,
+    kb: unknown,
+    done: (r: undefined) => void,
+  ) => Component;
+
+  /** The factory of the `ui.custom` call that mounted the transcript pane; throws when none did. */
+  function mountedPaneFactory(ui: ReturnType<typeof makeUI>): PaneFactory {
+    const call = ui.custom.mock.calls.at(0);
+    if (!call) throw new Error("no transcript pane was mounted");
+    return call[0] as PaneFactory;
+  }
+
+  // Invoke the factory that mounted the pane and render it — the act (handle)
+  // stays explicit in each test.
   function renderCapturedPane(ui: ReturnType<typeof makeUI>, width = 80): string[] {
-    const factory = ui.custom.mock.calls[0][0] as (
-      tui: TUI,
-      theme: ReturnType<typeof ansiTheme>,
-      kb: unknown,
-      done: (r: undefined) => void,
-    ) => Component;
-    const pane = factory(mockTui(), ansiTheme(), undefined, vi.fn());
+    const pane = mountedPaneFactory(ui)(mockTui(), ansiTheme(), undefined, vi.fn());
     return pane.render(width);
   }
 
@@ -400,7 +408,7 @@ describe("SessionNavigatorHandler", () => {
 
     await new SessionNavigatorHandler().handle({ ui, agents: [record], registry, cwd: "/test/cwd", readFile: noReadFile });
 
-    expect(ui.custom).toHaveBeenCalledOnce();
+    expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
     // Invariant #423: the handler is a reactive consumer — it sources the
     // transcript and never reads tool definitions off the record itself; only
     // the pane does, lazily, through the TranscriptSource at render time.
@@ -448,7 +456,7 @@ describe("SessionNavigatorHandler", () => {
     await new SessionNavigatorHandler().handle({ ui, agents: [released], registry, cwd: "/test/cwd", readFile });
 
     expect(readFile).toHaveBeenCalledWith("/tasks/e1.jsonl");
-    expect(ui.custom).toHaveBeenCalledOnce();
+    expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
     expect(renderCapturedPane(ui).some((l) => l.includes("released reply"))).toBe(true);
   });
 
