@@ -38,3 +38,16 @@ The package suite went from 5664 to 5668 tests (four new chain tests; three exis
 - An `Edit` of a runner comment emitted a literal `\u2014` escape into TypeScript source; caught on read-back and replaced with a colon before commit (the markdown gates do not cover `.ts` comments).
 - Pre-completion reviewer: PASS.
   It re-derived that `deriveSource` (session layer) and `SessionRules.approve` (allow only) are the sole producers of a session-sourced check, so no session `ask` can reach the combiner.
+
+## Stage: Sync (worktree) (2026-10-06T22:45:09Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` passed from the worktree root.
+The plan's marker is `**Release:** ship independently`; the `fix:` commit is the only one that reaches the changelog.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1033--/2026-10-06T21-21-39-169Z_01a11317-f360-76b6-b040-2037a93c752d.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+No follow-ups filed and nothing deferred.
