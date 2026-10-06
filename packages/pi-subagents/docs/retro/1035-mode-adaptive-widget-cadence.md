@@ -27,3 +27,24 @@ The operator chose a mode-adaptive cadence (80 ms fullscreen, 250 ms regular/unk
 #### Deferred tidyings
 
 - `packages/pi-subagents/test/ui/widget-viewport.test.ts`: extracting `fakeTerminal` to `test/helpers` was declined; the real-renderer cadence test lives in the same file, so there is no second consumer.
+
+## Stage: Implementation — TDD (2026-10-06T05:22:37Z)
+
+### Session summary
+
+Executed all four planned steps as four commits: the one-shot timer-chain refactor, the `stubTui` mode tweak, the `perf:` mode-adaptive cadence (with the `Co-authored-by: ReStranger` trailer), and the architecture-doc update. pi-subagents tests went from 2044 to 2050 (+6); `check`, root `lint`, the full suite, and `fallow dead-code` are all green.
+
+### Observations
+
+- Every planned killing mutation went red as predicted.
+  The first-arm-ordering mutation (arming before registration) also killed the real `TuiAltScreen` test, one more than the plan named and consistent with it.
+  A mutation deleting the relocated `setTimerRunning(...)` at its new site killed 8 timer-lifetime tests, so the move is pinned.
+- Self-inflicted slip: in step 1 the `cp` to `/tmp/green.ts` ran in the same tool batch as the mutating `Edit` and captured the mutation, which is exactly the hazard `/tdd-plan` warns about.
+  It was caught because the post-restore run stayed red, and fixed by restoring the line by hand; later mutations used a separate `cp` call.
+- Small deviations: step 1's continued-ticking test added a third inline tui literal, which step 2 routed through `stubTui` along with the two the plan counted.
+  The upstream-assumption row in `.pi/skills/package-pi-subagents/SKILL.md` landed in the `perf:` commit, as Module-Level Changes placed it.
+- The "follows a switch to fullscreen" test pins the per-arm semantics: the tick already armed at 250 ms fires first, and the arm after it uses 80 ms.
+- Pre-completion reviewer: WARN, no blockers.
+  - Evidence provenance: the probe is not in the tree and the plan's table shows one representative run of five.
+  - Robustness: `setTimerRunning` now runs last in `update()`, so a throw from `setWidget`/`requestRender`/`setStatus` during a tick ends the chain until the next lifecycle event (`setInterval` kept firing through a throw); judged theoretical.
+  The reviewer re-derived the #864 timer-iff-running and #849 dispose-is-final invariants over every `update()` entry path and found them held.
