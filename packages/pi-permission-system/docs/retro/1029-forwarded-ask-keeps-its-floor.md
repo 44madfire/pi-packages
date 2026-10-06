@@ -37,6 +37,30 @@ I filed two follow-ups, [#1030] (a new Phase 15 step) and [#1031] (out of scope)
 - None.
   The assessor rejected widening `accessFactsFromValue` with a `floor` parameter (its skill callers never floor) and moving the `ServingPolicy` interface; neither is debt.
 
+## Stage: Implementation — TDD (2026-10-06T01:18:14Z)
+
+### Session summary
+
+I completed all five plan steps as five commits (two preparatory `refactor:`, one wire `refactor:`, the `fix:`, and `docs:`), and every plan-named killing mutation went red.
+`pi-permission-system` grew from 5541 to 5562 tests (+21).
+The one changelog line is `fix(pi-permission-system): a subagent's floored bash ask prompts on the parent instead of riding its allow rule`.
+
+### Observations
+
+- The deny-winner probe first used `sudo ls && rm x`, and its mutation survived: `ls` is a core reader, so `sudo ls` is exempt and raises no floor for the chain to leak.
+  The probe became `sudo touch y && rm x`.
+- Plan deviation: Test Impact item 3 claimed a bare `floor: check.floor` would turn the unfloored `toEqual` tests red.
+  It does not, because `toEqual` ignores `undefined`-valued keys.
+  The conditional spread stays; the reviewer confirmed it keeps the key set stable for `toStrictEqual` consumers, and JSON drops `undefined` on the wire either way.
+- The roadmap step's `Outcome:` named `time rm x`, which [#963] already resolves by `rm`'s own rule, so it never floors; the Outcome now names `sudo rm x`.
+- The test block that hand-rebuilt the `index.ts` serving lambda moved to `test/policy/serving-policy.test.ts`, where it now constructs `ResolverServingPolicy`.
+  Mutating the class's surface argument reddens four of its five tests.
+- `index.ts` passes `isYoloEnabled` into `ResolverServingPolicy`, and nothing pins that wiring; this is the one-line risk the plan named.
+- Pre-completion reviewer: WARN.
+  Reviewer warning: a chain floor does not hold against a serving session grant that covers the winning unit's value (`git push *` granted on the parent approves `git push … && sudo rm y`).
+  It is not a regression, and it belongs to [#1030]'s class, so I recorded it there as a comment rather than widening this change.
+
+[#963]: https://github.com/gotgenes/pi-packages/issues/963
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1030]: https://github.com/gotgenes/pi-packages/issues/1030
 [#1031]: https://github.com/gotgenes/pi-packages/issues/1031
