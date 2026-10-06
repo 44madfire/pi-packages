@@ -44,6 +44,7 @@ import {
   truncateToWidth,
 } from "@earendil-works/pi-tui";
 import type { AgentConfigLookup } from "#src/config/agent-types";
+import { readPersistedRuns, type SessionEntryLike } from "#src/persisted-record";
 import { formatModel, type ModelIdentity, type Theme } from "#src/ui/display";
 import { labeledRule } from "#src/ui/labeled-rule";
 import {
@@ -130,6 +131,8 @@ export interface SessionNavigatorParams {
   cwd: string;
   /** Reads a persisted session file for the file-snapshot source. */
   readFile: (path: string) => string;
+  /** The parent session's entries, whose run records outlive the manager's. */
+  sessionEntries: readonly SessionEntryLike[];
 }
 
 /** How a scroll move treats following new output; by default it follows when it lands on the bottom. */
@@ -157,10 +160,12 @@ export interface TranscriptPaneOptions {
  * Lists navigable subagents, lets the operator pick one, and opens its transcript
  * read-only. Receives the agent snapshot (`manager.listAgents()`) rather than the
  * manager, so it stays a reactive consumer with no inbound call into the core.
+ * The session's entries add the runs it recorded that the manager no longer
+ * holds, such as those from before a `/reload`.
  */
 export class SessionNavigatorHandler {
-  async handle({ ui, agents, registry, cwd, readFile }: SessionNavigatorParams): Promise<void> {
-    const entries = listNavigableAgents(agents, registry);
+  async handle({ ui, agents, registry, cwd, readFile, sessionEntries }: SessionNavigatorParams): Promise<void> {
+    const entries = listNavigableAgents(agents, registry, readPersistedRuns(sessionEntries));
     if (entries.length === 0) {
       ui.notify("No subagent sessions to view.", "info");
       return;

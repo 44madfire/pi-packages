@@ -513,7 +513,7 @@ describe("SessionNavigatorHandler", () => {
     agents: SessionNavigatorParams["agents"],
     overrides: Partial<Omit<SessionNavigatorParams, "ui" | "agents">> = {},
   ): Promise<void> {
-    return new SessionNavigatorHandler().handle({ ui, agents, registry, cwd: "/test/cwd", readFile: noReadFile, ...overrides });
+    return new SessionNavigatorHandler().handle({ ui, agents, registry, cwd: "/test/cwd", readFile: noReadFile, sessionEntries: [], ...overrides });
   }
 
   it("notifies and skips the pane when no sessions are navigable", async () => {
@@ -572,7 +572,7 @@ describe("SessionNavigatorHandler", () => {
   describe("mount mode", () => {
     const PICK = makeNavigable();
     const handleIn = (ui: ReturnType<typeof makeUI>) => handleWith(ui, [PICK]);
-    const label = () => listNavigableAgents([PICK], registry)[0]?.label;
+    const label = () => listNavigableAgents([PICK], registry, [])[0]?.label;
 
     it("floats the pane over the bottom of a fullscreen TUI, above Pi's footer", async () => {
       // Pi's fullscreen viewport claims PgUp/PgDn/Home/End before a docked
@@ -618,6 +618,33 @@ describe("SessionNavigatorHandler", () => {
     expect(readFile).toHaveBeenCalledWith("/tasks/e1.jsonl");
     expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
     expect(renderCapturedPane(ui).some((l) => l.includes("released reply"))).toBe(true);
+  });
+
+  describe("after the manager lost its records (a reload)", () => {
+    const recordEntry = {
+      type: "custom",
+      customType: "subagents:record",
+      data: {
+        id: "e1", type: "general-purpose", description: "Old task", status: "completed",
+        result: "done", startedAt: 1000, completedAt: 4000, outputFile: "/tasks/e1.jsonl", toolUses: 5,
+      },
+    };
+    const label = "Agent (Old task) · 5 tools · completed · 3.0s · session released (snapshot)";
+
+    it("offers the runs the session recorded", async () => {
+      const ui = makeUI(undefined);
+      await handleWith(ui, [], { sessionEntries: [recordEntry] });
+      expect(ui.notify).not.toHaveBeenCalled();
+      expect(ui.select).toHaveBeenCalledWith("Subagent sessions", [label]);
+    });
+
+    it("opens a recorded run from its transcript file", async () => {
+      const readFile = vi.fn(() => JSON.stringify({ type: "session", version: 3, id: "s1", timestamp: "2026-06-23T00:00:00Z", cwd: "/proj" }));
+      const ui = makeUI(label);
+      await handleWith(ui, [], { sessionEntries: [recordEntry], readFile });
+      expect(readFile).toHaveBeenCalledWith("/tasks/e1.jsonl");
+      expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
+    });
   });
 
   it("notifies and skips the pane when the session file cannot be read", async () => {
