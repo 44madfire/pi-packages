@@ -61,3 +61,44 @@ The plan's `**Release:** ship independently` marker applies; at ship time close 
 ### Observations
 
 The operator accepted both pre-completion reviewer WARN notes as non-blocking (the tick's throw-robustness and the deleted probe's single-run table); no code or doc change followed.
+
+## Stage: Final Retrospective (2026-10-06T05:36:04Z)
+
+### Session summary
+
+The issue ran across four stages: PR Review of #1024 at the root, then planning, TDD, and sync in a worktree peer, then ship and retro at the root.
+The planning-time measurement replaced a flat-cadence argument with a mode-adaptive cadence (80 ms fullscreen, 250 ms regular), shipped in `cda4a5ce` and released as `pi-subagents` 23.1.1.
+PR #1024 was closed with credit to @ReStranger, who is co-author on the `perf:` commit.
+
+### Observations
+
+#### What went well
+
+- Running the measurement during planning, not handing it off as a TDD step, settled the design before the operator gate.
+  The probe drove Pi's real `TuiAltScreen`/`TuiMainScreen` over real session JSONLs, and the operator picked an option backed by a measured table, not an estimate.
+- The killing-mutation discipline caught its own tooling slip: a `cp` backup taken in the same batch as the mutating `Edit` captured the mutation, and the restore that stayed red exposed it.
+- The `markdown-conventions` em-dash rule worked as written: the peer suspected a lost dash in the TDD stage heading, confirmed it with `od -c`, and fixed it before committing.
+
+#### What caused friction (agent side)
+
+- `missing-context` — The PR Review stage was committed on root `main` (`64ace937`, 04:56Z) but not pushed, and `scripts/worktree-new.sh` bases the peer on `origin/main`.
+  The peer started at 04:59Z without the PR Review note, so it re-derived the attribution from `gh pr view 1024 --json commits` and created a second retro file, `1035-mode-adaptive-widget-cadence.md`, beside the PR Review stage's `1035-measure-widget-render-cost-spinner-cadence.md`.
+  Impact: no rework, because the peer re-derived the same attribution and direction independently; but the issue's stage notes are split across two files, and the ship's push carried two root commits it did not author (`64ace937` and the PR #917 triage `c8f0b001`).
+  The `pr-review` template says to commit the triage note and stop; it does not say to push.
+- `instruction-violation` (self-identified) — The `/ship` final report said it had not checked whether this was the last step of a roadmap phase, when the check was one grep.
+  Impact: none; `pi-subagents` has no open phase, which this retro confirmed.
+
+#### What caused friction (user side)
+
+- Nothing material.
+  Running `/pr-review` and then `/worktree` back to back, with no push in between, was the trigger for the split retro, and nothing in either command warned about it.
+
+### Diagnostic details
+
+- **Model-performance correlation** — Planning and TDD ran on `claude-opus-5-5`, which suited the probe design and the mutation work; the sync stage and both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5`, attributed from their own transcripts.
+  No mismatch.
+- **Feedback-loop gap analysis** — TDD ran `vitest` and `check` after every step and full gates at baseline and at the end; no gap.
+
+### Changes made
+
+1. `.pi/prompts/pr-review.md`: the triage note is committed **and pushed** before stopping (direction 1 and the closing commit step), so a `/worktree` peer branched from `origin/main` sees it.
