@@ -344,6 +344,7 @@ src/
 ├── index.ts                        entry point, tool registration, event wiring
 ├── runtime.ts                      SubagentRuntime factory (session-scoped state)
 ├── types.ts                        shared type definitions
+├── persisted-record.ts             subagents:record session-entry contract (writer's builder, reader's parser)
 ├── settings.ts                     SettingsManager (persistent operational settings)
 ├── debug.ts                        debug logging utility
 ├── layered-settings.ts             loadLayeredSettings helper (published as @gotgenes/pi-subagents/settings)
@@ -441,6 +442,7 @@ The widget reads agent state by polling the records exposed via `SubagentManager
 It runs if and only if a subagent is running, since a finished agent's line carries a fixed duration and the queued line is a count, so animating either would ask Pi to re-render its whole component tree for a byte-identical result.
 The widget's rendered height is also bounded by the terminal's row count rather than a fixed ceiling: Pi's regular-mode differential renderer clears the screen and the scrollback whenever the first changed line sits above the previous viewport top, and the widget's spinner is that line on every tick, so a widget taller than the rows beneath it turns every tick into a destructive repaint ([#864]).
 The `/subagents:sessions` navigator reads messages via `Subagent.agentMessages` and subscribes to updates via `Subagent.subscribeToUpdates()` — no direct `AgentSession` reference (#277).
+It also reads the parent session's `subagents:record` entries (`persisted-record.ts`), so runs the manager no longer holds, such as those from before a `/reload`, open from their transcript file.
 
 ## Cross-extension architecture
 

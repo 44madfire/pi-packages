@@ -176,6 +176,7 @@ Changes persist across pi restarts (see [Persistent Settings](./docs/configurati
 
 Pick any subagent — running, or completed with its live session already released — and read its full session transcript in pi's native per-entry viewer.
 Read-only: no steering, no session takeover (steering lives in the `steer_subagent` tool and the background widget).
+Runs that finished earlier in the session stay listed after a `/reload`, and a resumed session lists the runs it recorded; both open from their saved transcript.
 
 The viewer is framed by two rules in the style of pi's editor border, coloured for the agent's thinking level:
 
