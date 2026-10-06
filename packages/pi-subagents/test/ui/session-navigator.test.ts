@@ -45,6 +45,12 @@ function makePane(
   });
 }
 
+/** A user message of `n` numbered rows (`r000`, `r001`, …); it renders as n + 2 transcript lines. */
+const rowsOf = (n: number) =>
+  [
+    { role: "user", content: Array.from({ length: n }, (_, i) => `r${String(i).padStart(3, "0")}`).join("\n") },
+  ] as unknown as SessionMessage[];
+
 const SONNET_HIGH: SessionModel = { model: { provider: "anthropic", id: "claude-sonnet-5" }, thinkingLevel: "high" };
 
 describe("TranscriptPane", () => {
@@ -200,12 +206,6 @@ describe("TranscriptPane", () => {
   });
 
   describe("height", () => {
-    // A user message of n rows renders as n + 2 transcript lines.
-    const rowsOf = (n: number) =>
-      [
-        { role: "user", content: Array.from({ length: n }, (_, i) => `r${String(i).padStart(3, "0")}`).join("\n") },
-      ] as unknown as SessionMessage[];
-
     const paneFor = (messages: SessionMessage[]) =>
       makePane({ tui: mockTui(40, 80), source: fakeSource({ getMessages: () => messages }) });
 
@@ -221,6 +221,75 @@ describe("TranscriptPane", () => {
 
     it("keeps a minimum viewport when there is nothing to show", () => {
       expect(paneFor([]).render(80)).toHaveLength(5);
+    });
+  });
+
+  describe("paging keys", () => {
+    // 80 numbered rows in a 40-row terminal: a 26-row viewport over 82 transcript lines.
+    const PAGE = 26;
+    const PG_UP = "\x1b[5~";
+    const PG_DN = "\x1b[6~";
+    const HOME = "\x1b[H";
+    const END = "\x1b[F";
+
+    /** The numbered rows the pane shows, in order. */
+    const visibleRows = (pane: TranscriptPane): number[] =>
+      pane
+        .render(80)
+        .flatMap((line) => /\br(\d{3})\b/.exec(stripAnsi(line)) ?? [])
+        .filter((_, i) => i % 2 === 1)
+        .map(Number);
+
+    /** A pane the host has already painted once, as it is before any key arrives. */
+    const longPane = (source = fakeSource({ getMessages: () => rowsOf(80) })) => {
+      const pane = makePane({ tui: mockTui(40, 80), source });
+      pane.render(80);
+      return pane;
+    };
+
+    it("opens at the bottom of the transcript", () => {
+      expect(visibleRows(longPane()).at(-1)).toBe(79);
+    });
+
+    it("pages up a full viewport", () => {
+      const pane = longPane();
+      const [bottomFirst = -1] = visibleRows(pane);
+      pane.handleInput(PG_UP);
+      expect(visibleRows(pane)[0]).toBe(bottomFirst - PAGE);
+    });
+
+    it("pages back down to the bottom", () => {
+      const pane = longPane();
+      pane.handleInput(PG_UP);
+      pane.handleInput(PG_DN);
+      expect(visibleRows(pane).at(-1)).toBe(79);
+    });
+
+    it("jumps to the top", () => {
+      const pane = longPane();
+      pane.handleInput(HOME);
+      expect(visibleRows(pane)[0]).toBe(0);
+    });
+
+    it("jumps to the bottom and follows new output", () => {
+      let messages = rowsOf(80);
+      let captured: (() => void) | undefined;
+      const pane = longPane(
+        fakeSource({
+          getMessages: () => messages,
+          subscribe: (onChange) => {
+            captured = onChange;
+            return () => {};
+          },
+        }),
+      );
+      pane.handleInput(HOME);
+      pane.handleInput(END);
+      expect(visibleRows(pane).at(-1)).toBe(79);
+
+      messages = rowsOf(90);
+      captured?.();
+      expect(visibleRows(pane).at(-1)).toBe(89);
     });
   });
 
