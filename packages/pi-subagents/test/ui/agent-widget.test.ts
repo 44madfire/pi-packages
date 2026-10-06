@@ -1,3 +1,4 @@
+import type { TuiMode } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentTypeRegistry } from "#src/config/agent-types";
 import type { Subagent } from "#src/lifecycle/subagent";
@@ -21,11 +22,17 @@ function makeAgent(overrides: { id?: string; status?: string; completedAt?: numb
 const alwaysShow = () => true;
 const neverShow = () => false;
 
-/** The slice of the TUI the widget factory callback reads. */
-function stubTui(overrides: { columns?: number; rows?: number } = {}) {
+/**
+ * The slice of the TUI the widget factory callback reads. A plain object, so a
+ * test can reassign `mode` to model Pi switching renderers mid-session.
+ */
+function stubTui(
+	overrides: { columns?: number; rows?: number; mode?: TuiMode; requestRender?: () => void } = {},
+): { terminal: { columns: number; rows: number }; mode: TuiMode; requestRender: () => void } {
 	return {
 		terminal: { columns: overrides.columns ?? 200, rows: overrides.rows ?? 40 },
-		requestRender: () => {},
+		mode: overrides.mode ?? "regular",
+		requestRender: overrides.requestRender ?? (() => {}),
 	};
 }
 
@@ -528,7 +535,7 @@ describe("AgentWidget — animation cadence", () => {
 		widget.setUICtx({
 			setStatus: () => {},
 			setWidget: (_key, content) => {
-				content?.({ terminal: { columns: 200, rows: 40 }, requestRender }, stubTheme());
+				content?.(stubTui({ requestRender }), stubTheme());
 			},
 		});
 
@@ -557,7 +564,7 @@ describe("AgentWidget — animation cadence", () => {
 		widget.setUICtx({
 			setStatus: () => {},
 			setWidget: (_key, content) => {
-				content?.({ terminal: { columns: 200, rows: 40 }, requestRender }, stubTheme());
+				content?.(stubTui({ requestRender }), stubTheme());
 			},
 		});
 
