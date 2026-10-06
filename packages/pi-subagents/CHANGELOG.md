@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [23.2.0](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v23.1.1...pi-subagents-v23.2.0) (2026-10-06)
+
+
+### Features
+
+* **pi-subagents:** record each run's transcript path and tool count in its session entry ([f019748](https://github.com/gotgenes/pi-packages/commit/f019748c7378eb289c7472d94224e3de19aa9c1b)), closes [#1034](https://github.com/gotgenes/pi-packages/issues/1034)
+
+### Bug Fixes
+
+* **pi-subagents:** keep earlier subagents in /subagents:sessions after /reload ([77ef88a](https://github.com/gotgenes/pi-packages/commit/77ef88af6424a3dc0006665ad34061dab5074f1b)), closes [#1034](https://github.com/gotgenes/pi-packages/issues/1034)
+
+### Documentation
+
+* **pi-subagents:** document persisted runs in /subagents:sessions ([9900b2c](https://github.com/gotgenes/pi-packages/commit/9900b2ca8dd7a1ab7ba84060c01c45cc9443513a)), closes [#1034](https://github.com/gotgenes/pi-packages/issues/1034)
+
 ## [23.1.1](https://github.com/gotgenes/pi-packages/compare/pi-subagents-v23.1.0...pi-subagents-v23.1.1) (2026-10-06)
 
 
