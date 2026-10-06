@@ -18,6 +18,10 @@ vi.mock("node:fs", async () => {
   };
 });
 
+import {
+  resetWarmBashParser,
+  warmBashParser,
+} from "#src/access-intent/bash/parser";
 import { BashProgram } from "#src/access-intent/bash/program";
 import { UNPROVEN_EFFECT } from "#src/access-intent/effect";
 import { pathFlavorForPlatform, win32PathFlavor } from "#src/path/path-flavor";
@@ -2206,6 +2210,53 @@ describe("BashProgram", () => {
       expect(
         program.externalAccesses().map(({ path }) => path.value()),
       ).toEqual(["/etc/passwd"]);
+    });
+  });
+
+  describe("parseSync", () => {
+    const normalizer = new PathNormalizer(
+      pathFlavorForPlatform(process.platform),
+      "/projects/my-app",
+    );
+
+    beforeEach(() => {
+      resetWarmBashParser();
+      realpathSync.mockReset();
+      realpathSync.mockImplementation((p: string) => p);
+    });
+    afterEach(() => {
+      resetWarmBashParser();
+    });
+
+    it("answers null while the parser is cold", () => {
+      expect(BashProgram.parseSync("echo hi", normalizer)).toBeNull();
+    });
+
+    describe("once warm, builds the program parse builds", () => {
+      beforeEach(async () => {
+        await warmBashParser();
+      });
+
+      it.each([
+        ["a chain with a cd", "cd /tmp && rm a/x; cat ../secret", undefined],
+        [
+          "a command the parse could not resolve",
+          "> f <<'M' 2>&1 | rm -rf /tmp/x",
+          undefined,
+        ],
+        ["a seeded workdir", "cat notes.txt ../up.txt", "/elsewhere"],
+      ])("%s", async (_label, command, workdir) => {
+        const options = workdir === undefined ? undefined : { workdir };
+        const expected = await BashProgram.parse(command, normalizer, options);
+        const actual = BashProgram.parseSync(command, normalizer, options);
+        if (actual === null) throw new Error("parser not warm");
+        expect(actual.commandText()).toBe(command);
+        expect(actual.commands()).toEqual(expected.commands());
+        expect(actual.externalAccesses()).toEqual(expected.externalAccesses());
+        expect(actual.pathRuleCandidates()).toEqual(
+          expected.pathRuleCandidates(),
+        );
+      });
     });
   });
 });
