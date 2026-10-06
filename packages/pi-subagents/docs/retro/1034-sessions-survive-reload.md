@@ -46,3 +46,17 @@ The pi-subagents suite went from 2050 to 2065 tests.
   The `src/index.ts` relay `sessionEntries: ctx.sessionManager.getEntries()` is typechecked but has no test pinning it.
 - Pre-completion reviewer: WARN.
   Its two findings are the `PersistedRecordSource` deviation (accepted) and the unpinned `index.ts` relay, which needs a manual `/reload` then `/subagents:sessions` check before or at ship.
+
+## Stage: Sync (worktree) (2026-10-06T06:31:15Z)
+
+### Session summary
+
+Pre-push `pnpm run lint` and `pnpm fallow dead-code` passed.
+The plan's marker is `**Release:** ship independently`.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1034--/2026-10-06T05-47-54-527Z_01a10fc1-151e-7376-9329-8189fa3db79a.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+- The reviewer WARN on the unpinned `index.ts` relay was settled with the operator: they will run the live `/reload` then `/subagents:sessions` check themselves, so `/ship` should not block on it.
+- That check should also note whether a run still active at `/reload` is listed afterwards; if it is missing, file a follow-up.
