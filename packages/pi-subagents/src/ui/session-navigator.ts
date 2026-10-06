@@ -228,7 +228,7 @@ export class TranscriptPane implements Component {
         ? "100%"
         : `${Math.round(((visibleStart + viewportHeight) / totalLines) * 100)}%`;
     const position = th.fg("dim", `${totalLines} lines · ${scrollPct}`);
-    const hints = th.fg("dim", "↑↓ scroll · PgUp/PgDn · Esc close");
+    const hints = th.fg("dim", this.footerHint());
     lines.push(labeledRule(width, paint, [position], [hints]));
 
     return lines;
@@ -248,6 +248,11 @@ export class TranscriptPane implements Component {
   }
 
   // ---- Private ----
+
+  /** The key hints the footer rule carries on its right. */
+  private footerHint(): string {
+    return "↑↓ scroll · PgUp/PgDn · Esc close";
+  }
 
   /**
    * Header labels, most to least informative: the rule drops the task first,
