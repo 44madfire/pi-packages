@@ -68,6 +68,12 @@ const WRAPPER_SENTINEL: Record<WrapperKind, string> = {
  */
 const UNPARSED_SUBTREE_SENTINEL = "<unparsed-bash-subtree>";
 
+/**
+ * The synthetic `matchedPattern` recorded when a command the parse matched
+ * nothing in is floored to `ask` (#452).
+ */
+const UNPARSEABLE_COMMAND_SENTINEL = "<unparseable-bash-command>";
+
 export function resolveBashCommandCheck(
   command: string,
   commands: BashCommand[],
@@ -97,7 +103,7 @@ export function resolveBashCommandCheck(
         source: "bash",
         origin: "builtin",
         command,
-        matchedPattern: "<unparseable-bash-command>",
+        matchedPattern: UNPARSEABLE_COMMAND_SENTINEL,
       };
     }
   }
@@ -168,12 +174,21 @@ function floorUnparsedUnit(
   resolved: PermissionCheckResult,
 ): PermissionCheckResult {
   if (!cmd.parseUnresolved || resolved.state !== "allow") return resolved;
-  return {
-    ...resolved,
-    state: "ask",
-    command,
-    matchedPattern: UNPARSED_SUBTREE_SENTINEL,
-  };
+  return { ...floorToAsk(resolved, UNPARSED_SUBTREE_SENTINEL), command };
+}
+
+/**
+ * Clamp a resolved check up to a synthetic `ask` naming the floor that raised
+ * it.
+ *
+ * Spreads `resolved`, so a `source: "session"` grant survives to `GateRunner`'s
+ * session fast path.
+ */
+function floorToAsk(
+  resolved: PermissionCheckResult,
+  sentinel: string,
+): PermissionCheckResult {
+  return { ...resolved, state: "ask", matchedPattern: sentinel };
 }
 
 /**
@@ -199,11 +214,7 @@ function resolveWrapperUnit(
 ): PermissionCheckResult {
   const inner = cmd.floorExemption && cmd.executedUnit;
   if (!inner) {
-    return {
-      ...base,
-      state: "ask",
-      matchedPattern: WRAPPER_SENTINEL[wrapperKind],
-    };
+    return floorToAsk(base, WRAPPER_SENTINEL[wrapperKind]);
   }
   // The inner command's rule decides, but the unit is still what runs: the
   // prompt, the decision value, and the session-approval suggestion all read
