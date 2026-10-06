@@ -150,19 +150,6 @@ describe("ResolverServingPolicy over real recorded authority", () => {
 describe("ResolverServingPolicy honors the floor the child raised", () => {
   const WRAPPER = "<indirection-bash-wrapper>";
 
-  function servingPolicyOver(
-    bash: Record<string, PermissionState>,
-    options: { yolo?: boolean; sessionRules?: SessionRules } = {},
-  ): ResolverServingPolicy {
-    return new ResolverServingPolicy(
-      new PermissionResolver(
-        createInMemoryManager({ global: { permission: { bash } } }),
-        options.sessionRules ?? new SessionRules(),
-      ),
-      () => options.yolo ?? false,
-    );
-  }
-
   const flooredIntent = makeForwardedAccessIntent({
     surface: "bash",
     matchValues: ["sudo rm x"],
@@ -219,3 +206,116 @@ describe("ResolverServingPolicy honors the floor the child raised", () => {
     expect(result.matchedPattern).toBe(WRAPPER);
   });
 });
+
+describe("ResolverServingPolicy judges every unit the child left asking", () => {
+  const WRAPPER = "<indirection-bash-wrapper>";
+
+  function sessionGranting(pattern: string): SessionRules {
+    const sessionRules = new SessionRules();
+    sessionRules.recordSessionApproval(SessionApproval.single("bash", pattern));
+    return sessionRules;
+  }
+
+  const chainIntent = makeForwardedAccessIntent({
+    surface: "bash",
+    matchValues: ["ls"],
+    askingUnits: [{ command: "ls" }, { command: "rm -rf /tmp/x" }],
+  });
+
+  test("asks when a unit the parent's rules never allowed rides an allowed one", () => {
+    const result = servingPolicyOver({ "*": "ask", "ls*": "allow" }).resolve(
+      chainIntent,
+    );
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe("*");
+  });
+
+  test("denies when the parent's rules deny a unit that did not win on the child", () => {
+    const result = servingPolicyOver({
+      "*": "ask",
+      "ls*": "allow",
+      "rm *": "deny",
+    }).resolve(chainIntent);
+    expect(result.state).toBe("deny");
+    expect(result.matchedPattern).toBe("rm *");
+  });
+
+  test("approves when the parent's rules allow every unit", () => {
+    const result = servingPolicyOver({ "*": "allow" }).resolve(chainIntent);
+    expect(result.state).toBe("allow");
+  });
+
+  test("a session grant covering one unit leaves a floored sibling asking", () => {
+    const result = servingPolicyOver(
+      { "*": "allow" },
+      { sessionRules: sessionGranting("git push *") },
+    ).resolve(
+      makeForwardedAccessIntent({
+        surface: "bash",
+        matchValues: ["git push origin main"],
+        floor: WRAPPER,
+        askingUnits: [
+          { command: "git push origin main" },
+          { command: "sudo rm y", floor: WRAPPER },
+        ],
+      }),
+    );
+    expect(result.state).toBe("ask");
+    expect(result.matchedPattern).toBe(WRAPPER);
+  });
+
+  test("honors each unit's own floor rather than the chain's", () => {
+    const result = servingPolicyOver(
+      { "*": "allow" },
+      { sessionRules: sessionGranting("sudo rm y") },
+    ).resolve(
+      makeForwardedAccessIntent({
+        surface: "bash",
+        matchValues: ["ls"],
+        floor: WRAPPER,
+        askingUnits: [
+          { command: "ls" },
+          { command: "sudo rm y", floor: WRAPPER },
+        ],
+      }),
+    );
+    expect(result.state).toBe("allow");
+  });
+
+  test("approves a floored unit under the serving node's yolo", () => {
+    const result = servingPolicyOver({ "*": "allow" }, { yolo: true }).resolve(
+      makeForwardedAccessIntent({
+        surface: "bash",
+        matchValues: ["ls"],
+        floor: WRAPPER,
+        askingUnits: [
+          { command: "ls" },
+          { command: "sudo rm y", floor: WRAPPER },
+        ],
+      }),
+    );
+    expect(result.state).toBe("allow");
+  });
+
+  test("judges the single value alone when the request carries no units", () => {
+    const { askingUnits: _askingUnits, ...singleValue } = chainIntent;
+    const result = servingPolicyOver({ "*": "ask", "ls*": "allow" }).resolve(
+      singleValue,
+    );
+    expect(result.state).toBe("allow");
+    expect(result.matchedPattern).toBe("ls*");
+  });
+});
+
+function servingPolicyOver(
+  bash: Record<string, PermissionState>,
+  options: { yolo?: boolean; sessionRules?: SessionRules } = {},
+): ResolverServingPolicy {
+  return new ResolverServingPolicy(
+    new PermissionResolver(
+      createInMemoryManager({ global: { permission: { bash } } }),
+      options.sessionRules ?? new SessionRules(),
+    ),
+    () => options.yolo ?? false,
+  );
+}
