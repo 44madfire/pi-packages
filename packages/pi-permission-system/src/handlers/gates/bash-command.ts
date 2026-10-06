@@ -115,7 +115,30 @@ export function resolveBashCommandCheck(
   const winner =
     pickMostRestrictive(results) ??
     resolveOnBashSurface(command, [], agentName, resolver);
-  return withChainFloor(winner, results);
+  return withAskingUnits(withChainFloor(winner, results), results);
+}
+
+/**
+ * List on an asking winner every unit of the chain the gate left asking.
+ *
+ * The winner names one command, but a forwarded ask's answer approves the
+ * whole tool call, so the serving node has to judge every unit the child could
+ * not resolve, each with its own floor (#1030). A unit the child's rules
+ * allowed stays home, and so does one the session already granted: the user
+ * approved exactly that command.
+ */
+function withAskingUnits(
+  winner: PermissionCheckResult,
+  results: readonly PermissionCheckResult[],
+): PermissionCheckResult {
+  if (winner.state !== "ask") return winner;
+  const askingUnits = results
+    .filter((result) => result.state === "ask" && result.source !== "session")
+    .map((result) => ({
+      command: result.command ?? "",
+      ...(result.floor === undefined ? {} : { floor: result.floor }),
+    }));
+  return askingUnits.length === 0 ? winner : { ...winner, askingUnits };
 }
 
 /**

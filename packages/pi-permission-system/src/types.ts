@@ -96,6 +96,22 @@ export interface PermissionCheckResult {
    * node to clamp its own `allow` with.
    */
   floor?: string;
+  /**
+   * Every unit of the bash chain that resolved to `ask` and was not
+   * session-granted, in chain order, each with its own floor. Set only on an
+   * asking chain winner: the serving node of a forwarded ask judges each one,
+   * since the winner alone would approve commands it never saw.
+   */
+  askingUnits?: readonly AskingBashUnit[];
+}
+
+/**
+ * One unit of a bash chain the gate left asking, as the serving node of a
+ * forwarded ask needs it: the unit as typed, and the floor that raised it.
+ */
+export interface AskingBashUnit {
+  command: string;
+  floor?: string;
 }
 
 export function isPermissionState(value: unknown): value is PermissionState {

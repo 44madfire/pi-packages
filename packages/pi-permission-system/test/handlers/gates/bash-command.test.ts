@@ -845,31 +845,6 @@ describe("resolveBashCommandCheck: the floor that raised an ask", () => {
     await warmBashParser();
   });
 
-  function resolverOver(
-    bash: Record<string, PermissionState>,
-    sessionGrants: Ruleset = [],
-  ): PermissionResolver {
-    return new PermissionResolver(
-      createInMemoryManager({ global: { permission: { bash } } }),
-      { getRuleset: () => sessionGrants },
-    );
-  }
-
-  function decide(
-    bash: Record<string, PermissionState>,
-    command: string,
-    sessionGrants: Ruleset = [],
-  ): PermissionCheckResult {
-    const units = parseBashCommandsSync(command);
-    if (units === null) throw new Error("parser not warm");
-    return resolveBashCommandCheck(
-      command,
-      units,
-      undefined,
-      resolverOver(bash, sessionGrants),
-    );
-  }
-
   describe("a floored ask names its floor", () => {
     it.each([
       ["sudo rm x", "<indirection-bash-wrapper>"],
@@ -954,3 +929,114 @@ describe("resolveBashCommandCheck: the floor that raised an ask", () => {
     });
   });
 });
+
+describe("resolveBashCommandCheck: the units a chain leaves asking", () => {
+  beforeAll(async () => {
+    await warmBashParser();
+  });
+
+  describe("an asking chain lists every unit it could not resolve", () => {
+    it("lists each rule-asking unit in chain order", () => {
+      const result = decide({ "*": "ask" }, "ls && rm -rf /tmp/x");
+      expect(result.askingUnits).toStrictEqual([
+        { command: "ls" },
+        { command: "rm -rf /tmp/x" },
+      ]);
+    });
+
+    it("leaves out a unit the child's own rule allowed", () => {
+      const result = decide(
+        { "*": "ask", "ls*": "allow" },
+        "ls && rm -rf /tmp/x",
+      );
+      expect(result.askingUnits).toStrictEqual([{ command: "rm -rf /tmp/x" }]);
+    });
+
+    it("names each unit's own floor", () => {
+      const result = decide(
+        { "*": "allow", "git push *": "ask" },
+        "git push origin main && sudo rm y",
+      );
+      expect(result.askingUnits).toStrictEqual([
+        { command: "git push origin main" },
+        { command: "sudo rm y", floor: "<indirection-bash-wrapper>" },
+      ]);
+    });
+
+    it("leaves out a unit the session already granted", () => {
+      const result = decide(
+        { "*": "allow", "git push *": "ask" },
+        "git push origin main && sudo rm y",
+        [sessionRule("bash", "sudo rm y")],
+      );
+      expect(result.askingUnits).toStrictEqual([
+        { command: "git push origin main" },
+      ]);
+    });
+
+    it("names an unresolved subtree by the whole command", () => {
+      const result = resolveBashCommandCheck(
+        "rm x (",
+        [{ text: "rm x", parseUnresolved: true }],
+        undefined,
+        resolverOver({ "*": "allow" }),
+      );
+      expect(result.askingUnits).toStrictEqual([
+        { command: "rm x (", floor: "<unparsed-bash-subtree>" },
+      ]);
+    });
+  });
+
+  describe("no units listed", () => {
+    it("a deny winner, even beside a floored unit", () => {
+      const result = decide(
+        { "*": "allow", "rm *": "deny" },
+        "sudo touch y && rm x",
+      );
+      expect(result.state).toBe("deny");
+      expect(result).not.toHaveProperty("askingUnits");
+    });
+
+    it("an all-allow chain", () => {
+      const result = decide({ "*": "allow" }, "ls && rm x");
+      expect(result.state).toBe("allow");
+      expect(result).not.toHaveProperty("askingUnits");
+    });
+
+    it("a command the parse matched nothing in", () => {
+      const result = resolveBashCommandCheck(
+        "( rm x )",
+        [],
+        undefined,
+        resolverOver({ "*": "allow" }),
+      );
+      expect(result.state).toBe("ask");
+      expect(result).not.toHaveProperty("askingUnits");
+    });
+  });
+});
+
+function resolverOver(
+  bash: Record<string, PermissionState>,
+  sessionGrants: Ruleset = [],
+): PermissionResolver {
+  return new PermissionResolver(
+    createInMemoryManager({ global: { permission: { bash } } }),
+    { getRuleset: () => sessionGrants },
+  );
+}
+
+function decide(
+  bash: Record<string, PermissionState>,
+  command: string,
+  sessionGrants: Ruleset = [],
+): PermissionCheckResult {
+  const units = parseBashCommandsSync(command);
+  if (units === null) throw new Error("parser not warm");
+  return resolveBashCommandCheck(
+    command,
+    units,
+    undefined,
+    resolverOver(bash, sessionGrants),
+  );
+}
