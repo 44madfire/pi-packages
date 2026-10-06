@@ -484,6 +484,7 @@ Some arguments get no absolute spelling and are matched as typed only:
 The absolute spelling replaces every path argument of a command at once, and it is separate from the home spelling above.
 A rule naming one argument absolute and another relative, or naming both the expanded home and an absolute argument, matches neither text.
 A quoted argument is spelled without its quotes (`rm "a b/c"` is also matched as `rm /tmp/a b/c`).
+Whether an argument is a path is decided by its shape, so a slash-bearing word that is not one is spelled too: `git push origin feature/x` is also matched as `git push origin <cwd>/feature/x`, which only a rule naming that absolute form would match.
 When the spelling is what a rule matched, the prompt shows it on a `matched as` line beside the rule, and the review log records it as `matchedSpelling`.
 A session approval still records the command as typed, so approving `rm agent-builds/x` does not cover a later `rm /tmp/agent-builds/x`.
 
