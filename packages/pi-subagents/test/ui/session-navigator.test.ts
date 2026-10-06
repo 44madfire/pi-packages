@@ -17,7 +17,7 @@ import {
   type SessionModel,
   type TranscriptSource,
 } from "#src/ui/session-navigation";
-import { type PaneKeys, SessionNavigatorHandler, TranscriptPane } from "#src/ui/session-navigator";
+import { type PaneKeys, SessionNavigatorHandler, type SessionNavigatorParams, TranscriptPane } from "#src/ui/session-navigator";
 import { makeNavigable } from "#test/helpers/make-navigable";
 import { fakeSource, mockTui } from "#test/helpers/transcript-fixtures";
 
@@ -507,17 +507,26 @@ describe("SessionNavigatorHandler", () => {
     throw new Error("readFile not expected in this test");
   };
 
+  // The act under test; the defaults are what no test here varies.
+  function handleWith(
+    ui: ReturnType<typeof makeUI>,
+    agents: SessionNavigatorParams["agents"],
+    overrides: Partial<Omit<SessionNavigatorParams, "ui" | "agents">> = {},
+  ): Promise<void> {
+    return new SessionNavigatorHandler().handle({ ui, agents, registry, cwd: "/test/cwd", readFile: noReadFile, ...overrides });
+  }
+
   it("notifies and skips the pane when no sessions are navigable", async () => {
     const ui = makeUI();
     const notReady = makeNavigable({ isSessionReady: () => false, outputFile: undefined });
-    await new SessionNavigatorHandler().handle({ ui, agents: [notReady], registry, cwd: "/test/cwd", readFile: noReadFile });
+    await handleWith(ui, [notReady]);
     expect(ui.notify).toHaveBeenCalledWith("No subagent sessions to view.", "info");
     expect(ui.custom).not.toHaveBeenCalled();
   });
 
   it("does not open the pane when the operator cancels the picker", async () => {
     const ui = makeUI(undefined);
-    await new SessionNavigatorHandler().handle({ ui, agents: [makeNavigable()], registry, cwd: "/test/cwd", readFile: noReadFile });
+    await handleWith(ui, [makeNavigable()]);
     expect(ui.select).toHaveBeenCalledOnce();
     expect(ui.custom).not.toHaveBeenCalled();
   });
@@ -533,7 +542,7 @@ describe("SessionNavigatorHandler", () => {
     })();
     const ui = makeUI(label);
 
-    await new SessionNavigatorHandler().handle({ ui, agents: [record], registry, cwd: "/test/cwd", readFile: noReadFile });
+    await handleWith(ui, [record]);
 
     expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
     // Invariant #423: the handler is a reactive consumer — it sources the
@@ -546,7 +555,7 @@ describe("SessionNavigatorHandler", () => {
 
   it("heads the pane with the picked agent's name and task", async () => {
     const ui = makeUI("Agent (Test task) · 2 tools · completed · 3.0s");
-    await new SessionNavigatorHandler().handle({ ui, agents: [makeNavigable()], registry, cwd: "/test/cwd", readFile: noReadFile });
+    await handleWith(ui, [makeNavigable()]);
     expect(stripAnsi(renderCapturedPane(ui)[0] ?? "").startsWith("── Agent (twin)  Test task ")).toBe(true);
   });
 
@@ -555,21 +564,14 @@ describe("SessionNavigatorHandler", () => {
     // so an overlay mount bakes the pane's chrome into terminal history (#733).
     const ui = makeUI("Agent (Test task) · 2 tools · completed · 3.0s");
 
-    await new SessionNavigatorHandler().handle({
-      ui,
-      agents: [makeNavigable()],
-      registry,
-      cwd: "/test/cwd",
-      readFile: noReadFile,
-    });
+    await handleWith(ui, [makeNavigable()]);
 
     expect(ui.custom).toHaveBeenLastCalledWith(expect.any(Function), { overlay: false });
   });
 
   describe("mount mode", () => {
     const PICK = makeNavigable();
-    const handleIn = (ui: ReturnType<typeof makeUI>) =>
-      new SessionNavigatorHandler().handle({ ui, agents: [PICK], registry, cwd: "/test/cwd", readFile: noReadFile });
+    const handleIn = (ui: ReturnType<typeof makeUI>) => handleWith(ui, [PICK]);
     const label = () => listNavigableAgents([PICK], registry)[0]?.label;
 
     it("floats the pane over the bottom of a fullscreen TUI, above Pi's footer", async () => {
@@ -611,7 +613,7 @@ describe("SessionNavigatorHandler", () => {
     });
     const ui = makeUI("Agent (Old task) · 5 tools · completed · 3.0s · session released (snapshot)");
 
-    await new SessionNavigatorHandler().handle({ ui, agents: [released], registry, cwd: "/test/cwd", readFile });
+    await handleWith(ui, [released], { readFile });
 
     expect(readFile).toHaveBeenCalledWith("/tasks/e1.jsonl");
     expect(mountedPaneFactory(ui)).toEqual(expect.any(Function));
@@ -628,7 +630,7 @@ describe("SessionNavigatorHandler", () => {
     });
     const ui = makeUI("Agent (Old task) · 5 tools · completed · 3.0s · session released (snapshot)");
 
-    await new SessionNavigatorHandler().handle({ ui, agents: [released], registry, cwd: "/test/cwd", readFile });
+    await handleWith(ui, [released], { readFile });
 
     expect(ui.notify).toHaveBeenCalledWith("Could not read the session transcript file.", "error");
     expect(ui.custom).not.toHaveBeenCalled();
