@@ -69,3 +69,53 @@ The plan's marker is `**Release:** ship independently`, and the `fix!` commit ma
 
 - The Phase 15 sweep disposition ("out of scope for the roadmap") already landed on this branch as `docs(pi-permission-system): disposition #910 against Phase 15`, so the root needs no roadmap edit.
 - `.fallowrc.json` still carries stale `pi-subagents` boundary zones that make `fallow guard` error; `fallow dead-code` is unaffected.
+
+## Stage: Final Retrospective (2026-10-06T06:13:30Z)
+
+### Session summary
+
+The issue ran across four sessions: PR review of [#917] (adopt the capability, simplified design), planning in the peer worktree, TDD plus sync in the same peer, and the root `/ship`.
+The fast-forward merge, lint, `fallow dead-code`, CI, the issue and PR close, and the `pi-permission-system` 40.0.0 release all went through on the first attempt, and the worktree was torn down.
+The main finding is in the artifacts, not the code: the PR Review stage note was silently damaged by `rumdl fmt`, and the issue ended up with two retro files.
+
+### Observations
+
+#### What went well
+
+- The adopt-not-merge path held across sessions: the PR Review note's attribution instructions (`Co-authored-by:` on the implementation commits, a thank-you on the PR) reached `/ship` intact, and the close targets (issue and PR) were both read from the retro rather than inferred.
+- The pre-completion reviewer's WARN (non-path slash-bearing words get spelled) was settled with a pinning test and a doc note before sync, so nothing was left open at land time.
+- The Tidy-First assessor caught a real fail-open hole at planning (`rm $DIR/x` spelled as `/cwd/$DIR/x`), which the plan then guarded on `ArgWord.computed`.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` — the PR Review session started two lines of prose with a bare `#981` and `#910`; `markdown-conventions` says to prefix such a line with `Issue`.
+  The `rumdl fmt` hook's MD018 fix turned each into a heading (`## 981 shipped the same multi-spelling mechanism…`) and dropped the trailing period, and `rumdl check` accepts the result, so no gate fired.
+  Not caught by anyone during the session; found at retro.
+  Impact: two body paragraphs of `0910-absolute-path-bash-rule-relative-spelling.md` render as headings.
+  A repo-wide grep (`^#{1,6} [0-9]{2,4} [a-z(]`) finds 21 such converted headings in 11 files across plans, retros, and triage notes, so this is recurring, not a one-off.
+- `other` — two retro files for one issue: the PR Review stage wrote `0910-absolute-path-bash-rule-relative-spelling.md` (slug from the title), then `/plan-issue` created `0910-bash-argument-spellings.md` (slug from the plan) instead of appending.
+  `/plan-issue` already reads an existing retro file, but its stage-notes step says "use the same slug as the plan file".
+  Five other issues have the same split (`0122`, `0334`, `0525`, `0639` in `pi-permission-system`; `1035` in `pi-subagents`).
+  Impact: no rework; `/ship` and this retro had to find and read both files.
+- `instruction-violation` (minor) — the sync stage appended its note with a `cat >>` heredoc, which `markdown-conventions` routes to `Edit`/`Write`.
+  Impact: none; the note came out clean.
+
+#### What caused friction (user side)
+
+- Nothing notable this time; the operator's decisions at PR Review (scope to the absolute spelling) and planning (`fix!`) were made once and carried through without being reopened.
+
+### Diagnostic details
+
+- **Model-performance correlation** — TDD ran on `anthropic/claude-opus-5-5` with two `pre-completion-reviewer` dispatches; sync ran on `anthropic/claude-sonnet-5-5`, which fits its mechanical checklist; ship and retro ran on `anthropic/claude-opus-5-5`.
+- **Feedback-loop gap analysis** — the sync summary says the root `/ship` re-runs the tests on the merged tree; `/ship` runs lint and `fallow dead-code`, and the tests ran only in CI, which passed.
+
+### Changes made
+
+1. `.rumdl.toml`: set `[MD018] magiclink = true`, so `rumdl fmt` leaves a prose line that opens with an issue reference (`#981 shipped the same thing.`, `#42. Done.`, `#42's fix landed.`) alone instead of turning it into a heading; `#Summary` is still flagged and fixed.
+   Verified on the pinned 0.2.24 before landing.
+2. `.pi/skills/markdown-conventions/SKILL.md`: removed the rule to prefix a line-leading issue number with `Issue`, which the setting above makes unnecessary (CommonMark never read `#42 and more` as a heading; only the fix did).
+3. `.pi/prompts/plan-issue.md`: the stage-notes step now appends to a retro file that `## Check for prior session context` already found, instead of creating a second file under the plan's slug.
+4. Filed [#1036] (repair the 21 converted headings in 11 files) and [#1037] (lift the `rumdl` pin, since rvben/rumdl#811 and rvben/rumdl#816 are closed upstream), both recorded as out of scope in the Phase 15 sweep dispositions.
+
+[#1036]: https://github.com/gotgenes/pi-packages/issues/1036
+[#1037]: https://github.com/gotgenes/pi-packages/issues/1037

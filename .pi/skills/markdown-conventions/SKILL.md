@@ -80,7 +80,6 @@ An insertion point that reads correctly at the seam can reparent what follows it
 
 ### Issue references
 
-- When an issue number would begin a line outside a fenced code block, prefix it with `Issue` (e.g. `Issue #42`) to prevent `#N` from being misread as a Markdown heading.
 - In long-lived docs (`docs/architecture/`, `docs/plans/`), reference GitHub issues with reference-style links — `[#42]` in the body, `[#42]: https://github.com/gotgenes/pi-packages/issues/42` at the end of the file.
   Bare `#42` auto-links on GitHub but not in other renderers.
   Every `[#N]:` definition must have a matching `[#N]` reference in the body (markdownlint MD053 rejects unused definitions).
