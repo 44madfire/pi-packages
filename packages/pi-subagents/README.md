@@ -182,10 +182,12 @@ The viewer is framed by two rules in the style of pi's editor border, coloured f
 ```text
 ── Agent (twin)  Refactor auth module · anthropic/claude-sonnet-5 • high ───────
 … transcript …
-── 142 lines · 87% ──────────────────────── ↑↓ scroll · PgUp/PgDn · Esc close ──
+── 142 lines · 87% ──────── ↑↓ scroll · PageUp/PageDown · Home/End · Esc close ──
 ```
 
 The top rule names the agent, its task, model, and thinking level; the bottom carries the scroll position and key hints.
+Paging and jumping to the top or bottom follow Pi's viewport keybindings (`tui.altScreen.pageUp`, `pageDown`, `top`, `bottom`), so a remap applies here too, and the footer names the keys you bound; the mouse wheel scrolls the transcript as well.
+In fullscreen mode the viewer floats over the bottom of the screen, above Pi's footer, so those keys reach it instead of scrolling the conversation behind it.
 On a narrow terminal the footer drops the key hints, and the header drops the task and then the model before it shortens the agent's name.
 
 Creating and editing agent definitions is not a command — write an agent `.md` file in your editor, or ask a pi session to generate one (see [Custom Agents](./docs/configuration.md#custom-agents)).
