@@ -64,5 +64,48 @@ The plan's marker is `**Release:** ship independently`, so the root dispatches a
 
 The branch carries the plan, the five implementation commits, the Phase 15 disposition for [#1033], and the stage notes. [#1033] (the local session-tie bypass) is the filed follow-up, placed as the next Track D step, so the root files nothing new.
 
+## Stage: Final Retrospective (2026-10-06T04:40:06Z)
+
+### Session summary
+
+The issue ran in four sessions: planning, TDD, and sync in one peer worktree session, then ship and retro at the root.
+It landed as three `refactor:` commits, one `fix:`, and one `docs:`, and was released as `pi-permission-system-v39.1.2`.
+The ship fast-forwarded cleanly, and CI, the release run, and the worktree teardown all passed on the first attempt.
+
+### Observations
+
+#### What went well
+
+- The planning spike drove the real parser, `resolveBashCommandCheck`, and `ResolverServingPolicy` (`test/spike/spike-1030.test.ts`, deleted before commit).
+  It reproduced the issue's table and also surfaced [#1033], a separate local bypass, which became a filed issue with a recorded roadmap disposition instead of scope creep.
+- A second spike replayed the operator's review log through the real parser (74 forwarded bash auto-approvals, 0 plain-rule chains).
+  That turned "adds no prompts" from a guess into a measured claim the close comment could cite.
+- Every TDD step ran its plan-named killing mutations through a small `/tmp/mut.mjs` harness that applied the mutation against a saved green copy and then restored it.
+  The harness caught the plan's one wrong mutation prediction (the yolo row), and the step's test was re-pinned rather than shipped as a test that kills nothing.
+
+#### What caused friction (agent side)
+
+- `missing-context` — the plan prescribed `const [first, ...rest] = intent.askingUnits ?? []`, which ESLint's `no-unnecessary-condition` rejects in this repo because `noUncheckedIndexedAccess` is off, so the destructured `first` is never `undefined`.
+  The `fix:` commit's pre-commit hook failed (TDD turn 87), and the code was rewritten to `units.at(0)` / `units.slice(1)`, with the mutation re-checked against the new line.
+  Impact: 2 extra tool calls, no follow-up commit.
+- `instruction-violation` (self-identified) — the sync stage's `Edit` wrote a literal `\u2014` escape for an em-dash in the stage note, which `markdown-conventions` already forbids.
+  The agent noticed it right away; its `sed -i` repair matched nothing, and a Python replacement fixed it.
+  Impact: 2 extra tool calls, no rework past the commit.
+
+#### What caused friction (user side)
+
+- None observed: the operator's two planning-gate answers (only asking units travel; [#1033] as a separate step) were decisive and arrived on the first ask.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5`, and sync and ship on `claude-sonnet-5-5`, which fits each stage's judgment load.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5` according to their own transcripts, and the reviewer's PASS came with a substantive residual note (a forged non-bash request carrying `askingUnits`).
+- **Feedback-loop gap analysis** — verification was incremental: each TDD step ran its targeted tests, `pnpm run check`, and its mutations before committing, and the full suite plus lint and `fallow` ran once at the end.
+
+### Changes made
+
+1. Appended this Final Retrospective entry to `packages/pi-permission-system/docs/retro/1030-forwarded-ask-carries-every-unit.md`.
+   I proposed one `code-design` line on `noUncheckedIndexedAccess` destructuring, and the operator declined it, because the lint hook already catches the failure in about two calls.
+
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1033]: https://github.com/gotgenes/pi-packages/issues/1033
