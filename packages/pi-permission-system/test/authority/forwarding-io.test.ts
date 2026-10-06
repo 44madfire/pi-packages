@@ -484,12 +484,23 @@ describe("readForwardedPermissionRequest — payload field", () => {
         value: "git push",
         matchedPattern: "git *",
         commandContext: null,
+        matchedSpelling: null,
         executedUnit: null,
       },
       evidence: [{ label: "command", text: "git push", detail: null }],
     });
     const parsed = writeAndRead({ ...baseRequest(), payload });
     expect(parsed?.payload).toEqual(payload);
+  });
+
+  it("reads request facts without a matched spelling as having none (version skew)", () => {
+    const payload = makePromptPayload();
+    const { matchedSpelling: _absent, ...olderRequest } = payload.request;
+    const parsed = writeAndRead({
+      ...baseRequest(),
+      payload: { ...payload, request: olderRequest },
+    });
+    expect(parsed?.payload?.request.matchedSpelling).toBeNull();
   });
 
   it("reads a request with no payload as undefined (version skew)", () => {
