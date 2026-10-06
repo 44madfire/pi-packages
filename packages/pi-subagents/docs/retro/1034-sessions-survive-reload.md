@@ -60,3 +60,46 @@ The plan's marker is `**Release:** ship independently`.
 
 - The reviewer WARN on the unpinned `index.ts` relay was settled with the operator: they will run the live `/reload` then `/subagents:sessions` check themselves, so `/ship` should not block on it.
 - That check should also note whether a run still active at `/reload` is listed afterwards; if it is missing, file a follow-up.
+
+## Stage: Final Retrospective (2026-10-06T06:39:42Z)
+
+### Session summary
+
+The issue went through four stages: planning, TDD, and sync in one peer worktree session, then `/ship` at the root.
+The ship fast-forward-merged the branch, CI passed on the first try, #1034 closed, and `pi-subagents-v23.2.0` was released.
+The live `/reload` check is the only open item, and the operator chose to own it.
+
+### Observations
+
+#### What went well
+
+- The planning gate laid out three cause-grounded options (session entries, `globalThis` handoff, directory scan) and a second question on `getEntries()` versus `getBranch()`.
+  The operator answered once and nothing bounced.
+- Every killing mutation in TDD reddened exactly the tests the plan predicted, including the one that showed a vacuous-looking assertion was covered elsewhere (`outputFile: undefined` against an absent key).
+- The open reviewer WARN went from TDD (unpinned `src/index.ts` relay) to the operator decision at sync to `/ship`'s close comment without a second ask.
+  The sync note recorded the decision explicitly, so `/ship` step 2 could honor it rather than re-ask.
+
+#### What caused friction (agent side)
+
+- `instruction-violation` (self-identified, twice): in TDD steps 2 and 4, the `cp <file> /tmp/green.ts` backup went in the same tool batch as the mutating `Edit` (peer turns 52 and 70).
+  Batched calls run concurrently, so the backup captured the mutation.
+  `.pi/prompts/tdd-plan.md` already says to run the `cp` in its own tool call, and the plan warned about the same trap, yet the second slip came two steps after the first was caught.
+  The pattern that never failed was turn 60's: the `cp` appended to the Green verification command, which by construction finishes before any mutation is issued.
+  Impact: two hand restorations (one `grep` diagnosis and one `Edit` each); no bad commit.
+
+#### What caused friction (user side)
+
+- None observed.
+  The operator's one structural input (owning the live check) came at the sync gate, which is the earliest point the WARN existed.
+
+### Diagnostic details
+
+- **Model-performance correlation:** planning and TDD ran on `claude-opus-5-5`; sync ran on `claude-sonnet-5-5`.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5` per their transcripts.
+  Each fit its task: the assessor's helper recommendation became plan Step 1, and the reviewer's WARN was the right call.
+- **Feedback-loop gap analysis:** TDD ran targeted `vitest` plus `pnpm run check` after every Green, and the full gates at baseline and at the end.
+  No gap.
+
+### Changes made
+
+1. `.pi/prompts/tdd-plan.md`: step 3 now appends the green-file `cp` to the Green verification command instead of asking for a separate tool call.
