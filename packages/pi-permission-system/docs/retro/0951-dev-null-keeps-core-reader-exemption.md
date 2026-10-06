@@ -25,4 +25,25 @@ Classified as a non-breaking `fix:` that implements ADR 0013 §11's "no real out
 - The Tidy-First assessor recommended nothing; its optional `DISCARD_DEVICE` constant is folded into step 1.
 - Open PR #971 touches the wrapper floor in other files; it does not overlap and is not a close target.
 
+## Stage: Implementation — TDD (2026-10-06T16:47:44Z)
+
+### Session summary
+
+Completed all three plan steps, each its own commit: the `isDiscardDevice` predicate, the `redirectMayWriteFile` guard with unit and program-level rows, and the architecture-doc update.
+Added 30 tests: 8 in `safe-system-paths.test.ts`, 15 in `redirect-analysis.test.ts`, and 7 in `program.test.ts`.
+The full suite, `check`, root `lint`, and `fallow dead-code` are green.
+
+### Observations
+
+- No deviations from the plan.
+  Every named killing mutation killed exactly the predicted rows.
+  Deleting the guard killed 10, swapping in `isSafeSystemPath` killed 3, and `includes("/dev/null")` killed 5.
+  The step 1 mutation (`SAFE_SYSTEM_PATHS.has`) killed the 3 stream-device rows.
+- Process slip in step 1: the Red run and the implementing `Write` went out in the same tool batch and ran concurrently, so the "red" run saw green.
+  Red was re-derived by temporarily restoring the HEAD source: 8 new tests failed.
+  Keep Red runs in their own batch.
+- Pre-completion reviewer: PASS.
+  Its re-derivation spike put 90 of its own inputs through `BashProgram.parse`, including near-miss spellings, brace and glob expansions, `/dev/fd/1`, sibling real redirects, and compound and heredoc hosts.
+  It found no input that clears the refusal while a real file is written.
+
 [#977]: https://github.com/gotgenes/pi-packages/issues/977
