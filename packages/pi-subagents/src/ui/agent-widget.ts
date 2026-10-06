@@ -5,6 +5,7 @@
  * Uses the callback form of setWidget for themed rendering.
  */
 
+import type { TuiMode } from "@earendil-works/pi-tui";
 import { AgentTypeRegistry } from "#src/config/agent-types";
 import type { Subagent } from "#src/lifecycle/subagent";
 import type { SubagentManager, SubagentManagerObserver } from "#src/lifecycle/subagent-manager";
@@ -53,6 +54,11 @@ export function assembleWidgetState(
 /** The slice of the TUI the widget factory callback touches. */
 export interface TuiSurface {
   readonly terminal: { readonly columns: number; readonly rows: number };
+  /**
+   * The active renderer's mode. Pi hands widget factories a proxy that follows
+   * the current renderer, so this stays current across a `/fullscreen` switch.
+   */
+  readonly mode: TuiMode;
   requestRender(): void;
 }
 
@@ -66,14 +72,27 @@ export type UICtx = {
 };
 
 /**
- * How often the widget re-renders while a subagent animates.
+ * How often the widget re-renders while a subagent animates, per TUI mode.
  *
- * Pi renders the entire regular-mode component tree per request, and the widget
- * is the only thing requesting one while the parent idles, so this is the
- * cadence of that whole-tree walk. Deliberately slower than Pi's own `Loader`
- * default, which pays 80 ms only during a turn the user is already watching.
+ * The widget is the only thing asking Pi for a frame while the parent idles,
+ * and every frame walks the whole component tree, transcript included. Measured
+ * against real session transcripts mounted on Pi's own renderers (pi-tui 1.0.0):
+ *
+ * - Fullscreen diffs only the visible rows and Pi's components cache their
+ *   lines, so a frame costs under 1 ms even at 18k transcript lines (~1% of a
+ *   core at 80 ms). It ticks at Pi's own `Loader` cadence.
+ * - Regular mode's frame cost scales with the transcript (~9 ms at 18k lines),
+ *   so 80 ms would cost ~11% of a core for as long as an agent runs; it keeps
+ *   250 ms (~3.5%).
+ *
+ * An unknown mode (no TUI captured yet) takes the conservative regular cadence.
  */
-const WIDGET_UPDATE_INTERVAL_MS = 250;
+const FULLSCREEN_ANIMATION_MS = 80;
+const REGULAR_ANIMATION_MS = 250;
+
+function animationIntervalMs(mode: TuiMode | undefined): number {
+  return mode === "fullscreen" ? FULLSCREEN_ANIMATION_MS : REGULAR_ANIMATION_MS;
+}
 
 // ---- Widget manager ----
 
@@ -165,7 +184,7 @@ export class AgentWidget implements SubagentManagerObserver {
       this.widgetTimer ??= setTimeout(() => {
         this.widgetTimer = undefined;
         this.update();
-      }, WIDGET_UPDATE_INTERVAL_MS);
+      }, animationIntervalMs(this.tui?.mode));
       return;
     }
     if (this.widgetTimer) {
