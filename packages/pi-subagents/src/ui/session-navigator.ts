@@ -28,6 +28,8 @@
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import {
   type Component,
+  type Keybinding,
+  type KeyId,
   type MarkdownTheme,
   matchesKey,
   type TUI,
@@ -63,11 +65,20 @@ export type TranscriptTheme = Theme & {
   getThinkingBorderColor(level: string): (text: string) => string;
 };
 
+/**
+ * The `KeybindingsManager` surface the pane reads. Pi passes its manager to
+ * every `ui.custom` factory, so the pane honours the operator's remaps.
+ */
+export interface PaneKeys {
+  matches(data: string, keybinding: Keybinding): boolean;
+  getKeys(keybinding: Keybinding): KeyId[];
+}
+
 /** Component factory shape Pi's `ui.custom` invokes to mount a component. */
 export type CustomComponentFactory<R> = (
   tui: TUI,
   theme: TranscriptTheme,
-  keybindings: unknown,
+  keybindings: PaneKeys,
   done: (result: R) => void,
 ) => Component;
 
@@ -98,6 +109,8 @@ interface ScrollOptions {
 export interface TranscriptPaneOptions {
   tui: TUI;
   theme: TranscriptTheme;
+  /** Paging and top/bottom follow Pi's viewport bindings (`tui.altScreen.*`). */
+  keys: PaneKeys;
   source: TranscriptSource;
   /** Who produced the transcript, named in the header rule. */
   heading: EntryHeading;
@@ -137,8 +150,8 @@ export class SessionNavigatorHandler {
     }
     const markdownTheme = getMarkdownTheme();
     await ui.custom<undefined>(
-      (tui, theme, _keybindings, done) =>
-        new TranscriptPane({ tui, theme, source, heading: entry.heading, done, cwd, markdownTheme }),
+      (tui, theme, keys, done) =>
+        new TranscriptPane({ tui, theme, keys, source, heading: entry.heading, done, cwd, markdownTheme }),
       { overlay: false },
     );
   }
@@ -159,6 +172,7 @@ export class TranscriptPane implements Component {
 
   private readonly tui: TUI;
   private readonly theme: TranscriptTheme;
+  private readonly keys: PaneKeys;
   private readonly source: TranscriptSource;
   private readonly heading: EntryHeading;
   private readonly done: (result: undefined) => void;
@@ -166,9 +180,10 @@ export class TranscriptPane implements Component {
   /** Width the host last rendered at; input must use the same layout. */
   private renderedWidth: number | undefined;
 
-  constructor({ tui, theme, source, heading, done, cwd, markdownTheme }: TranscriptPaneOptions) {
+  constructor({ tui, theme, keys, source, heading, done, cwd, markdownTheme }: TranscriptPaneOptions) {
     this.tui = tui;
     this.theme = theme;
+    this.keys = keys;
     this.source = source;
     this.heading = heading;
     this.done = done;
@@ -193,13 +208,13 @@ export class TranscriptPane implements Component {
       this.scrollBy(-1);
     } else if (matchesKey(data, "down") || matchesKey(data, "j")) {
       this.scrollBy(1);
-    } else if (matchesKey(data, "pageUp") || matchesKey(data, "shift+up")) {
+    } else if (this.keys.matches(data, "tui.altScreen.pageUp") || matchesKey(data, "shift+up")) {
       this.scrollBy(-viewportHeight, { follow: false });
-    } else if (matchesKey(data, "pageDown") || matchesKey(data, "shift+down")) {
+    } else if (this.keys.matches(data, "tui.altScreen.pageDown") || matchesKey(data, "shift+down")) {
       this.scrollBy(viewportHeight);
-    } else if (matchesKey(data, "home")) {
+    } else if (this.keys.matches(data, "tui.altScreen.top")) {
       this.scrollTo(0, { follow: false });
-    } else if (matchesKey(data, "end")) {
+    } else if (this.keys.matches(data, "tui.altScreen.bottom")) {
       this.scrollTo(Number.POSITIVE_INFINITY);
     }
   }
@@ -249,9 +264,23 @@ export class TranscriptPane implements Component {
 
   // ---- Private ----
 
-  /** The key hints the footer rule carries on its right. */
+  /**
+   * The key hints the footer rule carries on its right, naming the keys the
+   * operator actually bound: the first key of each binding, and no segment
+   * for a pair left wholly unbound.
+   */
   private footerHint(): string {
-    return "↑↓ scroll · PgUp/PgDn · Esc close";
+    const page = this.keyPair("tui.altScreen.pageUp", "tui.altScreen.pageDown");
+    const ends = this.keyPair("tui.altScreen.top", "tui.altScreen.bottom");
+    return ["↑↓ scroll", page, ends, "Esc close"].filter((segment) => segment !== "").join(" · ");
+  }
+
+  /** `PageUp/PageDown` for a pair of bindings; the bound side alone when the other is unbound. */
+  private keyPair(first: Keybinding, second: Keybinding): string {
+    return [first, second]
+      .flatMap((keybinding) => this.keys.getKeys(keybinding).slice(0, 1))
+      .map(displayKey)
+      .join("/");
   }
 
   /**
@@ -312,6 +341,14 @@ export class TranscriptPane implements Component {
     const cap = Math.floor((this.tui.terminal.rows * VIEWPORT_HEIGHT_PCT) / 100) - CHROME_LINES;
     return Math.max(MIN_VIEWPORT, Math.min(totalLines, cap));
   }
+}
+
+/** A key id in Pi's display style: `ctrl+b` → `Ctrl+B`, `pageUp` → `PageUp`. */
+function displayKey(key: KeyId): string {
+  return key
+    .split("+")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("+");
 }
 
 /**

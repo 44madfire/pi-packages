@@ -1,11 +1,11 @@
 import { getMarkdownTheme, initTheme } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { visibleWidth } from "@earendil-works/pi-tui";
+import { type KeybindingsConfig, KeybindingsManager, TUI_KEYBINDINGS, visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { AgentTypeRegistry } from "#src/config/agent-types";
 import type { SessionMessage } from "#src/types";
 import type { EntryHeading, SessionModel, TranscriptSource } from "#src/ui/session-navigation";
-import { SessionNavigatorHandler, TranscriptPane } from "#src/ui/session-navigator";
+import { type PaneKeys, SessionNavigatorHandler, TranscriptPane } from "#src/ui/session-navigator";
 import { makeNavigable } from "#test/helpers/make-navigable";
 import { fakeSource, mockTui } from "#test/helpers/transcript-fixtures";
 
@@ -31,11 +31,21 @@ function ansiTheme() {
 
 const DEFAULT_HEADING: EntryHeading = { name: "Explore", modeLabel: undefined, description: "Find auth files" };
 
+/** Pi's keybindings with the given overrides, as Pi passes them to a `ui.custom` factory. */
+const keysWith = (overrides: KeybindingsConfig = {}): PaneKeys => new KeybindingsManager(TUI_KEYBINDINGS, overrides);
+
 function makePane(
-  opts: { source?: TranscriptSource; done?: (r: undefined) => void; tui?: TUI; heading?: EntryHeading } = {},
+  opts: {
+    source?: TranscriptSource;
+    done?: (r: undefined) => void;
+    tui?: TUI;
+    heading?: EntryHeading;
+    keys?: PaneKeys;
+  } = {},
 ) {
   return new TranscriptPane({
     tui: opts.tui ?? mockTui(),
+    keys: opts.keys ?? keysWith(),
     theme: ansiTheme(),
     source: opts.source ?? fakeSource(),
     heading: opts.heading ?? DEFAULT_HEADING,
@@ -192,12 +202,23 @@ describe("TranscriptPane", () => {
   });
 
   describe("footer rule", () => {
-    const footerAt = (width: number): string => stripAnsi(makePane().render(width).at(-1) ?? "");
+    const footerAt = (width: number, keys?: PaneKeys): string =>
+      stripAnsi(makePane({ keys }).render(width).at(-1) ?? "");
 
     it("carries the scroll position on the left and the key hints on the right", () => {
       const footer = footerAt(80);
       expect(footer.startsWith("── 3 lines · 100% ─")).toBe(true);
-      expect(footer.endsWith(" ↑↓ scroll · PgUp/PgDn · Esc close ──")).toBe(true);
+      expect(footer.endsWith(" ↑↓ scroll · PageUp/PageDown · Home/End · Esc close ──")).toBe(true);
+    });
+
+    it("names the keys the operator bound", () => {
+      const footer = footerAt(80, keysWith({ "tui.altScreen.pageUp": "ctrl+b" }));
+      expect(footer.endsWith(" ↑↓ scroll · Ctrl+B/PageDown · Home/End · Esc close ──")).toBe(true);
+    });
+
+    it("omits a pair the operator left unbound", () => {
+      const footer = footerAt(80, keysWith({ "tui.altScreen.top": [], "tui.altScreen.bottom": [] }));
+      expect(footer.endsWith(" ↑↓ scroll · PageUp/PageDown · Esc close ──")).toBe(true);
     });
 
     it("drops the key hints, keeping the position, when both do not fit", () => {
@@ -263,6 +284,19 @@ describe("TranscriptPane", () => {
       pane.handleInput(PG_UP);
       pane.handleInput(PG_DN);
       expect(visibleRows(pane).at(-1)).toBe(79);
+    });
+
+    it("pages on the key the operator bound instead of PgUp", () => {
+      const pane = makePane({
+        tui: mockTui(40, 80),
+        source: fakeSource({ getMessages: () => rowsOf(80) }),
+        keys: keysWith({ "tui.altScreen.pageUp": "ctrl+b" }),
+      });
+      const atBottom = visibleRows(pane);
+      pane.handleInput(PG_UP);
+      expect(visibleRows(pane)).toEqual(atBottom);
+      pane.handleInput("\x02");
+      expect(visibleRows(pane)[0]).toBe((atBottom[0] ?? -1) - PAGE);
     });
 
     it("jumps to the top", () => {
@@ -358,7 +392,7 @@ describe("SessionNavigatorHandler", () => {
   type PaneFactory = (
     tui: TUI,
     theme: ReturnType<typeof ansiTheme>,
-    kb: unknown,
+    kb: PaneKeys,
     done: (r: undefined) => void,
   ) => Component;
 
@@ -372,7 +406,7 @@ describe("SessionNavigatorHandler", () => {
   // Invoke the factory that mounted the pane and render it — the act (handle)
   // stays explicit in each test.
   function renderCapturedPane(ui: ReturnType<typeof makeUI>, width = 80): string[] {
-    const pane = mountedPaneFactory(ui)(mockTui(), ansiTheme(), undefined, vi.fn());
+    const pane = mountedPaneFactory(ui)(mockTui(), ansiTheme(), keysWith(), vi.fn());
     return pane.render(width);
   }
 
