@@ -26,6 +26,9 @@ export interface PersistedSubagentRecord {
 	readonly turnBudget: TurnBudget | undefined;
 	readonly startedAt: number;
 	readonly completedAt: number | undefined;
+	/** The run's session JSONL, which a reader can open after the live session is gone. */
+	readonly outputFile: string | undefined;
+	readonly toolUses: number;
 }
 
 /**
@@ -43,5 +46,7 @@ export function toPersistedRecord(record: PersistedSubagentRecord): PersistedSub
 		turnBudget: record.turnBudget,
 		startedAt: record.startedAt,
 		completedAt: record.completedAt,
+		outputFile: record.outputFile,
+		toolUses: record.toolUses,
 	};
 }

@@ -15,6 +15,9 @@ describe("toPersistedRecord", () => {
 			turnBudget,
 			startedAt: 1000,
 			completedAt: 2500,
+			toolUses: 7,
+			sessionReady: true,
+			outputFile: "/tasks/a.jsonl",
 		});
 
 		expect(toPersistedRecord(record)).toStrictEqual({
@@ -27,6 +30,8 @@ describe("toPersistedRecord", () => {
 			turnBudget,
 			startedAt: 1000,
 			completedAt: 2500,
+			outputFile: "/tasks/a.jsonl",
+			toolUses: 7,
 		});
 	});
 });
