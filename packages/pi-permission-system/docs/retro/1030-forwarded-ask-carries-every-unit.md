@@ -31,5 +31,25 @@ I filed [#1033] for a local bypass the spike found and recorded it as a new Phas
 - `src/handlers/gates/bash-command.ts` and `src/policy/serving-policy.ts` each build the same `bash-command` intent literal; sharing it would need a cross-zone edge, so the assessor rejected it.
 - `src/authority/forwarding-io.ts`: `asForwardedAccessIntent` could be split into per-field validators; that is unrelated cleanup.
 
+## Stage: Implementation — TDD (2026-10-06T04:24:46Z)
+
+### Session summary
+
+I completed all five plan steps as five commits: three `refactor:`, one `fix:`, and one `docs:`.
+Every plan-named killing mutation went red, and one mutation prediction was corrected.
+`pi-permission-system` grew from 5562 to 5587 tests (+25).
+
+### Observations
+
+- Plan deviation: the serving yolo row stays green when `resolve` is mutated to always use the single-value path, because there the chain-level floor's yolo branch also approves.
+  The row is pinned instead by passing `false` for yolo in `resolveUnit`.
+  I dropped the test's `origin: "yolo"` assertion: in `[ls, sudo rm y]`, the first-wins tie reports the unfloored `ls` result, so the winner's origin is `global` even with the fix.
+- `const [first, ...rest] = intent.askingUnits ?? []` failed ESLint's `no-unnecessary-condition`, because without `noUncheckedIndexedAccess` the destructured `first` is never `undefined`.
+  The fix uses `units.at(0)` with `units.slice(1)`.
+- The reader validates with `isWellFormedAskingUnits` and rebuilds each unit with `copyAskingUnits`, so unread keys from the wire cannot ride through.
+- The `ServingPolicy` doc comment in `forwarded-request-server.ts` was amended into the `fix:` commit, not the `docs:` one.
+- Pre-completion reviewer: PASS.
+  Its residual note: a forged request with a non-bash surface that carries `askingUnits` would be judged on the bash surface; no in-tree child produces one.
+
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1033]: https://github.com/gotgenes/pi-packages/issues/1033
