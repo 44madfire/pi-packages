@@ -648,10 +648,10 @@ describe("resolveBashCommandCheck", () => {
       expect(result.matchedPattern).toBe("*");
     });
 
-    it("carries a session grant through the floor", () => {
-      // `GateRunner` tests `check.source === "session"` before it tests state,
-      // so preserving the source is what honours a grant the user already gave
-      // for this exact command. Nothing in the type system says so.
+    it("leaves a session grant unfloored, naming the unit it covers", () => {
+      // The user approved this exact command, so the floor has no reason to
+      // hold; an `ask` here would tie with — and could beat — a sibling unit's
+      // real ask.
       const resolver = makeResolver(
         makeCheckResult({
           state: "allow",
@@ -668,8 +668,10 @@ describe("resolveBashCommandCheck", () => {
         resolver,
       );
 
-      expect(result.state).toBe("ask");
+      expect(result.state).toBe("allow");
       expect(result.source).toBe("session");
+      expect(result.command).toBe("git commit -F");
+      expect(result.floor).toBeUndefined();
     });
 
     it("keeps the wrapper sentinel on a unit that is both wrapped and unparsed", () => {
@@ -1133,6 +1135,55 @@ describe("resolveBashCommandCheck: the units a chain leaves asking", () => {
       expect(result.state).toBe("ask");
       expect(result).not.toHaveProperty("askingUnits");
     });
+  });
+});
+
+describe("resolveBashCommandCheck: a session grant covers only the unit it names", () => {
+  beforeAll(async () => {
+    await warmBashParser();
+  });
+
+  const policy: Record<string, PermissionState> = {
+    "*": "allow",
+    "git push *": "ask",
+  };
+
+  it("asks for a rule-asking unit that follows the granted one", () => {
+    const result = decide(policy, "sudo rm y && git push origin main", [
+      sessionRule("bash", "sudo rm y"),
+    ]);
+    expect(result.state).toBe("ask");
+    expect(result.source).toBe("bash");
+    expect(result.command).toBe("git push origin main");
+    expect(result.matchedPattern).toBe("git push *");
+  });
+
+  it("asks for a floored wrapper beside the granted one", () => {
+    const result = decide(policy, "sudo rm y && sudo rm z", [
+      sessionRule("bash", "sudo rm y"),
+    ]);
+    expect(result.state).toBe("ask");
+    expect(result.command).toBe("sudo rm z");
+    expect(result.floor).toBe("<indirection-bash-wrapper>");
+  });
+
+  it("allows a lone granted wrapper under the grant's own pattern", () => {
+    const result = decide(policy, "sudo rm y", [
+      sessionRule("bash", "sudo rm y"),
+    ]);
+    expect(result.state).toBe("allow");
+    expect(result.source).toBe("session");
+    expect(result.matchedPattern).toBe("sudo rm y");
+    expect(result.floor).toBeUndefined();
+  });
+
+  it("allows a chain whose every unit the session granted", () => {
+    const result = decide(policy, "sudo rm y && sudo rm z", [
+      sessionRule("bash", "sudo rm y"),
+      sessionRule("bash", "sudo rm z"),
+    ]);
+    expect(result.state).toBe("allow");
+    expect(result.source).toBe("session");
   });
 });
 

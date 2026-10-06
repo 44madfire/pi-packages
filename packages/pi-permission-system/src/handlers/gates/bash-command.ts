@@ -123,9 +123,8 @@ export function resolveBashCommandCheck(
  *
  * The winner names one command, but a forwarded ask's answer approves the
  * whole tool call, so the serving node has to judge every unit the child could
- * not resolve, each with its own floor (#1030). A unit the child's rules
- * allowed stays home, and so does one the session already granted: the user
- * approved exactly that command.
+ * not resolve, each with its own floor (#1030). A unit the child's rules or
+ * the session allowed stays home.
  */
 function withAskingUnits(
   winner: PermissionCheckResult,
@@ -133,7 +132,7 @@ function withAskingUnits(
 ): PermissionCheckResult {
   if (winner.state !== "ask") return winner;
   const askingUnits = results
-    .filter((result) => result.state === "ask" && result.source !== "session")
+    .filter((result) => result.state === "ask")
     .map((result) => ({
       command: result.command ?? "",
       ...(result.floor === undefined ? {} : { floor: result.floor }),
@@ -149,17 +148,14 @@ function withAskingUnits(
  * `git push x && sudo rm y` a `git push *: ask` rule wins the tie and the
  * wrapper's floor would otherwise go unrecorded. A forwarded ask is judged on
  * the winner's value alone, so the floor has to ride the result for the
- * serving node to keep it (#1029). A unit the session already granted is left
- * out: the user approved exactly that command.
+ * serving node to keep it (#1029).
  */
 function withChainFloor(
   winner: PermissionCheckResult,
   results: readonly PermissionCheckResult[],
 ): PermissionCheckResult {
   if (winner.state !== "ask" || winner.floor !== undefined) return winner;
-  const floored = results.find(
-    (result) => result.floor !== undefined && result.source !== "session",
-  );
+  const floored = results.find((result) => result.floor !== undefined);
   return floored ? { ...winner, floor: floored.floor } : winner;
 }
 
@@ -181,7 +177,7 @@ function resolveCommandUnit(
     resolver,
   );
   const floored =
-    cmd.wrapperKind && base.state === "allow"
+    cmd.wrapperKind && base.state === "allow" && !isSessionGrant(base)
       ? resolveWrapperUnit(cmd, cmd.wrapperKind, base, agentName, resolver)
       : base;
   const unparsed = floorUnparsedUnit(cmd, command, floored);
@@ -210,26 +206,40 @@ function resolveCommandUnit(
  * decides instead — and a wrapper unit already floored to `ask` keeps its own,
  * more specific sentinel.
  *
- * The result is built by spreading `resolved`, so a `source: "session"` grant
- * survives to `GateRunner`'s session fast path, which tests the source before
- * the state. A grant the user gave for this exact command still holds.
+ * A session grant is never floored: the user approved this exact command, and
+ * an `ask` carrying it would tie with a sibling unit's real ask and could
+ * approve the whole chain through `GateRunner`'s session fast path (#1033).
  */
 function floorUnparsedUnit(
   cmd: BashCommand,
   command: string,
   resolved: PermissionCheckResult,
 ): PermissionCheckResult {
-  if (!cmd.parseUnresolved || resolved.state !== "allow") return resolved;
+  if (
+    !cmd.parseUnresolved ||
+    resolved.state !== "allow" ||
+    isSessionGrant(resolved)
+  ) {
+    return resolved;
+  }
   return { ...floorToAsk(resolved, UNPARSED_SUBTREE_SENTINEL), command };
+}
+
+/**
+ * True when the session layer decided the check. `SessionRules` records only
+ * `allow`s, so this is a grant the user gave for the command it matched.
+ */
+function isSessionGrant(check: PermissionCheckResult): boolean {
+  return check.source === "session";
 }
 
 /**
  * Clamp a resolved check up to a synthetic `ask` naming the floor that raised
  * it.
  *
- * Spreads `resolved`, so a `source: "session"` grant survives to `GateRunner`'s
- * session fast path. Drops `matchedSpelling`: it names what the replaced rule
- * matched, and beside the sentinel it would name a match that did not decide.
+ * Never handed a session grant: both floors leave one unfloored. Drops
+ * `matchedSpelling`: it names what the replaced rule matched, and beside the
+ * sentinel it would name a match that did not decide.
  */
 function floorToAsk(
   resolved: PermissionCheckResult,
