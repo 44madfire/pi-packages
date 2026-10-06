@@ -541,6 +541,7 @@ Approving one for the session works normally: the floors clamp the decision and 
 A subagent's floored ask keeps its floor when it is forwarded to the parent session.
 The parent's `allow` rule does not answer it, so `sudo rm x` from a subagent prompts in the parent even under a parent `bash: *` allow.
 The parent's `deny` still denies, and a grant for the whole parent session or the parent's `yoloMode` still approves.
+A subagent's chained command (`ls && rm -rf /tmp/x`) is judged by the parent command by command: every command the subagent's own policy left asking is forwarded with its floor, and the parent's `deny` or `ask` on any one of them decides, not only on the first.
 
 Because of this, set an explicit `bash` policy rather than relying on a permissive top-level `*`.
 A config whose top-level `*` is `"allow"` with no `bash` `*` policy lets every bash command silently inherit `allow`; the extension emits a startup warning in that case.
