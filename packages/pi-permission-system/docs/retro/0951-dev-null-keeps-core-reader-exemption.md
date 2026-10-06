@@ -46,4 +46,18 @@ The full suite, `check`, root `lint`, and `fallow dead-code` are green.
   Its re-derivation spike put 90 of its own inputs through `BashProgram.parse`, including near-miss spellings, brace and glob expansions, `/dev/fd/1`, sibling real redirects, and compound and heredoc hosts.
   It found no input that clears the refusal while a real file is written.
 
+## Stage: Sync (worktree) (2026-10-06T16:50:01Z)
+
+### Session summary
+
+Root `pnpm run lint` and `pnpm fallow dead-code` pass on the branch.
+The plan's marker is `**Release:** ship independently`, and no follow-ups were filed.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-951--/2026-10-06T06-43-22-637Z_01a10ff3-dd8c-7169-98a3-cf2456aacd4c.jsonl` \- read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The reviewer returned PASS with no open warnings or operator decisions.
+One process slip is recorded in the TDD stage: a Red run batched with its implementing `Write`.
+
 [#977]: https://github.com/gotgenes/pi-packages/issues/977
