@@ -538,6 +538,10 @@ Every synthetic `ask` above — the two parse sentinels and both wrapper floors 
 An explicit `deny` still denies under yolo, and with yolo off the floors are unaffected.
 Approving one for the session works normally: the floors clamp the decision and leave the grant's provenance intact, so a command you have already approved does not prompt again.
 
+A subagent's floored ask keeps its floor when it is forwarded to the parent session.
+The parent's `allow` rule does not answer it, so `sudo rm x` from a subagent prompts in the parent even under a parent `bash: *` allow.
+The parent's `deny` still denies, and a grant for the whole parent session or the parent's `yoloMode` still approves.
+
 Because of this, set an explicit `bash` policy rather than relying on a permissive top-level `*`.
 A config whose top-level `*` is `"allow"` with no `bash` `*` policy lets every bash command silently inherit `allow`; the extension emits a startup warning in that case.
 To gate bash commands, add `"bash": { "*": "ask" }` (or `"deny"`).
