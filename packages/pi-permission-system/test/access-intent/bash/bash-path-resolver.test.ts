@@ -86,6 +86,15 @@ describe("BashPathResolver argument spellings", () => {
       ]);
     });
 
+    it("for a slash-bearing word that is not a path, since shape decides", async () => {
+      // A branch name looks like a relative path, so it is spelled too; only a
+      // rule naming the spelled form (`git push origin /projects/my-app/*`)
+      // could match it.
+      expect(await spellingsOf("git push origin feature/x")).toEqual([
+        ["feature/x", "/projects/my-app/feature/x"],
+      ]);
+    });
+
     it("with a parent segment resolved to the file that runs", async () => {
       expect(await spellingsOf("cd /tmp/a && rm ../../etc/x")).toEqual([
         ["../../etc/x", "/etc/x"],
