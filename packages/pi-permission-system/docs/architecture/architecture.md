@@ -1333,6 +1333,8 @@ Deferred by composition, with the reason each carries: [#804] (staging slice 7, 
   A forwarded bash ask carries only the chain's winning unit, so the serving node approves a whole multi-command line after judging one command (`ls && rm -rf /tmp/x` under a parent `ls*: allow`); [#1029] closes the floored variant of it, and this step closes the plain-rule one.
 - [#1031] — filed by [#1029]'s planning; out of scope for the roadmap.
   Setting yolo per node (a child separately from its parent) is a feature, and nothing in this phase's token-role spine touches `yoloMode`.
+- [#1033] — filed by [#1030]'s planning; **becomes a new step in this phase, directly after [#1030]** (operator decision, 2026-10-06).
+  A session-granted wrapper unit floors to an `ask` that keeps `source: "session"`, wins `pickMostRestrictive`'s first-wins tie, and takes `GateRunner`'s session fast path, so `sudo rm y && git push origin main` runs the `git push *: ask` unit unprompted; it is a live chain bypass in the same `resolveBashCommandCheck` as [#1029] and [#1030].
 - Feature issues [#691], [#687], [#680], [#654], [#648], [#604], [#603], [#472] — out of scope for a structural phase; [#680] is narrowed further by [#880] (a declared reader needs no floor override), and [#604] by [#813].
 
 #### Deferred tidyings swept
@@ -1672,6 +1674,19 @@ The serving node resolves it alone and its answer approves the whole tool call, 
 
 Release: independent
 
+#### [#1033] A session grant on one unit approves only that unit
+
+**Cause:** a wrapper unit's floor spreads its resolved check, so a session-granted `sudo rm y` comes back `ask` with `source: "session"`; `pickMostRestrictive` is first-wins on ties, so it beats a later rule-raised `ask`, and `GateRunner` tests the source before the state and approves the whole tool call.
+
+- **Smell:** Category C (a grant for one unit is read as a grant for the chain).
+- **Target:** `src/handlers/gates/bash-command.ts` (the tie between asking units).
+- **Constraint:** a session grant still approves the unit it names, and a chain whose only asking units are session-granted still takes the fast path.
+- **Soft dependency:** [#1030], which excludes session-granted units from the forwarded set on the premise this step makes true.
+- **Outcome:** `sudo rm y && git push origin main` under `{"*": "allow", "git push *": "ask"}` and a session grant for `sudo rm y` prompts for `git push origin main`.
+- **Commit type:** `fix:`.
+
+Release: independent
+
 #### [#1027] The commands inside `time ( … )` are units
 
 **Cause:** `tree-sitter-bash` (0.25.1, the latest release) defines no `time` keyword, so `time (rm -rf /tmp/x)` parses as a `command` named `time` whose argument is a `subshell`, and `time { rm …; }` as a `command` whose arguments are the brace group's words.
@@ -1752,7 +1767,8 @@ flowchart TD
     S995 -.soft.-> S963["✅ #963<br/>Execution-modifier wrappers inherit the verdict"]
     S963 -.soft.-> S1029["✅ #1029<br/>A forwarded ask keeps its floor"]
     S1029 -.soft.-> S1030["#1030<br/>A forwarded ask carries every unit"]
-    S1030 -.soft.-> S1027["#1027<br/>Commands inside time ( … )"]
+    S1030 -.soft.-> S1033["#1033<br/>A session grant covers one unit"]
+    S1033 -.soft.-> S1027["#1027<br/>Commands inside time ( … )"]
     S963 -.soft.-> S880["#880<br/>commandEffects"]
     S880 --> S881["#881<br/>Blame reaches the ask"]
     S609 -.soft.-> S881
@@ -1781,7 +1797,7 @@ The diagram is laid out by dependency instead, so its shape and the working sequ
   [#924] owns `command-effects.ts` and the pure-reader core section of `docs/configuration.md`; [#963] owns `wrapper-analysis.ts` and ADR 0013 §11; [#880] owns `src/config/` and re-enters `command-effects.ts`; [#881] owns `src/presentation/` and the two bash path gates.
   [#881] touches `bash-path.ts` / `bash-external-directory.ts`; [#609]'s plan leaves both gates unchanged, but [#881]'s blame reads the candidate set [#609] widens, so sequence [#881] after [#609].
 - **Track C — the judgment lane:** [#882], a deliberation first; its code half touches `authority/delegation-envelope.ts`, `authority/permission-forwarding.ts`, and the payload core [#881] owns, so it lands after [#881].
-- **Track D — the forwarding wire:** [#1029] → [#1030].
+- **Track D — the forwarding wire:** [#1029] → [#1030] → [#1033].
   Owns `src/authority/forwarded-request-server.ts` and the forwarded access facts; it shares that wire with Track C's [#882] code half, so sequence them rather than run them concurrently.
 
 The sandbox seam that Phase 15 briefly carried as a track of its own is now Phase 16's subject in full ([#892], with [#802]).
@@ -1790,7 +1806,7 @@ The sandbox seam that Phase 15 briefly carried as a track of its own is now Phas
 
 - **Batch "declared-effects":** [#880], [#881] (ship together; tail = [#881]; release vehicle = [#880]'s `feat:` with [#881]'s `fix:` riding the same release).
   They ship together because [#881]'s blame line names the config key [#880] creates, and a prompt telling the user to declare an effect they cannot declare is worse than the prompt it replaces.
-- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix!:` — newly prompts on a computed argument that may lead with `-`), [#995] (`fix:`), [#1029] (`fix:`), [#1030] (`fix:`), [#1027] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
+- Independently releasable: [#945] (`fix:`), [#863] (`fix:`), [#859] (`fix:`), [#957] (`fix:`), [#609] (`fix!:` — newly prompts on a bare creating redirect under an explicit `path`/`path_write` rule, or after a non-literal `cd`), [#977] (`fix:`), [#979] (`fix:`), [#985] (`fix:`), [#978] (no release), [#924] (`fix:`), [#992] (`fix!:` — newly prompts on a computed argument that may lead with `-`), [#995] (`fix:`), [#1029] (`fix:`), [#1030] (`fix:`), [#1033] (`fix:`), [#1027] (`fix:`), [#882] (`feat:` if the checkpoint changes; a `docs:` amendment alone cuts no release).
 
 ## Refactoring history
 
@@ -1956,5 +1972,6 @@ Each phase's findings, step plan, dependency diagram, and health metrics are pre
 [#1029]: https://github.com/gotgenes/pi-packages/issues/1029
 [#1030]: https://github.com/gotgenes/pi-packages/issues/1030
 [#1031]: https://github.com/gotgenes/pi-packages/issues/1031
+[#1033]: https://github.com/gotgenes/pi-packages/issues/1033
 [#490]: https://github.com/gotgenes/pi-packages/issues/490
 [ADR-0002]: https://github.com/gotgenes/pi-packages/blob/main/packages/pi-subagents/docs/decisions/0002-extensions-on-a-minimal-core.md
