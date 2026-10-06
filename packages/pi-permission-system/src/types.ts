@@ -84,6 +84,13 @@ export interface PermissionCheckResult {
    */
   executedUnit?: string;
   /**
+   * The spelling of the bash unit the winning rule matched, when the rule did
+   * not also match the unit as typed — the absolute spelling of a relative
+   * path argument, say (#910). Display-only: absent whenever the typed text
+   * decided, and dropped by a floor that replaces {@link matchedPattern}.
+   */
+  matchedSpelling?: string;
+  /**
    * Set when the winning bash unit is a wrapper the floor no longer covers,
    * naming why (#803, #963). Recorded in the review log so an allow the floor would
    * once have prompted for is auditable to the reason that let it through.

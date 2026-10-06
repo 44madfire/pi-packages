@@ -880,6 +880,8 @@ describe("resolveBashCommandCheck: a rule written with an absolute path", () => 
         "rm secrets/x",
       );
       expect(result.state).toBe("deny");
+      expect(result.command).toBe("rm secrets/x");
+      expect(result.matchedSpelling).toBe(`rm ${cwd}/secrets/x`);
     });
 
     it("with a parent segment resolved to the file that runs", () => {
@@ -914,6 +916,9 @@ describe("resolveBashCommandCheck: a rule written with an absolute path", () => 
       );
       expect(result.state).toBe("ask");
       expect(result.matchedPattern).toBe("<indirection-bash-wrapper>");
+      // The floor replaced the rule the spelling matched, so the spelling no
+      // longer names what decided.
+      expect("matchedSpelling" in result).toBe(false);
     });
   });
 

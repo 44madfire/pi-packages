@@ -228,14 +228,16 @@ function floorUnparsedUnit(
  * it.
  *
  * Spreads `resolved`, so a `source: "session"` grant survives to `GateRunner`'s
- * session fast path.
+ * session fast path. Drops `matchedSpelling`: it names what the replaced rule
+ * matched, and beside the sentinel it would name a match that did not decide.
  */
 function floorToAsk(
   resolved: PermissionCheckResult,
   sentinel: string,
 ): PermissionCheckResult {
+  const { matchedSpelling: _replaced, ...unspelled } = resolved;
   return {
-    ...resolved,
+    ...unspelled,
     state: "ask",
     matchedPattern: sentinel,
     floor: sentinel,
