@@ -51,3 +51,45 @@ The plan's marker is `**Release:** ship independently`; the `fix:` commit is the
 ### Observations
 
 No follow-ups filed and nothing deferred.
+
+## Stage: Final Retrospective (2026-10-06T22:56:19Z)
+
+### Session summary
+
+The fix landed through the worktree lane: a session grant on a floored bash unit now stays `allow`/`session`, so a sibling unit's real `ask` wins the chain, and `GateRunner`'s fast path requires a session `allow`.
+The ship fast-forward-merged cleanly, CI passed, #1033 closed, and `pi-permission-system-v40.0.2` released with no rework at any stage.
+
+### Observations
+
+#### What went well
+
+- Planning spiked all three changes (the floor guards, the dead-filter removal, the runner hardening) against the full suite before writing the plan, so the plan's predicted reds and killing mutations held exactly in TDD: zero deviations, and every mutation reddened the predicted tests.
+- The planning gate measured the defect's footprint in the operator's own review log (113 `session_approved` entries carrying a floor sentinel) instead of estimating it, and reproduced through the real parser, resolver, and session ruleset.
+- An ASCII component-flow diagram, placing option A at the floor, option B at `pickMostRestrictive`, and the hardening at the runner's fast path, settled the A-vs-B decision in one turn after the first gate left it unanswered.
+
+#### What caused friction (agent side)
+
+- `other` — the first `ask_user` gate described both options in prose and named "the roadmap's named target" without defining it.
+  The operator answered only the hardening question, then asked what principle 3 implied and where "the named target" came from, then asked for a diagram of where each option acts.
+  Impact: two extra operator round-trips before the decision; no rework.
+- `instruction-violation` (self-identified, twice) — a literal `\u2014` escape was emitted into authored text: once into a `runner.ts` comment during TDD (Opus), once into the sync stage note (Sonnet).
+  The markdown one was decoded by `pi-autoformat`; the TypeScript one was caught only on read-back, because `scripts/lint/unicode-escapes.mjs` lists only `*.md` files.
+  Impact: one extra edit each; no gate would have caught the `.ts` case.
+- `other` — in TDD Step 1 a `Read` batched with the implementing `Edit` returned the pre-edit snapshot, costing one extra `git diff`/`grep` call to confirm the edit landed.
+  Impact: one tool call; `/tdd-plan` already warns that batched calls run concurrently.
+
+#### What caused friction (user side)
+
+- The operator's questions after the first gate (principle 3, "the named target", then the diagram request) were redirecting questions rather than corrections, and they produced the artifact that decided the design.
+  Asking for the diagram in the first reply would have saved one round-trip.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5`; sync ran on `claude-sonnet-5-5`, appropriate for a mechanical stage.
+  Both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5` per their transcripts; the assessor corrected a design premise (the two floor guards read different values) and the reviewer re-derived the session-source producers independently, so neither was under-powered.
+- **Feedback-loop gap analysis** — no gap: TDD ran the affected test file at each Red, Green, and mutation, the package suite plus `check` and root `lint` before each commit, and the full root gates once at the end.
+
+### Changes made
+
+1. `.pi/skills/clarification-gates/SKILL.md` — added a `## Substance first` rule: when the options act at different points of one flow, draw the flow with each option placed at the point it changes.
+2. Filed #1038 (`scope:repo`): extend `scripts/lint/unicode-escapes.mjs` to literal escapes in `.ts`/`.js` comments; no package phase applies, so no roadmap disposition.
