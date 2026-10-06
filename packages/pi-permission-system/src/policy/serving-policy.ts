@@ -22,6 +22,13 @@ export class ResolverServingPolicy implements ServingPolicy {
   ) {}
 
   resolve(intent: ForwardedAccessIntent): PermissionCheckResult {
+    return this.resolveValue(intent);
+  }
+
+  /**
+   * Judge the intent's single child-fixed value, with the chain-level floor.
+   */
+  private resolveValue(intent: ForwardedAccessIntent): PermissionCheckResult {
     const check = this.resolver.resolve(
       buildResolvedIntentFromMatchValues(
         intent.surface,
