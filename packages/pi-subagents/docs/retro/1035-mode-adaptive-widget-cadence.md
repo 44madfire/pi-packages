@@ -48,3 +48,16 @@ Executed all four planned steps as four commits: the one-shot timer-chain refact
   - Evidence provenance: the probe is not in the tree and the plan's table shows one representative run of five.
   - Robustness: `setTimerRunning` now runs last in `update()`, so a throw from `setWidget`/`requestRender`/`setStatus` during a tick ends the chain until the next lifecycle event (`setInterval` kept firing through a throw); judged theoretical.
   The reviewer re-derived the #864 timer-iff-running and #849 dispose-is-final invariants over every `update()` entry path and found them held.
+
+## Stage: Sync (worktree) (2026-10-06T05:27:46Z)
+
+### Session summary
+
+Pre-push checks (`pnpm run lint`, `pnpm fallow dead-code`) both passed clean.
+The plan's `**Release:** ship independently` marker applies; at ship time close PR #1024 with a pointer to the measurement rather than merging it.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1035--/2026-10-06T04-59-13-628Z_01a10f94-835b-73fe-82ed-b02ef3c8ff72.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The operator accepted both pre-completion reviewer WARN notes as non-blocking (the tick's throw-robustness and the deleted probe's single-run table); no code or doc change followed.
