@@ -73,6 +73,60 @@ The TDD stage's reviewer WARN is already settled: the chain-floor-versus-serving
 
 The branch carries the plan, the five implementation commits, and the Phase 15 dispositions for [#1030] and [#1031]; no stage note cites a branch SHA.
 
+## Stage: Final Retrospective (2026-10-06T03:03:25Z)
+
+### Session summary
+
+The issue went from planning through TDD and sync in one peer worktree session, then landed at the root as a clean fast-forward and released as `pi-permission-system-v39.1.1`.
+Across all four stages, no step was reworked after its commit, no plan step was re-planned, and no operator correction came after the planning gate.
+The friction that did occur cost one retry each and stayed inside its own step.
+
+### Observations
+
+#### What went well
+
+- The planning spike ran the real parser, `resolveBashCommandCheck`, and the serving resolution in a throwaway `test/spike/` file, then deleted it.
+  It turned a suspected bypass into a four-row table, and it found [#1030]'s wider bypass before the plan was written, not after the fix shipped.
+- Measuring the operator's own review log (74 of 74 forwarded bash auto-approvals were floored) priced the fix's prompt cost from data instead of an estimate.
+- Scripted mutation probes (`/tmp/mut.mjs`, which refuses a match count other than one, with a green-copy restore after each run) ran on every TDD step.
+  The deny-row probe survived once (`sudo ls` is exempt, so it never floors), and that sharpened the test to `sudo touch y`.
+  An under-specified test was caught by its own mutation rather than by review.
+- The pre-completion reviewer's WARN (a serving session grant on the winning unit bypasses a chain floor) went to [#1030] as a comment, and the branch did not grow to cover it.
+
+#### What caused friction (agent side)
+
+- `missing-context` — the plan's Test Impact item 3 claimed that a bare `floor: check.floor` would turn the unfloored `toEqual` tests red.
+  `toEqual` ignores keys whose value is `undefined`, so they stay green.
+  Impact: none on the code (the conditional spread stays, for `toStrictEqual` consumers); one extra probe in TDD to disprove the claim.
+- `other` — in TDD, a `node -e '…'` that built the relocated test file broke on an apostrophe inside the single-quoted script, and the peer switched to a `/tmp/*.mjs` file.
+  Impact: one retry.
+- `other` — the `fix:` commit's first attempt was rejected because the `biome` pre-commit hook reformatted a test that had been appended by heredoc and never formatted.
+  Impact: one re-stage and re-commit.
+- `other` — the planning retro note failed `rumdl` MD013 (two sentences on one line) and was fixed with `rumdl fmt`.
+  Impact: one retry.
+- `instruction-violation` (self-identified) — the ship's final report said the phase-close check had not been run, when the step only needed a read of the Phase 15 step list.
+  Impact: none (it is not the last step; [#1030] follows it), but the report left an open item where a single `grep` would have settled it.
+- `other` — in ship, a pasted `head -0` and a stray `[ $? ]` in two shell calls; both were harmless noise.
+
+#### What caused friction (user side)
+
+- None observed.
+  The single operator intervention, the parent-yolo question in planning, came back as a question in place of a selection.
+  The peer answered it in a visible message and re-asked, which is the clarification-gates pattern working as written.
+
+### Diagnostic details
+
+- **Model-performance correlation** — planning and TDD ran on `claude-opus-5-5` (judgment-heavy: spike design, three operator decisions, mutation design); sync ran on `claude-sonnet-5-5` (mechanical: gates, a note, a rebase); both subagents (`tidy-first-assessor`, `pre-completion-reviewer`) ran on `claude-sonnet-5-5`, per their transcripts.
+  The assessor made one false claim (that the composition-root `approveForwardedRequest` drives the server end to end), which the planner caught; the reviewer's WARN was correct and actionable.
+  No mismatch to act on.
+- **Feedback-loop gap analysis** — TDD ran the targeted tests and the package `check` after every step, and lint, fallow, and the full suite at the end.
+  The gates also ran three times across sync and ship: before the rebase, after it (which the peer chose to add because `main` had moved), and again at ship on the same tree.
+  The sync's post-rebase run and the ship's run covered an identical tree (`27db48c5`), costing roughly 26 seconds.
+
+### Changes made
+
+1. `.pi/skills/testing/SKILL.md`: added that `toEqual` ignores `undefined`-valued keys and cannot pin a key's absence, so `toStrictEqual` is the matcher when the key set is the claim.
+
 [#963]: https://github.com/gotgenes/pi-packages/issues/963
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1030]: https://github.com/gotgenes/pi-packages/issues/1030
