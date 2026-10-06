@@ -77,9 +77,12 @@ export interface BashCommand {
    * Other spellings of {@link text} the shell runs identically, matched with
    * it as aliases of one invocation. Absent when there are none.
    *
-   * Today the only spelling is the home-expanded one, for a unit whose text
-   * opens with `~`, `$HOME`, or `${HOME}` in a program that leaves `HOME`
-   * alone ({@link WordReader.spellHomeAtStart}).
+   * Two producers supply them, each spelling the text on its own: the
+   * home-expanded spelling of a unit whose text opens with `~`, `$HOME`, or
+   * `${HOME}` in a program that leaves `HOME` alone
+   * ({@link WordReader.spellHomeAtStart}), and the argument spelling, in which
+   * every argument word the {@link ArgumentSpeller} resolved to an absolute
+   * path is replaced by that path (#910).
    */
   readonly spellings?: readonly string[];
 }
@@ -131,16 +134,27 @@ interface UnitScope {
    * program's variables are the same wherever in it a word sits.
    */
   readonly words: WordReader;
+  /**
+   * What an argument word's absolute spelling is, from the party that resolved
+   * the program's paths. Relayed unchanged, including into nested executions:
+   * it answers by node, so each unit asks about its own words. Absent for a
+   * salvaged region, whose nodes are not the primary tree's.
+   */
+  readonly speller?: ArgumentSpeller;
 }
 
 /** A top-level command in the current shell, writing no file, fully parsed. */
-function topLevelScope(words: WordReader): UnitScope {
-  return {
+function topLevelScope(
+  words: WordReader,
+  speller: ArgumentSpeller | undefined,
+): UnitScope {
+  const scope: UnitScope = {
     writesViaRedirect: false,
     parseUnresolved: false,
     salvaged: false,
     words,
   };
+  return speller === undefined ? scope : { ...scope, speller };
 }
 
 /**
@@ -279,9 +293,10 @@ const STATEMENT_TYPES = new Set([
 export function collectCommands(
   node: TSNode,
   words: WordReader,
+  speller?: ArgumentSpeller,
 ): BashCommand[] {
   const out: BashCommand[] = [];
-  collectCommandsInto(node, topLevelScope(words), out);
+  collectCommandsInto(node, topLevelScope(words, speller), out);
   return out;
 }
 
@@ -474,10 +489,12 @@ function makeUnit(
  * surely as one on the enclosing statement.
  */
 function makeCommandUnit(node: TSNode, scope: UnitScope): BashCommand {
-  const { text, words } = readCommandUnit(node, scope.words);
-  const homeSpelling = scope.words.spellHomeAtStart(text);
+  const { text, words, argumentSpelling } = readCommandUnit(node, scope);
   return makeUnit(text, scope, {
-    spellings: homeSpelling === undefined ? undefined : [homeSpelling],
+    spellings: distinctSpellings(text, [
+      scope.words.spellHomeAtStart(text),
+      argumentSpelling,
+    ]),
     wrapperKind: classifyWrapperWords(words),
     executedUnit: executedUnitOf(text, words) ?? undefined,
     floorExemption: floorExemptionOf(words, redirectedScope(node, scope)),
@@ -532,10 +549,11 @@ function redirectedScope(node: TSNode, scope: UnitScope): UnitScope {
  */
 function readCommandUnit(
   node: TSNode,
-  reader: WordReader,
+  scope: UnitScope,
 ): {
   text: string;
   words: CommandWord[];
+  argumentSpelling?: string;
 } {
   const nodes = commandWordNodes(node);
   if (nodes.length === 0) return { text: node.text, words: [] };
@@ -543,18 +561,47 @@ function readCommandUnit(
   const redirects = hostedRedirects(node);
   const words: CommandWord[] = [];
   let text = "";
+  let spelled = "";
+  let respelled = false;
   let previous: TSNode | undefined;
   for (const word of nodes) {
-    if (previous) text += gapBetween(node, previous, word, redirects);
-    words.push({
-      ...reader.argWord(word),
-      text: word.text,
-      offset: text.length,
-    });
+    if (previous) {
+      const gap = gapBetween(node, previous, word, redirects);
+      text += gap;
+      spelled += gap;
+    }
+    const argWord = scope.words.argWord(word);
+    words.push({ ...argWord, text: word.text, offset: text.length });
     text += word.text;
+    const spelling = argWord.computed
+      ? undefined
+      : scope.speller?.absoluteSpellingOf(word);
+    respelled ||= spelling !== undefined;
+    spelled += spelling ?? word.text;
     previous = word;
   }
-  return { text, words };
+  return respelled
+    ? { text, words, argumentSpelling: spelled }
+    : { text, words };
+}
+
+/**
+ * The spellings that differ from `text`, each once, or `undefined` when none
+ * does — so a unit with nothing to respell keeps the shape it had.
+ */
+function distinctSpellings(
+  text: string,
+  candidates: readonly (string | undefined)[],
+): readonly string[] | undefined {
+  const spellings = [
+    ...new Set(
+      candidates.filter(
+        (spelling): spelling is string =>
+          spelling !== undefined && spelling !== text,
+      ),
+    ),
+  ];
+  return spellings.length === 0 ? undefined : spellings;
 }
 
 /**
@@ -682,6 +729,7 @@ function collectHostedCommands(
         parseUnresolved: false,
         salvaged: scope.salvaged,
         words: scope.words,
+        speller: scope.speller,
       },
       out,
     );

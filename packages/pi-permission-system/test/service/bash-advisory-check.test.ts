@@ -6,12 +6,16 @@ import {
 } from "#src/access-intent/bash/parser";
 import { pathFlavorForPlatform } from "#src/path/path-flavor";
 import { PathNormalizer } from "#src/path/path-normalizer";
-import type { ScopedPermissionResolver } from "#src/policy/permission-resolver";
+import {
+  PermissionResolver,
+  type ScopedPermissionResolver,
+} from "#src/policy/permission-resolver";
 import { resolveBashAdvisoryCheck } from "#src/service/bash-advisory-check";
 import type { PermissionCheckResult } from "#src/types";
 
 import { bashCommandOf } from "#test/helpers/gate-fixtures";
 import { makeCheckResult } from "#test/helpers/handler-fixtures";
+import { createInMemoryManager } from "#test/helpers/manager-harness";
 
 /**
  * Resolver whose `resolve` dispatches on the bash command text, so a test can
@@ -255,6 +259,25 @@ describe("resolveBashAdvisoryCheck", () => {
 
       expect(result.state).toBe("deny");
       expect(result.matchedPattern).toBe("> *");
+    });
+
+    it("resolves a unit's absolute argument spelling as the gate does", () => {
+      const resolver = new PermissionResolver(
+        createInMemoryManager({
+          global: {
+            permission: { bash: { "*": "allow", "rm /tmp/a/*": "deny" } },
+          },
+        }),
+        { getRuleset: () => [] },
+      );
+      const result = resolveBashAdvisoryCheck(
+        "cd /tmp && rm a/x",
+        undefined,
+        resolver,
+        normalizer,
+      );
+      expect(result.state).toBe("deny");
+      expect(result.matchedPattern).toBe("rm /tmp/a/*");
     });
 
     it("evaluates a nested command inside a substitution", () => {

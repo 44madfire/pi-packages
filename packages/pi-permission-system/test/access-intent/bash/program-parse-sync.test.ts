@@ -78,6 +78,9 @@ describe("BashProgram.parseSync commands", () => {
           text: 'bash -c "rm -rf /"',
           wrapperKind: "opaque-payload",
           executedUnit: "rm -rf /",
+          // The path projection reads the payload as a relative path, so its
+          // absolute spelling is spelled; the wrapper floor holds either way.
+          spellings: ["bash -c /test/cwd/rm -rf "],
         },
       ]);
     });
@@ -98,7 +101,11 @@ describe("BashProgram.parseSync commands", () => {
           "git add -A . && git commit -F - <<'MSG' 2>&1 | rm -rf /tmp/x\nmsg\nMSG",
         ),
       ).toEqual([
-        { text: "git add -A .", parseUnresolved: true },
+        {
+          text: "git add -A .",
+          parseUnresolved: true,
+          spellings: ["git add -A /test/cwd"],
+        },
         { text: "git commit -F", parseUnresolved: true },
         { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
         { text: "git add -A .", parseUnresolved: true, salvaged: true },
@@ -141,16 +148,21 @@ describe("BashProgram.parseSync commands", () => {
         ]);
       });
 
-      it.each(["echo ~/x", '"~/bin/x"'])(
-        "does not spell a unit whose text does not open with the prefix: %s",
-        (command) => {
-          expect(commandsOf(command)).toEqual([{ text: command }]);
-        },
-      );
+      it("does not spell a quoted command name", () => {
+        expect(commandsOf('"~/bin/x"')).toEqual([{ text: '"~/bin/x"' }]);
+      });
 
-      it("does not spell a wrapper whose wrapped command opens with the prefix", () => {
+      it("spells a home-prefixed argument as an argument, not as the unit's head", () => {
+        expect(commandsOf("echo ~/x")).toEqual([
+          { text: "echo ~/x", spellings: [`echo ${homedir()}/x`] },
+        ]);
+      });
+
+      it("spells a wrapper's home-prefixed argument as an argument", () => {
         const units = commandsOf("sudo ~/bin/x");
-        expect(units?.map((unit) => unit.spellings)).toEqual([undefined]);
+        expect(units?.map((unit) => unit.spellings)).toEqual([
+          [`sudo ${homedir()}/bin/x`],
+        ]);
       });
 
       it("spells a nested command on its own, not its enclosing one", () => {

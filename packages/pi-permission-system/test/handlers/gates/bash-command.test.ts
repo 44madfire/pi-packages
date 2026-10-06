@@ -842,6 +842,119 @@ describe("resolveBashCommandCheck: home-prefixed rules and commands", () => {
   });
 });
 
+/**
+ * The reported scenarios, end to end over the real parse, the real manager, and
+ * the real resolver: a bash rule naming a path in its absolute spelling against
+ * a command naming it relatively.
+ */
+describe("resolveBashCommandCheck: a rule written with an absolute path", () => {
+  const cwd = process.cwd();
+
+  beforeAll(async () => {
+    await warmBashParser();
+  });
+
+  describe("matches the relative spelling of that path", () => {
+    it("allowing it when the absolute allow comes after the broader ask", () => {
+      const result = decide(
+        { "*": "allow", "rm *": "ask", "rm /tmp/agent-builds/*": "allow" },
+        "cd /tmp && rm agent-builds/pi-permission-system/config.json",
+      );
+      // Every unit allows, so the chain reports its first (`cd /tmp`); the
+      // `rm` unit alone would ask via `rm *` without its absolute spelling.
+      expect(result.state).toBe("allow");
+    });
+
+    it("denying it after a cd", () => {
+      const result = decide(
+        { "*": "allow", "rm /tmp/agent-builds/*": "deny" },
+        "cd /tmp && rm agent-builds/x",
+      );
+      expect(result.state).toBe("deny");
+      expect(result.matchedPattern).toBe("rm /tmp/agent-builds/*");
+    });
+
+    it("denying it inside the working directory", () => {
+      const result = decide(
+        { "*": "allow", [`rm ${cwd}/secrets/*`]: "deny" },
+        "rm secrets/x",
+      );
+      expect(result.state).toBe("deny");
+    });
+
+    it("with a parent segment resolved to the file that runs", () => {
+      const result = decide(
+        { "*": "allow", "rm /etc/*": "deny" },
+        "cd /tmp/a && rm ../../etc/x",
+      );
+      expect(result.state).toBe("deny");
+    });
+
+    it("for a quoted argument", () => {
+      const result = decide(
+        { "*": "allow", "rm /tmp/a b/*": "deny" },
+        'cd /tmp && rm "a b/c"',
+      );
+      expect(result.state).toBe("deny");
+    });
+
+    it("for a command nested in a substitution", () => {
+      const result = decide(
+        { "*": "allow", "cat /tmp/a/*": "deny" },
+        "cd /tmp && echo $(cat a/x)",
+      );
+      expect(result.state).toBe("deny");
+      expect(result.command).toBe("cat a/x");
+    });
+
+    it("and a wrapper unit it allows still floors to ask", () => {
+      const result = decide(
+        { "*": "ask", "cd *": "allow", "sudo rm /tmp/a/*": "allow" },
+        "cd /tmp && sudo rm a/x",
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("<indirection-bash-wrapper>");
+    });
+  });
+
+  describe("leaves the decision to the typed text", () => {
+    it("when the absolute allow comes before the broader ask", () => {
+      const result = decide(
+        { "*": "allow", "rm /tmp/agent-builds/*": "allow", "rm *": "ask" },
+        "cd /tmp && rm agent-builds/x",
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("rm *");
+    });
+
+    it("after a cd whose target is not literal", () => {
+      const result = decide(
+        { "*": "allow", "rm *": "ask", "rm /tmp/agent-builds/*": "allow" },
+        'cd "$DIR" && rm agent-builds/x',
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("rm *");
+    });
+
+    it("for an argument a variable computes", () => {
+      const result = decide(
+        { "*": "ask", [`rm ${cwd}/*`]: "allow" },
+        "rm $DIR/x",
+      );
+      expect(result.state).toBe("ask");
+      expect(result.matchedPattern).toBe("*");
+    });
+
+    it("for an argument a substitution computes", () => {
+      const result = decide(
+        { "*": "allow", [`cat ${cwd}/*`]: "deny" },
+        "cat $(pwd)/x",
+      );
+      expect(result.state).toBe("allow");
+    });
+  });
+});
+
 describe("resolveBashCommandCheck: the floor that raised an ask", () => {
   beforeAll(async () => {
     await warmBashParser();

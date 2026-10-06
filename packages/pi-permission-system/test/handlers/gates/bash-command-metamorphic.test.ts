@@ -10,6 +10,7 @@
  * full fuzzer (tree-sitter fuzzing is brittle); it pins A3 directly.
  */
 import { describe, expect, it } from "vitest";
+import { BashPathResolver } from "#src/access-intent/bash/bash-path-resolver";
 import { collectCommands } from "#src/access-intent/bash/command-enumeration";
 import { WordReader } from "#src/access-intent/bash/node-text";
 import { getParser } from "#src/access-intent/bash/parser";
@@ -558,10 +559,15 @@ describe("bash command gate — a parse it could not resolve fails closed", () =
       const tree = parser.parse(command);
       if (!tree) throw new Error("parse returned null");
       try {
-        return collectCommands(
-          tree.rootNode,
-          new WordReader(ShellVariables.UNREBOUND),
-        );
+        // The primary parse alone, spelled as the program spells it: the
+        // resolver walking only the primary tree records the same argument
+        // spellings, since a salvaged fragment's tokens are never spelled.
+        const words = new WordReader(ShellVariables.UNREBOUND);
+        const { argumentSpellings } = new BashPathResolver(
+          normalizer,
+          words,
+        ).resolve(tree.rootNode);
+        return collectCommands(tree.rootNode, words, argumentSpellings);
       } finally {
         tree.delete();
       }

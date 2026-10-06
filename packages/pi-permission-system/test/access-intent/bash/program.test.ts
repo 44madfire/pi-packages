@@ -598,6 +598,8 @@ describe("BashProgram", () => {
             text: "bash -c 'rm -rf /tmp/x'",
             wrapperKind: "opaque-payload",
             executedUnit: "rm -rf /tmp/x",
+            // The path projection reads the payload as a relative path.
+            spellings: ["bash -c /projects/my-app/rm -rf /tmp/x"],
           },
         ]);
       });
@@ -1258,7 +1260,14 @@ describe("BashProgram", () => {
       ])("flags %s as opaque", async (command, text) => {
         const program = await BashProgram.parse(command, normalizer);
         expect(program.commands()).toEqual([
-          { text, wrapperKind: "opaque-payload", executedUnit: "rm -rf /" },
+          {
+            text,
+            wrapperKind: "opaque-payload",
+            executedUnit: "rm -rf /",
+            // The path projection reads the payload as a relative path, so
+            // the unit carries its absolute spelling; the floor holds anyway.
+            spellings: [text.replace('"rm -rf /"', "/projects/my-app/rm -rf ")],
+          },
         ]);
       });
 
@@ -1272,6 +1281,7 @@ describe("BashProgram", () => {
             text: 'bash -c "rm -rf /"',
             wrapperKind: "opaque-payload",
             executedUnit: "rm -rf /",
+            spellings: ["bash -c /projects/my-app/rm -rf "],
           },
         ]);
       });
@@ -1387,19 +1397,33 @@ describe("BashProgram", () => {
         "flags %s as an indirection wrapper",
         async (command, executedUnit) => {
           const program = await BashProgram.parse(command, normalizer);
+          // `find`'s `.` resolves to the working directory.
+          const spellings = command.startsWith("find .")
+            ? { spellings: [command.replace(".", "/projects/my-app")] }
+            : {};
           expect(program.commands()).toEqual([
-            { text: command, wrapperKind: "indirection", executedUnit },
+            {
+              text: command,
+              wrapperKind: "indirection",
+              executedUnit,
+              ...spellings,
+            },
           ]);
         },
       );
 
-      it.each(["find . -name foo", "fd pattern", "fd -H -t f pattern"])(
-        "does not flag a bare %s search",
-        async (command) => {
-          const program = await BashProgram.parse(command, normalizer);
-          expect(program.commands()).toEqual([{ text: command }]);
-        },
-      );
+      it.each([
+        ["find . -name foo", ["find /projects/my-app -name foo"]],
+        ["fd pattern", undefined],
+        ["fd -H -t f pattern", undefined],
+      ])("does not flag a bare %s search", async (command, spellings) => {
+        const program = await BashProgram.parse(command, normalizer);
+        expect(program.commands()).toEqual([
+          spellings === undefined
+            ? { text: command }
+            : { text: command, spellings },
+        ]);
+      });
     });
 
     describe("executed unit", () => {
@@ -1652,7 +1676,11 @@ describe("BashProgram", () => {
           normalizer,
         );
         expect(program.commands()).toEqual([
-          { text: "git add -A .", parseUnresolved: true },
+          {
+            text: "git add -A .",
+            parseUnresolved: true,
+            spellings: ["git add -A /projects/my-app"],
+          },
           { text: "git commit -F", parseUnresolved: true },
           { text: "rm -rf /tmp/x", parseUnresolved: true, salvaged: true },
           { text: "git add -A .", parseUnresolved: true, salvaged: true },

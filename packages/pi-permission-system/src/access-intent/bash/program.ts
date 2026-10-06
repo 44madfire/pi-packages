@@ -93,15 +93,15 @@ export class BashProgram {
         const words = new WordReader(
           ShellVariables.scan([tree.rootNode, ...salvaged]),
         );
-        const { externalAccesses, ruleCandidates } = new BashPathResolver(
-          normalizer,
-          words,
-          options?.workdir,
-        ).resolve(tree.rootNode, salvaged);
+        const { externalAccesses, ruleCandidates, argumentSpellings } =
+          new BashPathResolver(normalizer, words, options?.workdir).resolve(
+            tree.rootNode,
+            salvaged,
+          );
         return new BashProgram(
           command,
           [
-            ...collectCommands(tree.rootNode, words),
+            ...collectCommands(tree.rootNode, words, argumentSpellings),
             ...salvaged.flatMap((root) => collectSalvagedCommands(root, words)),
           ],
           externalAccesses,
