@@ -51,5 +51,18 @@ Every plan-named killing mutation went red, and one mutation prediction was corr
 - Pre-completion reviewer: PASS.
   Its residual note: a forged request with a non-bash surface that carries `askingUnits` would be judged on the bash surface; no in-tree child produces one.
 
+## Stage: Sync (worktree) (2026-10-06T04:31:01Z)
+
+### Session summary
+
+`pnpm run lint` and `pnpm fallow dead-code` pass on the branch, and the TDD stage's reviewer verdict was a PASS with nothing open.
+The plan's marker is `**Release:** ship independently`, so the root dispatches a `pi-permission-system` release after landing.
+
+**Peer session transcript:** `/Users/chris/.pi/agent/sessions/--Users-chris-development-pi-pi-packages-worktrees-issue-1030--/2026-10-06T03-50-07-927Z_01a10f55-4134-72ea-b3ef-2eb4c525ab14.jsonl` — read with `read_session_file({ path: "<path>" })` for message-level verification at land/retro time.
+
+### Observations
+
+The branch carries the plan, the five implementation commits, the Phase 15 disposition for [#1033], and the stage notes. [#1033] (the local session-tie bypass) is the filed follow-up, placed as the next Track D step, so the root files nothing new.
+
 [#1019]: https://github.com/gotgenes/pi-packages/issues/1019
 [#1033]: https://github.com/gotgenes/pi-packages/issues/1033
