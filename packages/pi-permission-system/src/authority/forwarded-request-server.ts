@@ -155,6 +155,9 @@ function toAccessFacts(intent: ForwardedAccessIntent): ForwardedAccessFacts {
     matchValues: intent.matchValues,
     boundaryValue: intent.boundaryValue,
     ...(intent.floor === undefined ? {} : { floor: intent.floor }),
+    ...(intent.askingUnits === undefined
+      ? {}
+      : { askingUnits: intent.askingUnits }),
   };
 }
 

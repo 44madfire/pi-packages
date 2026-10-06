@@ -301,6 +301,49 @@ describe("readForwardedPermissionRequest — accessIntent field", () => {
     expect(parsed?.accessIntent).toBeUndefined();
   });
 
+  describe("askingUnits", () => {
+    function bashIntent(askingUnits: unknown): Record<string, unknown> {
+      return {
+        surface: "bash",
+        matchValues: ["ls"],
+        boundaryValue: null,
+        askingUnits,
+        requesterCwd: "/repo",
+        principal: { sessionId: "child-session", agentName: "reviewer" },
+      };
+    }
+
+    it("round-trips every unit the child left asking, with each one's floor", () => {
+      const accessIntent: ForwardedAccessIntent = {
+        surface: "bash",
+        matchValues: ["ls"],
+        boundaryValue: null,
+        askingUnits: [
+          { command: "ls" },
+          { command: "sudo rm y", floor: "<indirection-bash-wrapper>" },
+        ],
+        requesterCwd: "/repo",
+        principal: { sessionId: "child-session", agentName: "reviewer" },
+      };
+      const parsed = writeAndRead({ ...baseRequest(), accessIntent });
+      expect(parsed?.accessIntent).toStrictEqual(accessIntent);
+    });
+
+    it.each([
+      ["not an array", "ls"],
+      ["an empty list", []],
+      ["a unit whose command is not a string", [{ command: 42 }]],
+      ["a unit whose floor is not a string", [{ command: "ls", floor: 42 }]],
+      ["a unit that is not an object", [null]],
+    ])("drops the access intent for %s, so the ask escalates", (_, units) => {
+      const parsed = writeAndRead({
+        ...baseRequest(),
+        accessIntent: bashIntent(units),
+      });
+      expect(parsed?.accessIntent).toBeUndefined();
+    });
+  });
+
   it("drops a malformed access intent to undefined (missing principal)", () => {
     const parsed = writeAndRead({
       ...baseRequest(),

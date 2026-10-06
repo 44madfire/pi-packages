@@ -5,6 +5,7 @@ import type {
   ApprovalGrant,
   SessionGrantWidth,
 } from "#src/session/approval-grant";
+import type { AskingBashUnit } from "#src/types";
 import type { DecisionSource } from "./decision-source";
 import type { PermissionDecisionState } from "./permission-dialog";
 import type { SubagentSessionRegistry } from "./subagent-registry";
@@ -131,6 +132,14 @@ export interface ForwardedAccessFacts {
    * than recomputing it. Absent when no floor was raised.
    */
   floor?: string;
+  /**
+   * Every unit of a bash chain the child left asking, each with its own floor.
+   * `matchValues` names only the chain's winner, and the serving node's answer
+   * approves the whole tool call, so it judges each of these instead. Absent
+   * for a non-bash ask and for a bash ask raised without a chain (the empty
+   * parse), where `matchValues` is the whole command.
+   */
+  askingUnits?: AskingBashUnit[];
 }
 
 /**

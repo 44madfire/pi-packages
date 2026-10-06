@@ -655,6 +655,32 @@ describe("processInbox — child-fixed access facts on the escalated ask", () =>
     });
   });
 
+  test("carries a bash chain's asking units onto the escalated ask details", async () => {
+    const details = await escalateForwardedAsk({
+      id: "req-units-facts",
+      source: "tool_call",
+      surface: "bash",
+      value: "ls && sudo rm y",
+      accessIntent: makeForwardedAccessIntent({
+        matchValues: ["ls"],
+        askingUnits: [
+          { command: "ls" },
+          { command: "sudo rm y", floor: "<indirection-bash-wrapper>" },
+        ],
+      }),
+    });
+
+    expect(details.accessIntent).toEqual({
+      surface: "bash",
+      matchValues: ["ls"],
+      boundaryValue: null,
+      askingUnits: [
+        { command: "ls" },
+        { command: "sudo rm y", floor: "<indirection-bash-wrapper>" },
+      ],
+    });
+  });
+
   test("omits accessIntent entirely for a version-skew request that carried none", async () => {
     const details = await escalateForwardedAsk({
       id: "req-skew-facts",

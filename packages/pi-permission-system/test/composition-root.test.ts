@@ -399,6 +399,53 @@ describe("subagent registry sharing across factory instances", () => {
     rmSync(childCwd, { recursive: true, force: true });
   });
 
+  it("forwards every unit a child's bash chain left asking", async () => {
+    writeGlobalConfig({ permission: { "*": "allow", bash: { "*": "ask" } } });
+
+    const childCwd = mkdtempSync(join(tmpdir(), "pi-perm-child-cwd-"));
+    const forwardingDir = join(agentDir, "sessions", "permission-forwarding");
+    const parentSessionId = "parent-session-units";
+    const childSessionId = "child-session-units";
+
+    const parentBus = createEventBus();
+    const childBus = createEventBus();
+    piPermissionSystemExtension(
+      makeFakePi({ events: parentBus }) as unknown as ExtensionAPI,
+    );
+    const childPi = makeFakePi({ events: childBus, toolNames: ["bash"] });
+    piPermissionSystemExtension(childPi as unknown as ExtensionAPI);
+    parentBus.emit(SUBAGENT_CHILD_SESSION_CREATED, {
+      sessionId: childSessionId,
+      parentSessionId,
+    });
+    getServingSessionRegistry().markServing(parentSessionId);
+
+    // The parent's answer approves the whole line, so it has to see every
+    // command the child left asking, not only the winner.
+    const firePromise = childPi.fire(
+      "tool_call",
+      {
+        toolName: "bash",
+        toolCallId: "child-chain-bash",
+        input: { command: "ls && rm -rf /tmp/x" },
+      },
+      makeChildCtx(childCwd, childSessionId),
+    );
+
+    const request = await approveForwardedRequest(
+      forwardingDir,
+      parentSessionId,
+    );
+    expect(request.accessIntent?.matchValues).toEqual(["ls"]);
+    expect(request.accessIntent?.askingUnits).toStrictEqual([
+      { command: "ls" },
+      { command: "rm -rf /tmp/x" },
+    ]);
+
+    await firePromise;
+    rmSync(childCwd, { recursive: true, force: true });
+  });
+
   // The #719 failure mode: the child forwards correctly, but nothing drains
   // the parent's inbox. Before the serving registry it waited out the full
   // ten-minute timeout and reported the block as a user denial.

@@ -14,7 +14,7 @@ import {
 import { buildToolAskPayload } from "#src/presentation/tool-ask-payload";
 import { SessionApproval } from "#src/session/session-approval";
 import type { ToolPreviewFormatter } from "#src/tool-input/tool-preview-formatter";
-import type { PermissionCheckResult } from "#src/types";
+import type { AskingBashUnit, PermissionCheckResult } from "#src/types";
 import type { GateDescriptor } from "./descriptor";
 import {
   accessFactsFromPath,
@@ -180,6 +180,7 @@ export function describeToolGate(
     : {
         ...accessFactsFromValue(gateSurface, decisionValue),
         ...floorFact(check),
+        ...askingUnitsFact(check),
       };
 
   return {
@@ -240,4 +241,17 @@ function floorExemptionFact(
  */
 function floorFact(check: PermissionCheckResult): { floor?: string } {
   return check.floor === undefined ? {} : { floor: check.floor };
+}
+
+/**
+ * Every unit of a bash chain the child left asking, as a child-fixed fact for
+ * the wire, so the serving node judges each command rather than the winner
+ * alone (#1030). Absent when the check lists none.
+ */
+function askingUnitsFact(check: PermissionCheckResult): {
+  askingUnits?: AskingBashUnit[];
+} {
+  return check.askingUnits === undefined
+    ? {}
+    : { askingUnits: [...check.askingUnits] };
 }
