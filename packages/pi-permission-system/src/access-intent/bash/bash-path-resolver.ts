@@ -46,15 +46,13 @@ type EffectiveBase =
   | { readonly kind: "unknown" };
 
 /**
- * A path-candidate token paired with the effective working directory projected
- * onto the point in the command stream where it appears, the effect its
- * position proved, and the role its collector gave it.
+ * A collected {@link PathToken} — its text, the effect its position proved,
+ * the role its collector gave it, and its source span when it is a whole
+ * argument — paired with the effective working directory projected onto the
+ * point in the command stream where it appears.
  */
-interface PathCandidate {
-  readonly token: string;
+interface PathCandidate extends PathToken {
   readonly base: EffectiveBase;
-  readonly effect: TokenEffect;
-  readonly role: TokenRole;
 }
 
 /** A promoted bare token and its resolved path, before an effect is attached. */
@@ -699,8 +697,8 @@ function tagTokens(
   base: EffectiveBase,
   out: PathCandidate[],
 ): void {
-  for (const { token, effect, role } of tokens) {
-    out.push({ token, base, effect, role });
+  for (const token of tokens) {
+    out.push({ ...token, base });
   }
 }
 
