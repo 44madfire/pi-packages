@@ -20,3 +20,20 @@ The plan holds both repair tables in full; `/build-plan` applies them with a thr
   The originals came from the `Write`/`Edit` arguments in `~/.pi/agent/sessions/` transcripts, which covered all 12 files and every heading in them; every lost character was `.`.
 - The operator chose lines plus heading levels, a scripted repair, and no new lint check: `magiclink = true` prevents recurrence and #1037's step 4 re-verifies it under the upgraded rumdl.
 - Heading fixes must run before prose fixes (bottom-up), because deleting blank lines shifts line numbers; the script asserts each line's text before editing.
+
+## Stage: Implementation — Build (2026-10-07T03:04:38Z)
+
+### Session summary
+
+Applied the plan's single step: `/tmp/md018-repair.mjs` read both repair tables straight from the plan and rewrote all 12 files in one pass (25 prose lines, 98 heading levels, 26 blank lines removed), committed as `ae89ae7c`.
+All five Test Impact Analysis checks passed, and a `rumdl fmt` re-run over the 12 files changed nothing.
+
+### Observations
+
+- Deviation from the plan's ordering: the script records every edit against the original line indices and then rebuilds each file in one pass.
+  With no line-number shift, there was no need to apply headings first and prose lines bottom-up.
+- Pre-completion reviewer: WARN (non-blocking).
+  The reviewer rebuilt the expected result from the plan's tables and the pre-image and found it byte-identical to `ae89ae7c`.
+  Its only finding was evidence provenance: it could not re-check the session transcripts the recovery used.
+- The `bash` tool now runs `/opt/homebrew/bin/bash`, not zsh: a zsh-only `${=FILES}` failed with `bad substitution`.
+  The operator confirmed the switch back to bash, so `AGENTS.md`'s `### Shell` section and the `shell-traps` skill describe the wrong shell.
