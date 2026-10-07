@@ -33,9 +33,7 @@ The input was synthetic (hand-written policy and command), on the far side of no
 
 **Already on `main`.**
 The PR is based on `a867122d`; 534 package commits have landed since.
-
-## 981 shipped the same multi-spelling mechanism the PR builds: `BashCommandAccessIntent` (`kind: "bash-command"`, `spellings`) in `src/access-intent/access-intent.ts`, evaluated last-match-wins via `evaluateAnyValue` (#928), and populated per unit in `makeCommandUnit` (`src/access-intent/bash/command-enumeration.ts`) — today only with `ShellVariables.spellHomeAtStart`'s leading-home spelling
-
+#981 shipped the same multi-spelling mechanism the PR builds: `BashCommandAccessIntent` (`kind: "bash-command"`, `spellings`) in `src/access-intent/access-intent.ts`, evaluated last-match-wins via `evaluateAnyValue` (#928), and populated per unit in `makeCommandUnit` (`src/access-intent/bash/command-enumeration.ts`) — today only with `ShellVariables.spellHomeAtStart`'s leading-home spelling.
 The PR's `AliasValuesAccessIntent`, the `aliasMatching` flag on `buildCheckResult`, the `aliasTexts` parameter threaded through `resolveBashCommandCheck`, and the parallel `unitSpans` array in `BashProgram` all duplicate that seam.
 `git merge-tree` reports content conflicts in 15 files.
 
@@ -74,5 +72,4 @@ Co-authored-by: ilkerulusoy <ilker@ilkerulusoy.com.tr>
 
 The ship-stage PR close comment thanks @ilkerulusoy by name and links the implementing SHA(s).
 Reference the PR as `Refs #917`, never `Closes #917`.
-
-## 910 was closed by the reporter; `/ship` should reopen-or-comment as appropriate when the fix lands
+#910 was closed by the reporter; `/ship` should reopen-or-comment as appropriate when the fix lands.
