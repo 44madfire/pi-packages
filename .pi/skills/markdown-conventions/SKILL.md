@@ -32,6 +32,8 @@ The `pi-autoformat` extension reformats every file an `Edit`/`Write` touches, an
 - It also reads a numbered section citation (`§ *7. Verify CI*`) as a sentence end and splits it — cite the heading instead (`` the `## 7. Verify CI` section ``).
 - It also reads a leading `~` as strikethrough and rewrites a `~`-prefixed token (`(~:211)` → `(~~211)`), which `rumdl check` passes — write an approximate line reference as `line ~211`.
 
+Damage this pass writes lands in the file's first commit, so git holds no clean copy; recover the authored text from the `Write` `content` / `Edit` `newText` arguments in the session transcripts under `~/.pi/agent/sessions/`.
+
 ### Non-ASCII in authored prose
 
 An em-dash in a `newText`/`content` body is unreliably emitted: it can arrive as a bare newline, splitting a sentence or a heading.
